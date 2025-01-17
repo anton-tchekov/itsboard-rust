@@ -14,6 +14,7 @@ mod terminus16_bold;
 use crate::terminus16::TERMINUS16;
 use crate::terminus16_bold::TERMINUS16_BOLD;
 use crate::lcd::*;
+use crate::font::*;
 
 use panic_halt as _;
 use stm32f4::stm32f429::{self, interrupt};
@@ -58,6 +59,9 @@ fn start() -> ! {
     gpiod.bsrr.write(|w| w.br7().set_bit());
 
     lcd_init(lcd_color(0, 0, 0));
+    lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
+    font_str(200, 200, "Hello World",
+        lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16_BOLD);
 
     /*rcc.apb1enr.modify(|_, w| w.tim2en().enabled());
     tim2.dier.write(|w| w.uie().enabled());

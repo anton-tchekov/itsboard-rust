@@ -7,7 +7,7 @@ pub struct Font
 	pub bitmap: &'static [u8]
 }
 
-fn font_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
+pub fn font_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
 	let mut o = c as u32;
 	if o < 32 {
 		o = 127;
@@ -35,7 +35,7 @@ fn font_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
 	lcd_window_end();
 }
 
-fn font_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font) {
+pub fn font_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font) {
 	let mut x0 = x;
 	for c in s.chars() {
 		font_char(x0, y, c, fg, bg, font);
