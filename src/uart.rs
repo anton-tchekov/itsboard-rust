@@ -32,11 +32,8 @@ pub fn uart_tx(val: char)
 	while(!(USART3.SR & USART_SR_TXE)) {}*/
 }
 
-pub fn uart_tx_str(s: &str)
-{
-	/*int c;
-	while((c = *s++))
-	{
+pub fn uart_tx_str(s: &str) {
+	for c in s.chars() {
 		uart_tx(c);
-	}*/
+	}
 }
