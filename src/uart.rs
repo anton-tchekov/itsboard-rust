@@ -1,3 +1,5 @@
+// LATER
+
 /*#define APB1_FREQUENCY 45000000
 
 #define SETBITS(R, CLEARMASK, SETMASK) \
@@ -18,12 +20,14 @@ static inline void gpio_init(
 
 pub fn uart_init(baud: u32)
 {
-	/*RCC.APB1ENR |= (1 << 18) | (1 << 3);
+	/*
+	RCC.APB1ENR |= (1 << 18) | (1 << 3);
 	gpio_init(GPIOD, 8, 2, 0, GPIO_SPEED_HIGH, 0, 7);
 	gpio_init(GPIOD, 9, 2, 0, GPIO_SPEED_HIGH, 0, 7);
 	USART3.CR1 = 0;
 	USART3.BRR = APB1_FREQUENCY / baud;
-	USART3.CR1 |= (1 << 13) | (1 << 2) | (1 << 3);*/
+	USART3.CR1 |= (1 << 13) | (1 << 2) | (1 << 3);
+	*/
 }
 
 pub fn uart_tx(val: char)
