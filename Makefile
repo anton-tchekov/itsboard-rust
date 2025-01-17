@@ -10,4 +10,4 @@ clean:
 	rm -f out.hex
 
 flash:
-	st-flash --format ihex write out.hex
+	st-flash --connect-under-reset --format ihex write out.hex
