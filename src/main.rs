@@ -1,6 +1,20 @@
 #![no_std]
 #![no_main]
 
+mod uart;
+mod font;
+mod spi;
+mod timer;
+mod delay;
+mod lcd_ll;
+mod lcd;
+mod terminus16;
+mod terminus16_bold;
+
+use crate::terminus16::TERMINUS16;
+use crate::terminus16_bold::TERMINUS16_BOLD;
+use crate::lcd::*;
+
 use panic_halt as _;
 use stm32f4::stm32f429::{self, interrupt};
 
@@ -42,6 +56,8 @@ fn start() -> ! {
     gpiod.bsrr.write(|w| w.br5().set_bit());
     gpiod.bsrr.write(|w| w.br6().set_bit());
     gpiod.bsrr.write(|w| w.br7().set_bit());
+
+    lcd_init(lcd_color(0, 0, 0));
 
     /*rcc.apb1enr.modify(|_, w| w.tim2en().enabled());
     tim2.dier.write(|w| w.uie().enabled());

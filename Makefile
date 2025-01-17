@@ -1,4 +1,5 @@
 build:
+	clear
 	cargo build --release
 	arm-none-eabi-objcopy -O ihex target/thumbv7em-none-eabihf/release/itsboard-rust out.hex
 
