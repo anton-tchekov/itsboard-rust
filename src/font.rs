@@ -1,7 +1,6 @@
 use crate::lcd::*;
 
-pub struct Font
-{
+pub struct Font {
 	pub width: u32,
 	pub height: u32,
 	pub bitmap: &'static [u8]
