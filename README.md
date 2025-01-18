@@ -22,7 +22,6 @@ ASM Dump:
 
 ### HW Basics
 
-- Clock Setup with Max Frequency
 - UART works
 - SPI works
 - LCD works

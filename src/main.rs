@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+mod clock;
 mod gpio;
 mod uart;
 mod font;
@@ -12,6 +13,7 @@ mod lcd;
 mod terminus16;
 mod terminus16_bold;
 
+use crate::clock::*;
 use crate::terminus16::*;
 use crate::terminus16_bold::*;
 use crate::lcd::*;
@@ -22,10 +24,13 @@ use crate::spi::*;
 use crate::gpio::*;
 use crate::delay::*;
 
+//use stm32f4::stm32f429::{self};
+
 use panic_halt as _;
 
 #[cortex_m_rt::entry]
 fn start() -> ! {
+	clock_init();
 	gpio_init();
 	timer_init();
 
