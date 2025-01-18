@@ -199,17 +199,14 @@ pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
 	lcd_window_end();
 }
 
-// TODO
-/*
-pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32, void *handle,
-	int (*callback)(int, int, void *)) {
-	let x0, y0;
+pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32,
+	callback: &dyn Fn(u32, u32) -> u16) {
 	lcd_window_start(x, y, w, h);
-	let y0 = 0;
+	let mut y0 = 0;
 	while y0 < h {
-		let x0 = 0;
+		let mut x0 = 0;
 		while x0 < w {
-			lcd_emit(callback(x0, y0, handle));
+			lcd_emit(callback(x0, y0));
 			x0 += 1;
 		}
 
@@ -218,7 +215,6 @@ pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32, void *handle,
 
 	lcd_window_end();
 }
-*/
 
 pub fn lcd_init(color: u16)
 {

@@ -24,10 +24,10 @@ ASM Dump:
 
 - UART works
 - SPI works
-- LCD works
-- Font renderer works
 
 - Simple Demo:
+	- Test Both fonts
+	- Test LCD callback
 	- UART send message
 	- Rectangles on Screen
 	- Label that shows seconds counter
@@ -36,6 +36,8 @@ ASM Dump:
 	- LED show counter in seconds
 
 ### Project
+
+- SD Card, FAT32 Library / Driver
 
 - Control using buttons
 
@@ -56,3 +58,6 @@ ASM Dump:
 	- I2C
 	- UART
 	- OneWire
+
+- Send data over USB UART
+- Save capture/screenshots to SD Card
