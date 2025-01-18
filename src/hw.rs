@@ -135,7 +135,7 @@ pub fn timer_get() -> u32 {
 	unsafe { (*TIM2::ptr()).cnt().read().bits() }
 }
 
-pub fn spi_ll_xchg(spi: &mut Spi<SPI1>, val: u8) -> u8 {
+pub fn spi_ll_xchg(val: u8) -> u8 {
 	unsafe {
 		delay_us(1);
 		while (read_volatile(SPI1_SR as *mut u32) & SPI_SR_TXE) == 0 {}
