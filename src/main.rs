@@ -14,18 +14,23 @@ use crate::terminus16_bold::*;
 use crate::lcd::*;
 use crate::font::*;
 use crate::delay::*;
+use core::fmt::Write;
 
 use panic_halt as _;
 
 #[cortex_m_rt::entry]
 fn start() -> ! {
-	hw_init();
-	lcd_init(lcd_color(0, 0, 0));
-	lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
-	font_str(200, 200, "Hello World",
+	let mut hw = hw_init();
+	lcd_init(&mut hw.spi, lcd_color(0, 0, 0));
+	delay_ms(100);
+	lcd_rect(&mut hw.spi, 10, 10, 100, 100, lcd_color(255, 0, 0));
+	lcd_rect(&mut hw.spi, 30, 30, 100, 100, lcd_color(0, 255, 0));
+	lcd_rect(&mut hw.spi, 50, 50, 100, 100, lcd_color(0, 0, 255));
+
+	font_str(&mut hw.spi, 200, 200, "Hello World from Rust!",
 		lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16_BOLD);
 
-	font_str(200, 216, "This is a test",
+	font_str(&mut hw.spi, 200, 216, "Finally it works ...",
 		lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16);
 
 	loop {
@@ -44,5 +49,7 @@ fn start() -> ! {
 		blueset(0x55);
 
 		delay_ms(1000);
+
+		writeln!(hw.tx, "Main loop running\n").unwrap();
 	}
 }

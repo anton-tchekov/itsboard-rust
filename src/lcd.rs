@@ -1,5 +1,7 @@
 use crate::delay::*;
 use crate::hw::*;
+use stm32f4xx_hal::pac::SPI1;
+use stm32f4xx_hal::spi::Spi;
 
 pub const LCD_WIDTH: u32 = 480;
 pub const LCD_HEIGHT: u32 = 320;
@@ -111,37 +113,37 @@ const LCD_INIT_CMDS: [u8; 103] =
 	0x55
 ];
 
-fn lcd_param0()
+fn lcd_param0(spi: &mut Spi<SPI1>)
 {
 	lcd_dc_1();
 	lcd_cs_0();
-	spi_ll_xchg(0);
+	spi_ll_xchg(spi, 0);
 }
 
-fn lcd_param1(param: u8)
+fn lcd_param1(spi: &mut Spi<SPI1>, param: u8)
 {
-	spi_ll_xchg(param);
+	spi_ll_xchg(spi, param);
 	lcd_cs_1();
 }
 
-fn lcd_param(param: u8)
+fn lcd_param(spi: &mut Spi<SPI1>, param: u8)
 {
-	lcd_param0();
-	lcd_param1(param);
+	lcd_param0(spi);
+	lcd_param1(spi, param);
 }
 
-fn lcd_cmd(cmd: u8)
+fn lcd_cmd(spi: &mut Spi<SPI1>, cmd: u8)
 {
 	lcd_dc_0();
 	lcd_cs_0();
-	spi_ll_xchg(cmd);
+	spi_ll_xchg(spi, cmd);
 	lcd_cs_1();
 }
 
-pub fn lcd_emit(color: u16)
+pub fn lcd_emit(spi: &mut Spi<SPI1>, color: u16)
 {
-	spi_ll_xchg((color >> 8) as u8);
-	spi_ll_xchg((color & 0xFF) as u8);
+	spi_ll_xchg(spi, (color >> 8) as u8);
+	spi_ll_xchg(spi, (color & 0xFF) as u8);
 }
 
 fn lcd_reset()
@@ -154,24 +156,24 @@ fn lcd_reset()
 	delay_ms(500);
 }
 
-pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32)
+pub fn lcd_window_start(spi: &mut Spi<SPI1>, x: u32, y: u32, w: u32, h: u32)
 {
 	let ex = x + w - 1;
 	let ey = y + h - 1;
 
-	lcd_cmd(0x2A);
-	lcd_param((x >> 8) as u8);
-	lcd_param((x & 0xFF) as u8);
-	lcd_param((ex >> 8) as u8);
-	lcd_param((ex & 0xFF) as u8);
+	lcd_cmd(spi, 0x2A);
+	lcd_param(spi, (x >> 8) as u8);
+	lcd_param(spi, (x & 0xFF) as u8);
+	lcd_param(spi, (ex >> 8) as u8);
+	lcd_param(spi, (ex & 0xFF) as u8);
 
-	lcd_cmd(0x2B);
-	lcd_param((y >> 8) as u8);
-	lcd_param((y & 0xFF) as u8);
-	lcd_param((ey >> 8) as u8);
-	lcd_param((ey & 0xFF) as u8);
+	lcd_cmd(spi, 0x2B);
+	lcd_param(spi, (y >> 8) as u8);
+	lcd_param(spi, (y & 0xFF) as u8);
+	lcd_param(spi, (ey >> 8) as u8);
+	lcd_param(spi, (ey & 0xFF) as u8);
 
-	lcd_cmd(0x2C);
+	lcd_cmd(spi, 0x2C);
 	lcd_dc_1();
 	lcd_cs_0();
 }
@@ -181,31 +183,31 @@ pub fn lcd_window_end()
 	lcd_cs_1();
 }
 
-pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
+pub fn lcd_rect(spi: &mut Spi<SPI1>, x: u32, y: u32, w: u32, h: u32, color: u16)
 {
 	let mut count = w * h;
 	let color_hi = (color >> 8) as u8;
 	let color_lo = (color & 0xFF) as u8;
 
-	lcd_window_start(x, y, w, h);
+	lcd_window_start(spi, x, y, w, h);
 	while count > 0
 	{
 		count -= 1;
-		spi_ll_xchg(color_hi);
-		spi_ll_xchg(color_lo);
+		spi_ll_xchg(spi, color_hi);
+		spi_ll_xchg(spi, color_lo);
 	}
 
 	lcd_window_end();
 }
 
-pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32,
+pub fn lcd_callback(spi: &mut Spi<SPI1>, x: u32, y: u32, w: u32, h: u32,
 	callback: &dyn Fn(u32, u32) -> u16) {
-	lcd_window_start(x, y, w, h);
+	lcd_window_start(spi, x, y, w, h);
 	let mut y0 = 0;
 	while y0 < h {
 		let mut x0 = 0;
 		while x0 < w {
-			lcd_emit(callback(x0, y0));
+			lcd_emit(spi, callback(x0, y0));
 			x0 += 1;
 		}
 
@@ -215,35 +217,35 @@ pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32,
 	lcd_window_end();
 }
 
-pub fn lcd_init(color: u16)
+pub fn lcd_init(spi: &mut Spi<SPI1>, color: u16)
 {
 	lcd_reset();
 
 	let mut i = 0;
 	while i < LCD_INIT_CMDS.len() {
-		lcd_cmd(LCD_INIT_CMDS[i]);
+		lcd_cmd(spi, LCD_INIT_CMDS[i]);
 		i += 1;
 		let mut num = LCD_INIT_CMDS[i];
 		i += 1;
 		while num > 0
 		{
 			num -= 1;
-			lcd_param(LCD_INIT_CMDS[i]);
+			lcd_param(spi, LCD_INIT_CMDS[i]);
 			i += 1;
 		}
 	}
 
-	lcd_cmd(0xB6);
-	lcd_param(0x00);
-	lcd_param(0x62);
-	lcd_cmd(0x36);
-	lcd_param(0x28);
+	lcd_cmd(spi, 0xB6);
+	lcd_param(spi, 0x00);
+	lcd_param(spi, 0x62);
+	lcd_cmd(spi, 0x36);
+	lcd_param(spi, 0x28);
 
 	delay_ms(200);
-	lcd_cmd(0x11);
+	lcd_cmd(spi, 0x11);
 	delay_ms(120);
-	lcd_cmd(0x29);
-	lcd_rect(0, 0, LCD_WIDTH, LCD_HEIGHT, color);
+	lcd_cmd(spi, 0x29);
+	lcd_rect(spi, 0, 0, LCD_WIDTH, LCD_HEIGHT, color);
 }
 
 pub const fn lcd_color(r: u8, g: u8, b: u8) -> u16

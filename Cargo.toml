@@ -19,5 +19,5 @@ features = ["stm32f429"]
 [profile.release]
 codegen-units = 1
 incremental = false
-debug = true
-lto = true
+debug = false
+lto = false

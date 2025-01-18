@@ -1,11 +1,13 @@
 use stm32f4xx_hal::{prelude::*, pac::{Peripherals,SPI1}};
-use stm32f4xx_hal::spi::{Polarity, Mode, Phase, NoMiso, Spi};
+use stm32f4xx_hal::spi::{Polarity, Mode, Phase, Spi};
 use stm32f4xx_hal::pac::RCC;
 use stm32f4xx_hal::uart::{Config, Serial};
 use core::fmt::Write;
-static mut MainSPI: Option<Spi<SPI1>> = None;
-
 use stm32f4xx_hal::pac::*;
+use stm32f4xx_hal::serial::Tx;
+use core::ptr::{read_volatile, write_volatile};
+
+use crate::delay_us;
 
 const LCD_RST: u32 = 12;
 const LCD_DC: u32 = 13;
@@ -13,7 +15,22 @@ const LCD_CS: u32 = 14;
 
 pub const TICKS_PER_US: u32 = 90;
 
-pub fn hw_init() {
+pub struct HW {
+	pub spi: Spi<SPI1>,
+	pub tx: Tx<USART3>
+}
+
+const PERIPH_BASE     : u32 = 0x40000000;
+const APB2PERIPH_BASE : u32 = PERIPH_BASE + 0x10000;
+const SPI1_BASE       : u32 = APB2PERIPH_BASE + 0x3000;
+const SPI1_SR         : u32 = SPI1_BASE + 0x08;
+const SPI1_DR         : u32 = SPI1_BASE + 0x0C;
+
+const SPI_SR_RXNE     : u32 = 1 << 0;
+const SPI_SR_TXE      : u32 = 1 << 1;
+const SPI_SR_BSY      : u32 = 1 << 7;
+
+pub fn hw_init() -> HW {
 	let dp = Peripherals::take().unwrap();
 	let clocks = dp.RCC.constrain().cfgr
 		.use_hse(8.MHz())
@@ -34,10 +51,6 @@ pub fn hw_init() {
 	}
 
 	let gpiod = dp.GPIOD.split();
-	let gpioa = dp.GPIOA.split();
-	let sclk = gpioa.pa5.into_alternate();
-	let mosi = gpioa.pa7.into_alternate();
-	let tx_pin = gpiod.pd8.into_alternate();
 
 	unsafe {
 		/* DC: F13, RST: F12, SDCS: E11 */
@@ -47,7 +60,7 @@ pub fn hw_init() {
 
 		/* BL: D15, CS: D14 */
 		(*GPIOD::ptr()).bsrr().write(|w| w.bits(0xFF | (1 << 15)));
-		(*GPIOE::ptr()).bsrr().write(|w| w.bits(0xFF));
+		(*GPIOE::ptr()).bsrr().write(|w| w.bits(0xFF | (1 << 11)));
 
 		/* All pullup */
 		(*GPIOD::ptr()).pupdr().write(|w| w.bits(0x5555));
@@ -83,8 +96,17 @@ pub fn hw_init() {
 		(*TIM2::ptr()).cr1().modify(|_, w| w.cen().enabled());
 	}
 
+	let gpioa = dp.GPIOA.split();
+	unsafe {
+		(*GPIOA::ptr()).ospeedr().write(|w| w.bits(0xFFFF));
+	}
+
+	let sclk = gpioa.pa5.into_alternate();
+	let miso = gpioa.pa6.into_alternate();
+	let mosi = gpioa.pa7.into_alternate();
+
 	let spi = dp.SPI1.spi(
-		(sclk, <NoMiso as core::default::Default>::default(), mosi),
+		(sclk, miso, mosi),
 		Mode {
 			polarity: Polarity::IdleLow,
 			phase: Phase::CaptureOnFirstTransition,
@@ -93,6 +115,7 @@ pub fn hw_init() {
 		&clocks,
 	);
 
+	let tx_pin = gpiod.pd8.into_alternate();
 	let mut tx = Serial::tx(
 		dp.USART3,
 		tx_pin,
@@ -103,20 +126,26 @@ pub fn hw_init() {
 		&clocks,
 	).unwrap();
 
-	writeln!(tx, "Button Press\n").unwrap();
+	writeln!(tx, "ITS-Board initialized\n").unwrap();
 
-	unsafe { MainSPI = Some(spi); }
+	HW { spi, tx }
 }
 
 pub fn timer_get() -> u32 {
 	unsafe { (*TIM2::ptr()).cnt().read().bits() }
 }
 
-pub fn spi_ll_xchg(val: u8) -> u8 {
-	let ib: [u8; 1] = [ val ];
-	let mut ob: [u8; 1] = [ 0 ];
-	unsafe { MainSPI.as_mut().unwrap().transfer(&mut ob, &ib); }
-	ob[0]
+pub fn spi_ll_xchg(spi: &mut Spi<SPI1>, val: u8) -> u8 {
+	unsafe {
+		delay_us(1);
+		while (read_volatile(SPI1_SR as *mut u32) & SPI_SR_TXE) == 0 {}
+		write_volatile(SPI1_DR as *mut u32, val.into());
+		while (read_volatile(SPI1_SR as *mut u32) & SPI_SR_RXNE) == 0 {}
+		while (read_volatile(SPI1_SR as *mut u32) & SPI_SR_BSY) != 0 {}
+		let v = read_volatile(SPI1_DR as *mut u32) as u8;
+		delay_us(1);
+		v
+	}
 }
 
 pub fn buttons_read() -> u8 {
