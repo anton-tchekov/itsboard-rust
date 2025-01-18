@@ -1,3 +1,5 @@
+// TODO
+
 /*#define GPIO_MODE_AF      0x02
 #define GPIO_SPEED_50MHZ  0x02
 #define GPIO_PUPD_DOWN    0x02*/
@@ -32,8 +34,6 @@ pub fn spi_ll_init()
 
 pub fn spi_ll_fast() {
 	unsafe {
-		// TODO
-
 		/*SPI1.CR1 &= ~(1 << 6);
 		SPI1.CR1 = (1 << 9) | (1 << 8) | (1 << 2) |
 			(SPI_BAUDRATEPRESCALER_16 & SPI_CR1_BR_Msk);
@@ -46,8 +46,6 @@ pub fn spi_ll_fast() {
 
 pub fn spi_ll_slow()
 {
-	// LATER
-
 	/*SPI1.CR1 &= ~(1 << 6);
 	SPI1.CR1 = (1 << 9) | (1 << 8) | (1 << 2) |
 		(SPI_BAUDRATEPRESCALER_256 & SPI_CR1_BR_Msk);

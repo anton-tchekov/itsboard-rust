@@ -27,6 +27,14 @@ ASM Dump:
 - LCD works
 - Font renderer works
 
+- Simple Demo:
+	- UART send message
+	- Rectangles on Screen
+	- Label that shows seconds counter
+	- Button reset counter to zero
+	- Button move rectangle around
+	- LED show counter in seconds
+
 ### Project
 
 - Control using buttons

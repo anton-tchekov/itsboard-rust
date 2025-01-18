@@ -199,7 +199,7 @@ pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
 	lcd_window_end();
 }
 
-// LATER
+// TODO
 /*
 pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32, void *handle,
 	int (*callback)(int, int, void *)) {

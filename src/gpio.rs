@@ -1,6 +1,3 @@
-//use stm32f4::stm32f429::*;
-//use stm32f4::stm32f429::RCC;
-
 use stm32f4xx_hal::pac::*;
 
 pub fn gpio_init() {

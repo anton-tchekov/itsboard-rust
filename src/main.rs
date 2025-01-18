@@ -24,8 +24,6 @@ use crate::spi::*;
 use crate::gpio::*;
 use crate::delay::*;
 
-//use stm32f4::stm32f429::{self};
-
 use panic_halt as _;
 
 #[cortex_m_rt::entry]
@@ -33,15 +31,12 @@ fn start() -> ! {
 	clock_init();
 	gpio_init();
 	timer_init();
-
-	/*
-	uart_init(115200);
-	uart_tx_str("Hello World");
-	*/
-
-	/*
 	spi_ll_init();
+	uart_init(115200);
 
+	uart_tx_str("Hello World");
+
+	/*
 	lcd_init(lcd_color(0, 0, 0));
 	lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
 	font_str(200, 200, "Hello World",
