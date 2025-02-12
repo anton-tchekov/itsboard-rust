@@ -181,8 +181,7 @@ pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16) {
 	let color_lo = (color & 0xFF) as u8;
 
 	lcd_window_start(x, y, w, h);
-	while count > 0
-	{
+	while count > 0 {
 		count -= 1;
 		spi_xchg(color_hi);
 		spi_xchg(color_lo);
