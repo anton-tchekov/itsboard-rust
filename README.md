@@ -20,29 +20,25 @@ ASM Dump:
 
 ## TODO
 
-### HW Basics
-
-- SPI works
-- Simple Demo:
-	- Test LCD callback
-	- Label that shows seconds counter
-	- Button reset counter to zero
-	- LED show counter in seconds
-
-### Project
-
-- SD Card, FAT32 Library / Driver
+- Remove Unsafe Code
+- GUI Emulator
+- SD Card Driver
+- FAT File System Driver
 - Control using buttons
 - Bottom bar with Icons/Current function mapping for buttons
 - Sampling / Buffering GPIO Port
-- 8 Channels
+- 8/16 Channels
 - Start capture on trigger
 - Select Sampling Frequency
 - Start / Stop capture
 - Measure Time with cursors
+
 - Hide / Show Channels
+	- Checkboxes
+
 - Zoom in / Zoom out
 - Move forward / backward on timeline
+
 - Protocol decoding
 	- SPI
 	- I2C
@@ -50,4 +46,5 @@ ASM Dump:
 	- OneWire
 
 - Send data over USB UART
-- Save capture/screenshots to SD Card
+- Save capture to SD card
+- Save screenshots to SD card

@@ -4,8 +4,10 @@ use crate::hw::*;
 pub const LCD_WIDTH: u32 = 480;
 pub const LCD_HEIGHT: u32 = 320;
 
-const LCD_INIT_CMDS: [u8; 103] =
-[
+pub const LCD_BLACK: u16 = 0x0000;
+pub const LCD_WHITE: u16 = 0xFFFF;
+
+const LCD_INIT_CMDS: [u8; 103] = [
 	0xF9,
 	2,
 	0x00,
@@ -111,41 +113,35 @@ const LCD_INIT_CMDS: [u8; 103] =
 	0x55
 ];
 
-fn lcd_param0()
-{
+fn lcd_param0() {
 	lcd_dc_1();
 	lcd_cs_0();
-	spi_ll_xchg(0);
+	spi_xchg(0);
 }
 
-fn lcd_param1(param: u8)
-{
-	spi_ll_xchg(param);
+fn lcd_param1(param: u8) {
+	spi_xchg(param);
 	lcd_cs_1();
 }
 
-fn lcd_param(param: u8)
-{
+fn lcd_param(param: u8) {
 	lcd_param0();
 	lcd_param1(param);
 }
 
-fn lcd_cmd(cmd: u8)
-{
+fn lcd_cmd(cmd: u8) {
 	lcd_dc_0();
 	lcd_cs_0();
-	spi_ll_xchg(cmd);
+	spi_xchg(cmd);
 	lcd_cs_1();
 }
 
-pub fn lcd_emit(color: u16)
-{
-	spi_ll_xchg((color >> 8) as u8);
-	spi_ll_xchg((color & 0xFF) as u8);
+pub fn lcd_emit(color: u16) {
+	spi_xchg((color >> 8) as u8);
+	spi_xchg((color & 0xFF) as u8);
 }
 
-fn lcd_reset()
-{
+fn lcd_reset() {
 	lcd_rst_1();
 	delay_ms(500);
 	lcd_rst_0();
@@ -154,8 +150,7 @@ fn lcd_reset()
 	delay_ms(500);
 }
 
-pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32)
-{
+pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32) {
 	let ex = x + w - 1;
 	let ey = y + h - 1;
 
@@ -176,13 +171,11 @@ pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32)
 	lcd_cs_0();
 }
 
-pub fn lcd_window_end()
-{
+pub fn lcd_window_end() {
 	lcd_cs_1();
 }
 
-pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
-{
+pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16) {
 	let mut count = w * h;
 	let color_hi = (color >> 8) as u8;
 	let color_lo = (color & 0xFF) as u8;
@@ -191,8 +184,8 @@ pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
 	while count > 0
 	{
 		count -= 1;
-		spi_ll_xchg(color_hi);
-		spi_ll_xchg(color_lo);
+		spi_xchg(color_hi);
+		spi_xchg(color_lo);
 	}
 
 	lcd_window_end();
@@ -215,8 +208,11 @@ pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32,
 	lcd_window_end();
 }
 
-pub fn lcd_init(color: u16)
-{
+pub fn lcd_clear(color: u16) {
+	lcd_rect(0, 0, LCD_WIDTH, LCD_HEIGHT, color);
+}
+
+pub fn lcd_init(color: u16) {
 	lcd_reset();
 
 	let mut i = 0;
@@ -243,12 +239,19 @@ pub fn lcd_init(color: u16)
 	lcd_cmd(0x11);
 	delay_ms(120);
 	lcd_cmd(0x29);
-	lcd_rect(0, 0, LCD_WIDTH, LCD_HEIGHT, color);
+	lcd_clear(color);
 }
 
-pub const fn lcd_color(r: u8, g: u8, b: u8) -> u16
-{
+pub const fn lcd_color(r: u8, g: u8, b: u8) -> u16 {
 	((r as u16 & 0xF8) << 8) |
 		((g as u16 & 0xFC) << 3) |
 		(b as u16 >> 3)
+}
+
+pub fn lcd_vline(x: u32, y: u32, h: u32, color: u16) {
+	lcd_rect(x, y, 1, h, color);
+}
+
+pub fn lcd_hline(x: u32, y: u32, w: u32, color: u16) {
+	lcd_rect(x, y, w, 1, color);
 }

@@ -135,7 +135,15 @@ pub fn timer_get() -> u32 {
 	unsafe { (*TIM2::ptr()).cnt().read().bits() }
 }
 
-pub fn spi_ll_xchg(val: u8) -> u8 {
+pub fn spi_slow() {
+
+}
+
+pub fn spi_fast() {
+
+}
+
+pub fn spi_xchg(val: u8) -> u8 {
 	unsafe {
 		delay_us(1);
 		while (read_volatile(SPI1_SR as *mut u32) & SPI_SR_TXE) == 0 {}
@@ -190,4 +198,12 @@ pub fn lcd_cs_0() {
 
 pub fn lcd_cs_1() {
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
+}
+
+pub fn sd_select() {
+
+}
+
+pub fn sd_deselect() {
+
 }

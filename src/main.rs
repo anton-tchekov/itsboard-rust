@@ -5,8 +5,19 @@ mod hw;
 mod font;
 mod delay;
 mod lcd;
+mod sd;
+mod gui;
+mod sample;
+mod decoder;
 mod terminus16;
 mod terminus16_bold;
+mod fat;
+mod bytewriter;
+mod decoder_spi;
+mod decoder_i2c;
+mod decoder_onewire;
+mod decoder_uart;
+mod decoders;
 
 use crate::hw::*;
 use crate::terminus16::*;
@@ -14,67 +25,28 @@ use crate::terminus16_bold::*;
 use crate::lcd::*;
 use crate::font::*;
 use crate::delay::*;
+use crate::decoder::*;
+use crate::gui::*;
+use crate::sample::*;
+use crate::sd::*;
+use crate::fat::*;
+use crate::bytewriter::*;
+use crate::decoder_spi::*;
 use core::fmt::Write;
-use core::fmt;
-use core::str;
+
 use panic_halt as _;
-
-pub struct ByteMutWriter<'a> {
-	buf: &'a mut [u8],
-	cursor: usize,
-}
-
-impl<'a> ByteMutWriter<'a> {
-	pub fn new(buf: &'a mut [u8]) -> Self {
-		ByteMutWriter { buf, cursor: 0 }
-	}
-
-	pub fn as_str(&self) -> &str {
-		str::from_utf8(&self.buf[0..self.cursor]).unwrap()
-	}
-
-	#[inline]
-	pub fn capacity(&self) -> usize {
-		self.buf.len()
-	}
-
-	pub fn clear(&mut self) {
-		self.cursor = 0;
-	}
-
-	pub fn len(&self) -> usize {
-		self.cursor
-	}
-
-	pub fn empty(&self) -> bool {
-		self.cursor == 0
-	}
-
-	pub fn full(&self) -> bool {
-		self.capacity() == self.cursor
-	}
-}
-
-impl fmt::Write for ByteMutWriter<'_> {
-	fn write_str(&mut self, s: &str) -> fmt::Result {
-		let cap = self.capacity();
-		for (i, &b) in self.buf[self.cursor..cap]
-			.iter_mut()
-			.zip(s.as_bytes().iter())
-		{
-			*i = b;
-		}
-		self.cursor = usize::min(cap, self.cursor + s.as_bytes().len());
-		Ok(())
-	}
-}
 
 #[cortex_m_rt::entry]
 fn start() -> ! {
 	let mut hw = hw_init();
 	lcd_init(lcd_color(0, 0, 0));
-	delay_ms(100);
-	lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
+
+	let gui = Gui::init();
+
+	delay_ms(2000);
+	gui.base();
+
+	/*lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
 	lcd_rect(30, 30, 100, 100, lcd_color(0, 255, 0));
 	lcd_rect(50, 50, 100, 100, lcd_color(0, 0, 255));
 
@@ -82,7 +54,7 @@ fn start() -> ! {
 		lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16_BOLD);
 
 	lcd_str(200, 216, "Finally it works ...",
-		lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16);
+		lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16);*/
 
 	blueclear(0xFF);
 	yellowclear(0xFF);
@@ -97,7 +69,7 @@ fn start() -> ! {
 
 		let mut buf = [0u8; 20];
 		let mut buf = ByteMutWriter::new(&mut buf[..]);
-	  
+
 		buf.clear();
 		write!(&mut buf, "Seconds: {:>10}", seconds).unwrap();
 
