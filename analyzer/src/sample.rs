@@ -5,6 +5,7 @@
 pub type Sample = u8;
 
 pub struct SampleBuffer {
+	sample_rate: u32,
 	samples: &'static [Sample],
 	len: usize
 }
