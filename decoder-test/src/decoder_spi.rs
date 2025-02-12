@@ -1,5 +1,5 @@
 use crate::decoder::*;
-use crate::SampleBuffer;
+use crate::sample::*;
 
 struct DecoderSPI {
 	mosi_pin: DecoderPin,

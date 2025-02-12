@@ -1,5 +1,5 @@
 use crate::decoder::*;
-use crate::SampleBuffer;
+use crate::sample::*;
 
 static BAUDRATES: &'static [i32] = &[
 	300,

@@ -1,5 +1,5 @@
 use crate::decoder::*;
-use crate::SampleBuffer;
+use crate::sample::*;
 
 pub struct DecoderOneWire {
 	onewire_pin: DecoderPin

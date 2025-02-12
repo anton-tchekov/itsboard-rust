@@ -1,4 +1,4 @@
-use crate::SampleBuffer;
+use crate::sample::*;
 
 pub type DecoderPin = i32;
 
