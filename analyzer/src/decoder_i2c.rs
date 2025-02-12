@@ -6,7 +6,7 @@ pub struct DecoderI2C {
 	scl_pin: DecoderPin
 }
 
-impl DecoderI2C {
+impl Decoder for DecoderI2C {
 	fn decode(&self, samples: &SampleBuffer) {
 		// TODO
 	}

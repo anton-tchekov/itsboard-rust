@@ -40,10 +40,10 @@ ASM Dump:
 - Move forward / backward on timeline
 
 - Protocol decoding
-	- SPI
-	- I2C
-	- UART
-	- OneWire
+	1. I2C
+	2. UART
+	3. SPI
+	4. OneWire
 
 - Send data over USB UART
 - Save capture to SD card
