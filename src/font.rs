@@ -6,12 +6,7 @@ pub struct Font {
 	pub bitmap: &'static [u8]
 }
 
-pub fn lcd_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
-	let mut o = c as u32;
-	if o < 32 {
-		o = 127;
-	}
-
+pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font) {
 	lcd_window_start(x, y, font.width, font.height);
 	let stride = (font.width + 7) >> 3;
 	let offset = (o - 32) * font.height * stride;
@@ -32,6 +27,15 @@ pub fn lcd_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
 	}
 
 	lcd_window_end();
+}
+
+pub fn lcd_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
+	let mut o = c as u32;
+	if o < 32 {
+		o = 127;
+	}
+
+	lcd_font(x, y, o, fg, bg, font);
 }
 
 pub fn lcd_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font) {

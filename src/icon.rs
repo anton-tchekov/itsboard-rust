@@ -1,23 +1,12 @@
-struct IconBW {
-	width: u32,
-	height: u32,
-	data: &'static [u8]
+use crate::terminus16::*;
+use crate::lcd::*;
+use crate::font::*;
+
+pub fn lcd_icon_color(x: u32, y: u32, icon: u32, fg: u16, bg: u16) {
+	lcd_font(x, y, icon, fg, bg, &TERMINUS16);
+	lcd_font(x + TERMINUS16.width, y, icon + 1, fg, bg, &TERMINUS16);
 }
 
-struct IconRGB565 {
-	width: u32,
-	height: u32,
-	data: &'static [u16]
-}
-
-impl IconBW {
-	fn render(&self) {
-
-	}
-}
-
-impl IconRGB565 {
-	fn render(&self) {
-
-	}
+pub fn lcd_icon_bw(x: u32, y: u32, icon: u32) {
+	lcd_icon_color(x, y, icon, LCD_WHITE, LCD_BLACK);
 }
