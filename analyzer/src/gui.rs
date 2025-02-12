@@ -135,10 +135,12 @@ impl Gui {
 
 	}
 }
-fn channel_str(channel: u32) -> &[u8;3] {
 
+fn channel_str(channel: u32, out: &mut [u8]) {
+	out[0] = b'D';
+	out[1] = (channel / 10) as u8 + b'0';
+	out[2] = (channel % 10) as u8 + b'0';
 }
 
 fn channel_render() {
-
 }

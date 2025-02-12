@@ -1,4 +1,3 @@
-use sdl2::image::{self, LoadTexture, InitFlag};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
@@ -21,7 +20,7 @@ impl Graphics {
 
 		let events = sdl_context.event_pump()?;
 
-		Ok(Graphics { canvas, texture, events })
+		Ok(Graphics { canvas, events })
 	}
 
 	pub fn clear(&mut self) {

@@ -1,4 +1,5 @@
 use crate::lcd::*;
+use crate::terminus16::*;
 
 pub struct Font {
 	pub width: u32,
