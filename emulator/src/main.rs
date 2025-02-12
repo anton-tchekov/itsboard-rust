@@ -21,7 +21,7 @@ fn main() -> Result<(), String> {
 		}
 
 		gfx.clear();
-
+		gfx.blit();
 		gfx.present();
 	}
 

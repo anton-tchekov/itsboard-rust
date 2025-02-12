@@ -1,4 +1,5 @@
 use crate::decoder::*;
+use crate::SampleBuffer;
 
 struct DecoderSPI {
 	mosi_pin: DecoderPin,
@@ -7,21 +8,8 @@ struct DecoderSPI {
 	cs_pin: DecoderPin
 }
 
-impl DecoderSPI {
+impl Decoder for DecoderSPI {
+	fn decode(&self, samples: &SampleBuffer) {
+		// TODO
+	}
 }
-
-fn decode_spi() {
-}
-
-static SETTINGS_SPI: [DecoderSetting; 4] = [
-	DecoderSetting { name: "MISO Pin" },
-	DecoderSetting { name: "MOSI Pin" },
-	DecoderSetting { name: "SCK Pin" },
-	DecoderSetting { name: "CS Pin" },
-];
-
-pub static DECODER_SPI: ProtocolDecoder = ProtocolDecoder {
-	name: "SPI",
-	settings: &SETTINGS_SPI,
-	decode: decode_spi
-};

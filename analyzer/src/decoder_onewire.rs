@@ -1,22 +1,12 @@
 use crate::decoder::*;
+use crate::SampleBuffer;
 
-struct DecoderOneWire {
+pub struct DecoderOneWire {
 	onewire_pin: DecoderPin
 }
 
-impl DecoderOneWire {
+impl Decoder for DecoderOneWire {
+	fn decode(&self, samples: &SampleBuffer) {
+		// TODO
+	}
 }
-
-fn decode_onewire() {
-
-}
-
-static SETTINGS_ONEWIRE: [DecoderSetting; 1] = [
-	DecoderSetting { name: "OneWire Pin" },
-];
-
-pub static DECODER_ONEWIRE: ProtocolDecoder = ProtocolDecoder {
-	name: "OneWire",
-	settings: &SETTINGS_ONEWIRE,
-	decode: decode_onewire
-};

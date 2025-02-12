@@ -1,5 +1,6 @@
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use crate::lcd::*;
 
 pub struct Graphics {
 	pub canvas: sdl2::render::WindowCanvas,
@@ -26,6 +27,15 @@ impl Graphics {
 	pub fn clear(&mut self) {
 		self.canvas.set_draw_color(Color::RGB(0, 0, 0));
 		self.canvas.clear();
+	}
+
+	pub fn blit(&mut self) {
+		{
+			let img = &IMAGE.lock().unwrap().image;
+			// Copy img to framebuffer
+		}
+
+		// Blit framebuffer to screen
 	}
 
 	pub fn present(&mut self) {

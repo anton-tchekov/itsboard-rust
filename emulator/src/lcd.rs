@@ -8,8 +8,8 @@ pub const LCD_WHITE: u16 = 0xFFFF;
 
 pub const LCD_SIZE: usize = LCD_WIDTH as usize * LCD_HEIGHT as usize;
 
-struct PrivDat {
-	image: Box<[u32; LCD_SIZE]>,
+pub struct PrivDat {
+	pub image: Box<[u32; LCD_SIZE]>,
 	wx: u32,
 	wy: u32,
 	ww: u32,
@@ -18,7 +18,7 @@ struct PrivDat {
 	py: u32
 }
 
-static IMAGE: LazyLock<Mutex<PrivDat>> =
+pub static IMAGE: LazyLock<Mutex<PrivDat>> =
 	LazyLock::new(|| Mutex::new(
 		PrivDat {
 			image: Box::new([0; LCD_SIZE]),

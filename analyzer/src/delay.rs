@@ -1,3 +1,5 @@
+// Busy-loop delay functions
+
 use crate::hw::*;
 
 pub fn delay_us(us: u32) {

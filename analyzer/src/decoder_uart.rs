@@ -1,4 +1,5 @@
 use crate::decoder::*;
+use crate::SampleBuffer;
 
 static BAUDRATES: &'static [i32] = &[
 	300,
@@ -42,24 +43,8 @@ pub struct DecoderUart {
 	baudrate: u32
 }
 
-impl DecoderUart {
+impl Decoder for DecoderUart {
+	fn decode(&self, samples: &SampleBuffer) {
+		// TODO
+	}
 }
-
-fn decode_uart() {
-
-}
-
-static SETTINGS_UART: [DecoderSetting; 6] = [
-	DecoderSetting { name: "RX Pin" },
-	DecoderSetting { name: "TX Pin" },
-	DecoderSetting { name: "Baudrate" },
-	DecoderSetting { name: "Data Bits" },
-	DecoderSetting { name: "Parity" },
-	DecoderSetting { name: "Stop Bits" }
-];
-
-pub static DECODER_UART: ProtocolDecoder = ProtocolDecoder {
-	name: "UART",
-	settings: &SETTINGS_UART,
-	decode: decode_uart
-};
