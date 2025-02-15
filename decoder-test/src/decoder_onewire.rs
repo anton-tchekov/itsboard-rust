@@ -6,7 +6,8 @@ pub struct DecoderOneWire {
 }
 
 impl Decoder for DecoderOneWire {
-	fn decode(&self, samples: &SampleBuffer) {
+	fn decode(&self, samples: &SampleBuffer, range: Range, output: &mut [Section]) -> usize {
 		// TODO
+		0
 	}
 }

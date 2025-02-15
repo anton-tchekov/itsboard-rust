@@ -160,6 +160,22 @@ pub fn buttons_read() -> u8 {
 	(unsafe { (*GPIOF::ptr()).idr().read().bits() } & 0xFF) as u8
 }
 
+pub fn blueread() -> u8 {
+	(unsafe { (*GPIOD::ptr()).idr().read().bits() & 0xFF }) as u8
+}
+
+pub fn yellowread() -> u8 {
+	(unsafe { (*GPIOE::ptr()).idr().read().bits() & 0xFF }) as u8
+}
+
+pub fn blueinput() {
+	unsafe { (*GPIOD::ptr()).moder().modify(|r, w| w.bits(r.bits() & !0xFFFF)); }
+}
+
+pub fn yellowinput() {
+	unsafe { (*GPIOE::ptr()).moder().modify(|r, w| w.bits(r.bits() & !0xFFFF)); }
+}
+
 pub fn blueset(val: u8) {
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(val as u32)); }
 }

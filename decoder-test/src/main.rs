@@ -8,7 +8,7 @@ mod sample;
 use std::fs::read_to_string;
 
 use crate::sample::SampleBuffer;
-use crate::decoder::Decoder;
+use crate::decoder::{Decoder, Range, Section};
 use crate::decoder_uart::{Parity, DataBits, StopBits, DecoderUart};
 
 // Die Datei wurde mit einer Sample Rate von 1.000.000 pro sek aufgenommen
@@ -66,5 +66,7 @@ fn main() {
 		baudrate: 9600
 	};
 
-	uart.decode(&buf);
+	let mut out_sections: [Section; 128] = [Section::default(); 128];
+
+	let count = uart.decode(&buf, Range { start: 0, len: buf.len, }, &mut out_sections);
 }

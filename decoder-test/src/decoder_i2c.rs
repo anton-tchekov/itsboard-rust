@@ -7,7 +7,8 @@ pub struct DecoderI2C {
 }
 
 impl Decoder for DecoderI2C {
-	fn decode(&self, samples: &SampleBuffer) {
+	fn decode(&self, samples: &SampleBuffer, range: Range, output: &mut [Section]) -> usize {
 		// TODO
+		0
 	}
 }

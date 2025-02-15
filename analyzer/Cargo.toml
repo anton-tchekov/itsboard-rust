@@ -20,4 +20,4 @@ features = ["stm32f429"]
 codegen-units = 1
 incremental = false
 debug = false
-lto = false
+lto = true

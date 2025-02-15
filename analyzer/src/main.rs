@@ -53,6 +53,7 @@ fn start() -> ! {
 		len: 0
 	};
 
+	blueinput();
 	sample_blocking(&mut buf);
 
 	for i in 0..buf.len {

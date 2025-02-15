@@ -21,7 +21,7 @@ impl SampleBuffer<'_> {
 const INTERVAL: u32 = 90;
 
 fn sample() -> u8 {
-	buttons_read()
+	blueread()
 }
 
 // 1. Iteration, just collect samples in a fixed loop

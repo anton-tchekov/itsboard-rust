@@ -2,6 +2,7 @@ use crate::lcd::*;
 use crate::font::*;
 use crate::TERMINUS16_BOLD;
 use crate::TERMINUS16;
+use crate::terminus16::*;
 use crate::sample::*;
 
 const BUTTON_COUNT: usize = 8;
@@ -89,6 +90,24 @@ impl Gui {
 			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
 				LCD_HEIGHT - ICON_BOX, ICON_BOX, LCD_WHITE);
 		}
+
+		let mut x = LCD_WIDTH - 8 * (ICON_BOX + 1) + 7;
+		let y = LCD_HEIGHT - ICON_BOX + 7;
+		lcd_icon_bw(x, y, ICON_EXIT);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_LEFT);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_UP);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_ENTER);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_DOWN);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_RIGHT);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_SCREENSHOT);
+		x += ICON_BOX + 1;
+		lcd_icon_bw(x, y, ICON_FOLDER);
 	}
 
 	pub fn base(&self) {
