@@ -46,6 +46,20 @@ fn start() -> ! {
 	delay_ms(2000);
 	gui.base();
 
+	let mut data: [Sample; 100_000] = [0; 100_000];
+	let mut buf = SampleBuffer {
+		sample_rate: 1_000_000,
+		samples: &mut data,
+		len: 0
+	};
+
+	sample_blocking(&mut buf);
+
+	for i in 0..buf.len {
+		let sample = buf.samples[i];
+		writeln!(hw.tx, "{:#08b}", sample);
+	}
+
 	/*lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
 	lcd_rect(30, 30, 100, 100, lcd_color(0, 255, 0));
 	lcd_rect(50, 50, 100, 100, lcd_color(0, 0, 255));
@@ -64,8 +78,6 @@ fn start() -> ! {
 	loop {
 		let ctr = timer_get();
 		let seconds = ctr / (TICKS_PER_US * 1000 * 1000);
-
-		//let msg = format!();
 
 		let mut buf = [0u8; 20];
 		let mut buf = ByteMutWriter::new(&mut buf[..]);

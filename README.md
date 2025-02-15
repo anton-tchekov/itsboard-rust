@@ -29,7 +29,7 @@ ASM Dump:
 - 8 Channels
 - Select Sampling Frequency in GUI
 - Blocking Sample Loop
-- Start capture on trigger
+- Start capture on Start + trigger
 - Hide / Show Channels with Checkboxes
 - Zoom in / Zoom out
 - Move forward / backward on timeline
@@ -48,6 +48,6 @@ ASM Dump:
 - Concurrent Sample Loop
 - Start / Stop capture
 - Measure Time with cursors
-- Send more data over UART
+- Send all data over UART
 - Save capture to SD card
 - Save screenshots to SD card

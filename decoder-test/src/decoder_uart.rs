@@ -15,7 +15,7 @@ static BAUDRATES: &'static [i32] = &[
 	115200
 ];
 
-pub enum ParitySetting {
+pub enum Parity {
 	None,
 	Even,
 	Odd
@@ -35,12 +35,12 @@ pub enum StopBits {
 }
 
 pub struct DecoderUart {
-	rx_pin: DecoderPin,
-	tx_pin: DecoderPin,
-	databits: DataBits,
-	parity: ParitySetting,
-	stopbits: StopBits,
-	baudrate: u32
+	pub rx_pin: DecoderPin,
+	pub tx_pin: DecoderPin,
+	pub databits: DataBits,
+	pub parity: Parity,
+	pub stopbits: StopBits,
+	pub baudrate: u32
 }
 
 impl Decoder for DecoderUart {
