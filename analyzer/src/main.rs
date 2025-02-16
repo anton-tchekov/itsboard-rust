@@ -8,6 +8,7 @@ mod lcd;
 mod sd;
 mod gui;
 mod sample;
+mod sampler;
 mod decoder;
 mod terminus16;
 mod terminus16_bold;
@@ -19,6 +20,7 @@ mod decoder_onewire;
 mod decoder_uart;
 mod decoders;
 
+use crate::sampler::*;
 use crate::hw::*;
 use crate::terminus16::*;
 use crate::terminus16_bold::*;

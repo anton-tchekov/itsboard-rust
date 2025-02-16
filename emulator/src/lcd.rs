@@ -51,7 +51,7 @@ pub fn lcd_emit(color: u16) {
 	let g8 = (g << 2) | (g >> 4);
 	let b8 = (b << 3) | (b >> 2);
 
-	v.image[idx + 0] = b8 as u8;
+	v.image[idx] = b8 as u8;
 	v.image[idx + 1] = g8 as u8;
 	v.image[idx + 2] = r8 as u8;
 	v.image[idx + 3] = 0xFF;
