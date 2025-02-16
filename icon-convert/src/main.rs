@@ -13,7 +13,7 @@ const START_IDX: u32 = 133;
 struct State {
 	font: String,
 	consts: String,
-	idx: u32,
+	idx: u32
 }
 
 fn is_set(pixel: [u8; 4]) -> bool {
