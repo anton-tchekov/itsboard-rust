@@ -21,7 +21,6 @@ ASM Dump:
 ## TODO
 
 ### Ferien
-- Remove Unsafe Code
 - GUI Emulator
 - Control using buttons
 - Bottom bar with Icons/Current function mapping for buttons

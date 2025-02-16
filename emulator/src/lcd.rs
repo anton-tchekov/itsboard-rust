@@ -3,13 +3,21 @@ use std::sync::{LazyLock, Mutex};
 pub const LCD_WIDTH: u32 = 480;
 pub const LCD_HEIGHT: u32 = 320;
 
-pub const LCD_BLACK: u16 = 0x0000;
-pub const LCD_WHITE: u16 = 0xFFFF;
+pub const LCD_BLACK   : u16 = 0x0000;
+pub const LCD_WHITE   : u16 = 0xFFFF;
+pub const LCD_RED     : u16 = 0xF800;
+pub const LCD_YELLOW  : u16 = 0xFFE0;
+pub const LCD_GREEN   : u16 = 0x07E0;
+pub const LCD_CYAN    : u16 = 0x07FF;
+pub const LCD_BLUE    : u16 = 0x001F;
+pub const LCD_MAGENTA : u16 = 0xF81F;
 
 pub const LCD_SIZE: usize = LCD_WIDTH as usize * LCD_HEIGHT as usize;
 
+pub const LCD_BYTES: usize = LCD_SIZE * 4;
+
 pub struct PrivDat {
-	pub image: Box<[u32; LCD_SIZE]>,
+	pub image: Box<[u8; LCD_BYTES]>,
 	wx: u32,
 	wy: u32,
 	ww: u32,
@@ -21,7 +29,7 @@ pub struct PrivDat {
 pub static IMAGE: LazyLock<Mutex<PrivDat>> =
 	LazyLock::new(|| Mutex::new(
 		PrivDat {
-			image: Box::new([0; LCD_SIZE]),
+			image: Box::new([0; LCD_BYTES]),
 			wx: 0,
 			wy: 0,
 			ww: 0,
@@ -30,23 +38,24 @@ pub static IMAGE: LazyLock<Mutex<PrivDat>> =
 			py: 0
 		}));
 
-const fn rgb565_to_rgba(rgb565: u16) -> u32 {
-	let r = (rgb565 >> 11) & 0x1F;
-	let g = (rgb565 >> 5) & 0x3F;
-	let b = rgb565 & 0x1F;
+pub fn lcd_emit(color: u16) {
+	let mut v = IMAGE.lock().unwrap();
+	let idx = ((v.wy as usize + v.py as usize) * (LCD_WIDTH as usize) +
+		(v.wx as usize + v.px as usize)) * 4;
+
+	let r = (color >> 11) & 0x1F;
+	let g = (color >> 5) & 0x3F;
+	let b = color & 0x1F;
 
 	let r8 = (r << 3) | (r >> 2);
 	let g8 = (g << 2) | (g >> 4);
 	let b8 = (b << 3) | (b >> 2);
 
-	(0xFF << 24) | ((r8 as u32) << 16) | ((g8 as u32) << 8) | (b8 as u32)
-}
+	v.image[idx + 0] = b8 as u8;
+	v.image[idx + 1] = g8 as u8;
+	v.image[idx + 2] = r8 as u8;
+	v.image[idx + 3] = 0xFF;
 
-pub fn lcd_emit(color: u16) {
-	let mut v = IMAGE.lock().unwrap();
-	let idx = (v.wy as usize + v.py as usize) * (LCD_WIDTH as usize) +
-		(v.wx as usize + v.px as usize);
-	v.image[idx] = rgb565_to_rgba(color);
 	v.px += 1;
 	if v.px == v.ww {
 		v.px = 0;
