@@ -16,6 +16,8 @@ use crate::decoder_uart::{Parity, DataBits, StopBits, DecoderUart};
 // Channel 0 -> Bit 0 etc.
 // Die Dateien sind als .txt, damit man leichter manuell anpassen kann vlt.
 
+// UART Test files Generator ist im ordner testdata-generator
+
 // data/uart.txt
 // Ist die Kommunikation über UART mit 9600 Baud, 8N1
 // RX Pin: 1
@@ -49,6 +51,8 @@ fn main() {
 
 		data.push(byte);
 	}
+
+	println!("Loaded data len = {}", data.len());
 	// ----------------
 
 	let buf = SampleBuffer {
