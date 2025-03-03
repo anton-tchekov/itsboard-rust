@@ -9,6 +9,11 @@ emu:
 	cp src/terminus16_bold.rs ../emulator/src/terminus16_bold.rs
 	cp src/terminus16.rs ../emulator/src/terminus16.rs
 	cp src/sample.rs ../emulator/src/sample.rs
+	cp src/decoder.rs ../emulator/src/decoder.rs
+	cp src/decoder_uart.rs ../emulator/src/decoder_uart.rs
+	cp src/decoder_spi.rs ../emulator/src/decoder_spi.rs
+	cp src/decoder_i2c.rs ../emulator/src/decoder_i2c.rs
+	cp src/decoder_onewire.rs ../emulator/src/decoder_onewire.rs
 	cd ../emulator && cargo run
 
 dump:

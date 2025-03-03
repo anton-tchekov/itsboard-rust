@@ -5,6 +5,11 @@ mod gui;
 mod terminus16;
 mod terminus16_bold;
 mod font;
+mod decoder;
+mod decoder_uart;
+mod decoder_spi;
+mod decoder_i2c;
+mod decoder_onewire;
 
 use crate::font::*;
 use crate::graphics::*;
