@@ -4,6 +4,9 @@ use crate::terminus16_bold::*;
 use crate::terminus16::*;
 use crate::sample::*;
 use crate::decoder_uart::*;
+use crate::decoder_spi::*;
+use crate::decoder_i2c::*;
+use crate::decoder_onewire::*;
 use crate::decoder::*;
 
 const BUTTON_COUNT: usize = 8;
@@ -14,13 +17,17 @@ const COLOR_SEL: u16 = lcd_color(0, 128, 255);
 const BORDER_SEL: u32 = 2;
 const BORDER_DEFAULT: u32 = 1;
 const TITLE_FONT: &Font = &TERMINUS16_BOLD;
-const BUTTON_HEIGHT: u32 = 30;
+const BUTTON_HEIGHT: u32 = 26;
 const BUTTON_FONT: &Font = &TERMINUS16_BOLD;
 const DECODER_COUNT: u32 = 4;
 
 const TITLE_Y: u32 = ICON_BOX / 2 - TITLE_FONT.width;
 const TITLE_X: u32 = TITLE_Y;
 const CH_Y_BEGIN: u32 = 48;
+
+const DA_PADDING: u32 = 10;
+const Y_BEGIN: u32 = ICON_BOX + 1;
+const DA_BTN_WIDTH: u32 = 100;
 
 enum Action {
 	Up,
@@ -30,43 +37,6 @@ enum Action {
 	Enter,
 	Escape
 }
-
-// >>> Main Page: View Waveforms
-// Controls: Start capture
-// Up down left right
-// Zoom in, Zoom out
-// Settings
-// Screenshot
-
-// >>> Settings Page:
-// Controls:
-// Enable/Disable Channels via checkboxes
-// Add protocol decoder
-// Save capture
-// Load capture
-//
-// Actions:
-// Up down left right
-// Enter
-// Exit
-
-// >>> Add protocol decoder
-// List of all Protocol decoders + Cancel
-
-// Add concrete protocol decoder
-// Select pins: dropdown
-// select baudrate etc: dropdown
-// cancel and add button
-
-// Save capture
-// on screen Keyboard
-// textbox for filename
-// save and cancel
-// move cursor + backspace
-
-// Load capture
-// cancel on top
-// List of files: enter to select
 
 enum Mode {
 	Init,
@@ -102,13 +72,23 @@ pub struct Button {
 
 impl Button {
 	fn render(&self, sel: bool) {
-		let color = if sel { COLOR_SEL } else { LCD_WHITE };
-		let border = if sel { BORDER_SEL } else { BORDER_DEFAULT };
-
 		let text_x = self.x + self.w / 2;
 		let text_y = self.y + BUTTON_HEIGHT / 2;
 		lcd_str_center(text_x, text_y, self.text,
 				LCD_WHITE, LCD_BLACK, &BUTTON_FONT);
+
+		if sel { self.select(); } else { self.deselect(); }
+	}
+
+	fn undraw(&self) {
+		let text_w = BUTTON_FONT.width(self.text);
+		let text_h = BUTTON_FONT.height;
+		let text_x = self.x + self.w / 2 - text_w / 2;
+		let text_y = self.y + BUTTON_HEIGHT / 2 - text_h / 2;
+		lcd_rect(text_x, text_y, text_w, text_h, LCD_BLACK);
+
+		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
+			BORDER_SEL, LCD_BLACK);
 	}
 
 	fn select(&self) {
@@ -118,9 +98,9 @@ impl Button {
 
 	fn deselect(&self) {
 		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
-			BORDER_DEFAULT, COLOR_SEL);
-		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
-			BORDER_DEFAULT, COLOR_SEL);
+			BORDER_DEFAULT, LCD_BLACK);
+		lcd_rect_border(self.x + 1, self.y + 1, self.w - 2, BUTTON_HEIGHT - 2,
+			BORDER_DEFAULT, LCD_WHITE);
 	}
 }
 
@@ -356,7 +336,8 @@ pub struct Gui {
 	pixels_per_sample: u32,
 	cur_title: &'static str,
 	mode: Mode,
-	selected: u32
+	selected: u32,
+	optcnt: u32
 }
 
 impl Gui {
@@ -389,7 +370,8 @@ impl Gui {
 			pixels_per_sample: 5,
 			cur_title: "",
 			mode: Mode::Init,
-			selected: 0
+			selected: 0,
+			optcnt: 0
 		};
 
 		gui.title_set("ITS-Board Logic Analyzer V0.1");
@@ -458,7 +440,7 @@ impl Gui {
 			match self.mode {
 				Mode::Init => {
 					self.icon_box();
-					self.ch_open();
+					self.ma_open();
 				}
 				Mode::Main => { self.ma_action(action); }
 				Mode::Channels => { self.ch_action(action); }
@@ -472,20 +454,60 @@ impl Gui {
 		}
 	}
 
-
 	fn m_reset(&mut self, new_mode: Mode) {
 		self.selected = 0;
 		self.mode = new_mode;
 	}
 
+	/* === CD COMMON === */
+	fn select_render(&mut self, select: &Select) {
+		let new_cnt = select.options.len() as u32;
+
+		if self.optcnt > new_cnt {
+
+		}
+
+		for option in select.options {
+		}
+	}
+
+	fn input_render(&mut self, input: &Input, y: u32, sel: bool) {
+		lcd_str(DA_PADDING,
+			Y_BEGIN + DA_PADDING + y * 40,
+			input.label,
+			LCD_WHITE, LCD_BLACK, &TERMINUS16);
+
+		lcd_rect_border(DA_PADDING, Y_BEGIN + DA_PADDING + y * 40 + 16,
+			100, 20, 1, LCD_WHITE);
+
+		lcd_str(DA_PADDING + 2,
+			Y_BEGIN + DA_PADDING + y * 40 + 18,
+			"aaa.ggg.111",
+			LCD_WHITE, LCD_BLACK, &TERMINUS16);
+
+		if sel {
+			self.select_render(input.select);
+		}
+	}
+
+	fn cd_render(&mut self, inputs: &[&Input]) {
+		let mut y = 0;
+		for input in inputs {
+			self.input_render(input, y, y == 0);
+			y += 1;
+		}
+	}
+
 	/* === U MODE === */
 	fn u_open(&mut self) {
 		self.m_reset(Mode::DecoderUart);
+		self.da_undraw();
 		self.u_render();
 	}
 
 	fn u_render(&mut self) {
-
+		self.title_set("UART Decoder");
+		self.cd_render(&UART_INPUTS);
 	}
 
 	fn u_update(&mut self) {
@@ -494,6 +516,15 @@ impl Gui {
 
 	fn u_action(&mut self, action: Action) {
 		match action {
+			Action::Up => {
+				if self.selected > 0 {
+					self.selected -= 1;
+				}
+			}
+			Action::Down => {
+
+			}
+			Action::Escape => { self.da_open(); }
 			_ => {}
 		};
 	}
@@ -501,46 +532,98 @@ impl Gui {
 	/* === S MODE === */
 	fn s_open(&mut self) {
 		self.m_reset(Mode::DecoderSpi);
+		self.da_undraw();
 		self.s_render();
 	}
 
 	fn s_render(&mut self) {
-
+		self.title_set("SPI Decoder");
+		self.cd_render(&SPI_INPUTS);
 	}
 
 	fn s_action(&mut self, action: Action) {
+		match action {
+			Action::Escape => { self.da_open(); }
+			_ => {}
+		}
+	}
+
+	fn s_exit(&mut self) {
 
 	}
 
 	/* === I MODE === */
 	fn i_open(&mut self) {
 		self.m_reset(Mode::DecoderI2C);
+		self.da_undraw();
 		self.i_render();
 	}
 
 	fn i_render(&mut self) {
-
+		self.title_set("I2C Decoder");
+		self.cd_render(&I2C_INPUTS);
 	}
 
 	fn i_action(&mut self, action: Action) {
-
+		match action {
+			Action::Escape => { self.da_open(); }
+			_ => {}
+		}
 	}
 
 	fn i_exit(&mut self) {
-
+		let d = DecoderI2C {
+			sda_pin: item_to_pin(1),
+			scl_pin: item_to_pin(1)
+		};
 	}
 
 	/* === O MODE === */
 	fn o_open(&mut self) {
 		self.m_reset(Mode::DecoderOneWire);
+		self.da_undraw();
+		self.o_render();
+	}
+
+	fn o_render(&mut self) {
+		self.title_set("OneWire Decoder");
+		self.cd_render(&ONEWIRE_INPUTS);
 	}
 
 	fn o_action(&mut self, action: Action) {
+		match action {
+			Action::Escape => { self.da_open(); }
+			_ => {}
+		}
+	}
+
+	fn o_exit(&mut self) {
 
 	}
 
 	/* === MA MODE === */
+	fn ma_update(&mut self, i: u32, sel: bool) {
+		const ICONS: [u32; 2] = [ ICON_ADD, ICON_SETTINGS ];
+		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
+		let x = i * (ICON_BOX + 1) + LCD_WIDTH - 2 * (ICON_BOX + 1) + 7;
+		lcd_icon_color(x, 7, ICONS[i as usize], fg, LCD_BLACK);
+	}
+
+	fn ma_top_box(&mut self) {
+		for i in 0..2 {
+			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
+				0, ICON_BOX, LCD_WHITE);
+			self.ma_update(i, i == 0);
+		}
+	}
+
 	fn ma_open(&mut self) {
+		self.title_set("Logic Analyzer");
+		lcd_rect(0, ICON_BOX + 1, LCD_WIDTH, LCD_HEIGHT - 2 * (ICON_BOX + 2),
+			LCD_BLACK);
+		self.m_reset(Mode::Main);
+		self.ma_top_box();
+
 		// Icon Visible Chan
 		// Icon Add Decoder
 	}
@@ -561,12 +644,16 @@ impl Gui {
 			}
 			Action::Left => {
 				if self.selected > 0 {
+					self.ma_update(self.selected, false);
 					self.selected -= 1;
+					self.ma_update(self.selected, true);
 				}
 			}
 			Action::Right => {
-				if self.selected < 2 {
+				if self.selected < 1 {
+					self.ma_update(self.selected, false);
 					self.selected += 1;
+					self.ma_update(self.selected, true);
 				}
 			}
 			Action::Enter => {
@@ -598,8 +685,8 @@ impl Gui {
 	}
 
 	fn ch_open(&mut self) {
+		self.m_reset(Mode::Channels);
 		self.ch_render();
-		self.mode = Mode::Channels;
 	}
 
 	fn ch_render(&mut self) {
@@ -658,7 +745,7 @@ impl Gui {
 				self.ch_update(true);
 			},
 			Action::Escape => {
-				self.mode = Mode::Main;
+				self.ma_open();
 			},
 		}
 	}
@@ -666,25 +753,36 @@ impl Gui {
 	/* === DA MODE === */
 	fn da_enter(&mut self) {
 		match self.selected {
-			0 => { self.mode = Mode::DecoderUart },
-			1 => { self.mode = Mode::DecoderSpi },
-			2 => { self.mode = Mode::DecoderI2C },
-			3 => { self.mode = Mode::DecoderOneWire },
+			0 => { self.u_open(); },
+			1 => { self.s_open(); },
+			2 => { self.i_open(); },
+			3 => { self.o_open(); },
 			_ => {}
 		}
 	}
 
-	fn da_update(&self, idx: u32, sel: bool) {
+	fn da_button(&self, idx: u32) -> Button {
 		const LABELS: [&'static str; 4] = [ "UART", "SPI", "I2C", "OneWire" ];
 		Button {
-			x: 0,
-			y: idx * (BUTTON_HEIGHT + 10) + 48,
-			w: 120,
+			x: DA_PADDING,
+			y: idx * (BUTTON_HEIGHT + DA_PADDING) + ICON_BOX + 1 + DA_PADDING,
+			w: DA_BTN_WIDTH,
 			text: LABELS[idx as usize]
-		}.render(sel);
+		}
 	}
 
-	fn da_render(&self) {
+	fn da_undraw(&self) {
+		for i in 0..DECODER_COUNT {
+			self.da_button(i).undraw();
+		}
+	}
+
+	fn da_update(&self, idx: u32, sel: bool) {
+		self.da_button(idx).render(sel);
+	}
+
+	fn da_render(&mut self) {
+		self.title_set("Add Protocol Decoder");
 		for i in 0..DECODER_COUNT {
 			self.da_update(i, i == 0);
 		}
@@ -699,23 +797,23 @@ impl Gui {
 		match action {
 			Action::Up => {
 				if self.selected > 0 {
-					self.da_update(self.selected, false);
+					self.da_button(self.selected).deselect();
 					self.selected -= 1;
-					self.da_update(self.selected, true);
+					self.da_button(self.selected).select();
 				}
 			},
 			Action::Down => {
 				if self.selected < DECODER_COUNT - 1 {
-					self.da_update(self.selected, false);
+					self.da_button(self.selected).deselect();
 					self.selected += 1;
-					self.da_update(self.selected, true);
+					self.da_button(self.selected).select();
 				}
 			},
 			Action::Enter => {
 				self.da_enter();
 			},
 			Action::Escape => {
-				self.mode = Mode::Main;
+				self.ma_open();
 			},
 			_ => {}
 		};

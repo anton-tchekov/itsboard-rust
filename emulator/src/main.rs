@@ -22,22 +22,14 @@ use crate::terminus16_bold::TERMINUS16_BOLD;
 
 fn main() -> Result<(), String> {
 	let mut gui = Gui::init();
-	/*gui.base();
-	lcd_str(10, 10, "ITS Board Rust LCD Emulator funktioniert!", LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
-
-	lcd_rect(50, 50, 50, 50, LCD_RED);
-	lcd_rect(70, 70, 50, 50, LCD_GREEN);
-	lcd_rect(90, 90, 50, 50, LCD_BLUE);*/
-
 	let mut gfx = Graphics::init()?;
 	'running: loop {
 		for event in gfx.events.poll_iter() {
 			match event {
-				Event::Quit {..} |
-				Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+				Event::Quit {..} => {
 					break 'running;
 				},
-				Event::KeyDown { keycode: Some(Keycode::Num1), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Escape) | Some(Keycode::Num1), .. } => {
 					gui.key(7);
 				},
 				Event::KeyDown { keycode: Some(Keycode::Left) | Some(Keycode::Num2), .. } => {

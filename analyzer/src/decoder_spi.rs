@@ -2,10 +2,10 @@ use crate::decoder::*;
 use crate::sample::*;
 
 struct DecoderSPI {
-	mosi_pin: DecoderPin,
-	miso_pin: DecoderPin,
-	sck_pin: DecoderPin,
-	cs_pin: DecoderPin
+	pub mosi_pin: DecoderPin,
+	pub miso_pin: DecoderPin,
+	pub sck_pin: DecoderPin,
+	pub cs_pin: DecoderPin
 }
 
 impl Decoder for DecoderSPI {

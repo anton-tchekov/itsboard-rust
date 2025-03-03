@@ -22,16 +22,14 @@ ASM Dump:
 
 ### Anton Heute
 - Control using buttons on ITS Board
-- Bottom bar with Icons/Current function mapping for buttons
 - Hide / Show Channels with Checkboxes
 - Protocol Decoder GUIs
 - SD Info on init screen
 
 ### Ferien
 - Sampling / Buffering GPIO Port
-- 8 Channels
 - Select Sampling Frequency in GUI
-- Blocking Sample Loop
+- Blocking Sample Loop 16 channels
 - Start capture on Start + trigger
 - Zoom in / Zoom out
 - Move forward / backward on timeline
@@ -46,10 +44,10 @@ ASM Dump:
 
 - SD Card Driver
 - FAT File System Driver
-- 16 Channels
 - Concurrent Sample Loop
 - Start / Stop capture
 - Measure Time with cursors
 - Send all data over UART
 - Save capture to SD card
 - Save screenshots to SD card
+- Save Load Capture GUI

@@ -124,91 +124,51 @@ impl Sd {
 		delay_ms(20);
 
 		/*
-
-
-			uint8_t i, b, csd_read_bl_len, csd_c_size_mult, csd_structure;
-			uint16_t csd_c_size;
-			memset(info, 0, sizeof(*info));
-			SELECT();
-
-			if(_command(CMD_SEND_CID, 0))
-			{
-				sd_deselect();
-				return Err(());
-			}
+		sd_select();
+		if _command(CMD_SEND_CID, 0) != 0
+		{
+			sd_deselect();
+			return Err(());
+		}
 
 			while(_spi_xchg(0xFF) != 0xFE) ;
 
-			for(i = 0; i < 18; ++i)
-			{
-				b = _spi_xchg(0xFF);
-				switch(i)
-				{
-				case 0:
-				{
-					info->manufacturer = b;
-					break;
-				}
+		let buf[u8; 18] = [0; 18];
 
-				case 1:
-				case 2:
-				{
-					info->oem[i - 1] = b;
-					break;
-				}
+		for i in 0..buf.len() {
+			buf[i] = spi_xchg(0xFF);
+		}
 
-				case 3:
-				case 4:
-				case 5:
-				case 6:
-				case 7:
-				{
-					info->product[i - 3] = b;
-					break;
-				}
+		info.manufacturer = buf[0];
+		info.oem[0] = buf[1];
+		info.oem[1] = buf[2];
+		info.product[0] = buf[3];
+		info.product[1] = buf[4];
+		info.product[2] = buf[5];
+		info.product[3] = buf[6];
+		info.product[4] = buf[7];
+		info.revision = buf[8];
+		into.serial |= buf[9] << ((12 - 9) * 8);
+		into.serial |= buf[10] << ((12 - 10) * 8);
+		into.serial |= buf[11] << ((12 - 11) * 8);
+		into.serial |= buf[12] << ((12 - 12) * 8);
 
-				case 8:
-				{
-					info->revision = b;
-					break;
-				}
+		info.manufacturing_year = buf[13] << 4;
+		info.manufacturing_year |= buf[14] >> 4;
+		info.manufacturing_month = buf[14] & 0x0F;
 
-				case 9:
-				case 10:
-				case 11:
-				case 12:
-				{
-					info->serial |= (uint32_t) b << ((12 - i) * 8);
-					break;
-				}
+		let csd_read_bl_len = 0;
+		let csd_c_size_mult = 0;
+		let csd_structure = 0;
+		let csd_c_size = 0;
 
-				case 13:
-				{
-					info->manufacturing_year = b << 4;
-					break;
-				}
+		if _command(CMD_SEND_CSD, 0) != 0
+		{
+			sd_deselect();
+			return 0;
+		}
 
-				case 14:
-				{
-					info->manufacturing_year |= b >> 4;
-					info->manufacturing_month = b & 0x0f;
-					break;
-				}
-				}
-			}
-
-			csd_read_bl_len = 0;
-			csd_c_size_mult = 0;
-			csd_structure = 0;
-			csd_c_size = 0;
-
-			if _command(CMD_SEND_CSD, 0) != 0
-			{
-				sd_deselect();
-				return 0;
-			}
-
-			while(_spi_xchg(0xFF) != 0xFE) ;
+		while(_spi_xchg(0xFF) != 0xFE) ;
 
 			for(i = 0; i < 18; ++i)
 			{
@@ -307,7 +267,7 @@ impl Sd {
 				}
 			}
 
-			DESELECT();
+			sd_deselect();
 			return 1;
 		}*/
 
