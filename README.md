@@ -20,16 +20,19 @@ ASM Dump:
 
 ## TODO
 
-### Ferien
-- GUI Emulator
-- Control using buttons
+### Anton Heute
+- Control using buttons on ITS Board
 - Bottom bar with Icons/Current function mapping for buttons
+- Hide / Show Channels with Checkboxes
+- Protocol Decoder GUIs
+- SD Info on init screen
+
+### Ferien
 - Sampling / Buffering GPIO Port
 - 8 Channels
 - Select Sampling Frequency in GUI
 - Blocking Sample Loop
 - Start capture on Start + trigger
-- Hide / Show Channels with Checkboxes
 - Zoom in / Zoom out
 - Move forward / backward on timeline
 - Protocol decoding

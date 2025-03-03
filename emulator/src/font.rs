@@ -7,6 +7,12 @@ pub struct Font {
 	pub bitmap: &'static [u8]
 }
 
+impl Font {
+	pub fn width(&self, s: &str) -> u32 {
+		self.width * s.len() as u32
+	}
+}
+
 pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font) {
 	lcd_window_start(x, y, font.width, font.height);
 	let stride = (font.width + 7) >> 3;
@@ -47,6 +53,12 @@ pub fn lcd_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font) {
 	}
 }
 
+pub fn lcd_str_center(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font) {
+	lcd_str(x - font.width(s) / 2,
+		y - font.height / 2,
+		s, fg, bg, font);
+}
+
 pub fn lcd_icon_color(x: u32, y: u32, icon: u32, fg: u16, bg: u16) {
 	lcd_font(x, y, icon, fg, bg, &TERMINUS16);
 	lcd_font(x + TERMINUS16.width, y, icon + 1, fg, bg, &TERMINUS16);
@@ -54,4 +66,11 @@ pub fn lcd_icon_color(x: u32, y: u32, icon: u32, fg: u16, bg: u16) {
 
 pub fn lcd_icon_bw(x: u32, y: u32, icon: u32) {
 	lcd_icon_color(x, y, icon, LCD_WHITE, LCD_BLACK);
+}
+
+pub fn lcd_rect_border(x: u32, y: u32, w: u32, h: u32, border: u32, color: u16) {
+	lcd_rect(x, y, w, border, color);
+	lcd_rect(x, y + border, border, h - 2 * border, color);
+	lcd_rect(x + w - border, y + border, border, h - 2 * border, color);
+	lcd_rect(x, y + h - border, w, border, color);
 }

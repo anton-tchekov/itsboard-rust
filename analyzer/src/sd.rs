@@ -122,6 +122,195 @@ impl Sd {
 		sd_deselect();
 		spi_fast();
 		delay_ms(20);
+
+		/*
+
+
+			uint8_t i, b, csd_read_bl_len, csd_c_size_mult, csd_structure;
+			uint16_t csd_c_size;
+			memset(info, 0, sizeof(*info));
+			SELECT();
+
+			if(_command(CMD_SEND_CID, 0))
+			{
+				sd_deselect();
+				return Err(());
+			}
+
+			while(_spi_xchg(0xFF) != 0xFE) ;
+
+			for(i = 0; i < 18; ++i)
+			{
+				b = _spi_xchg(0xFF);
+				switch(i)
+				{
+				case 0:
+				{
+					info->manufacturer = b;
+					break;
+				}
+
+				case 1:
+				case 2:
+				{
+					info->oem[i - 1] = b;
+					break;
+				}
+
+				case 3:
+				case 4:
+				case 5:
+				case 6:
+				case 7:
+				{
+					info->product[i - 3] = b;
+					break;
+				}
+
+				case 8:
+				{
+					info->revision = b;
+					break;
+				}
+
+				case 9:
+				case 10:
+				case 11:
+				case 12:
+				{
+					info->serial |= (uint32_t) b << ((12 - i) * 8);
+					break;
+				}
+
+				case 13:
+				{
+					info->manufacturing_year = b << 4;
+					break;
+				}
+
+				case 14:
+				{
+					info->manufacturing_year |= b >> 4;
+					info->manufacturing_month = b & 0x0f;
+					break;
+				}
+				}
+			}
+
+			csd_read_bl_len = 0;
+			csd_c_size_mult = 0;
+			csd_structure = 0;
+			csd_c_size = 0;
+
+			if _command(CMD_SEND_CSD, 0) != 0
+			{
+				sd_deselect();
+				return 0;
+			}
+
+			while(_spi_xchg(0xFF) != 0xFE) ;
+
+			for(i = 0; i < 18; ++i)
+			{
+				b = _spi_xchg(0xFF);
+				if(i == 0)
+				{
+					csd_structure = b >> 6;
+				}
+				else if(i == 14)
+				{
+					if(b & 0x40)
+					{
+						info->flag_copy = 1;
+					}
+
+					if(b & 0x20)
+					{
+						info->flag_write_protect = 1;
+					}
+
+					if(b & 0x10)
+					{
+						info->flag_write_protect_temp = 1;
+					}
+
+					info->format = (b & 0x0C) >> 2;
+				}
+				else
+				{
+					if(csd_structure == 0x01)
+					{
+						switch(i)
+						{
+						case 7:
+						{
+							b &= 0x3f;
+						}
+
+						case 8:
+						case 9:
+						{
+							csd_c_size <<= 8;
+							csd_c_size |= b;
+							++csd_c_size;
+							info->capacity = (uint32_t)csd_c_size << 10;
+						}
+						}
+					}
+					else if(csd_structure == 0x00)
+					{
+						switch (i)
+						{
+						case 5:
+						{
+							csd_read_bl_len = b & 0x0F;
+							break;
+						}
+
+						case 6:
+						{
+							csd_c_size = b & 0x03;
+							csd_c_size <<= 8;
+							break;
+						}
+
+						case 7:
+						{
+							csd_c_size |= b;
+							csd_c_size <<= 2;
+							break;
+						}
+
+						case 8:
+						{
+							csd_c_size |= b >> 6;
+							++csd_c_size;
+							break;
+						}
+
+						case 9:
+						{
+							csd_c_size_mult = b & 0x03;
+							csd_c_size_mult <<= 1;
+							break;
+						}
+
+						case 10:
+						{
+							csd_c_size_mult |= b >> 7;
+							info->capacity = ((uint32_t)csd_c_size <<
+								(csd_c_size_mult + csd_read_bl_len + 2)) >> 9;
+							break;
+						}
+						}
+					}
+				}
+			}
+
+			DESELECT();
+			return 1;
+		}*/
+
 		return Ok(sd);
 	}
 

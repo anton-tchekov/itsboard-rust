@@ -43,10 +43,7 @@ fn start() -> ! {
 	let mut hw = hw_init();
 	lcd_init(lcd_color(0, 0, 0));
 
-	let gui = Gui::init();
-
-	delay_ms(2000);
-	gui.base();
+	let mut gui = Gui::init();
 
 	let mut data: [Sample; 100_000] = [0; 100_000];
 	let mut buf = SampleBuffer {
