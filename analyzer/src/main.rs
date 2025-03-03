@@ -18,7 +18,6 @@ mod decoder_spi;
 mod decoder_i2c;
 mod decoder_onewire;
 mod decoder_uart;
-mod decoders;
 
 use crate::sampler::*;
 use crate::hw::*;
@@ -45,7 +44,7 @@ fn start() -> ! {
 
 	let mut gui = Gui::init();
 
-	let mut data: [Sample; 100_000] = [0; 100_000];
+	/*let mut data: [Sample; 100_000] = [0; 100_000];
 	let mut buf = SampleBuffer {
 		sample_rate: 1_000_000,
 		samples: &mut data,
@@ -58,7 +57,7 @@ fn start() -> ! {
 	for i in 0..buf.len {
 		let sample = buf.samples[i];
 		writeln!(hw.tx, "{:#08b}", sample);
-	}
+	}*/
 
 	/*lcd_rect(10, 10, 100, 100, lcd_color(255, 0, 0));
 	lcd_rect(30, 30, 100, 100, lcd_color(0, 255, 0));
@@ -73,10 +72,34 @@ fn start() -> ! {
 	blueclear(0xFF);
 	yellowclear(0xFF);
 
-	let mut rx = 100;
-	let mut ry = 100;
+	let mut ticks: [u32; 8] = [0; 8];
+	let mut last_check = 0;
 	loop {
-		let ctr = timer_get();
+
+		let t = timer_get();
+		if (t - last_check) >= TICKS_PER_US * 1000 {
+			last_check = t;
+
+			let btns = buttons_read();
+			for i in 0..8 {
+				if btns & (1 << i) != 0 {
+					// Released
+					if ticks[i] > 0 {
+						ticks[i] -= 1;
+					}
+				}
+				else {
+					// Pressed
+					if ticks[i] == 0 {
+						gui.key(i as i32);
+					}
+
+					ticks[i] = 50;
+				}
+			}
+		}
+
+		/*let ctr = timer_get();
 		let seconds = ctr / (TICKS_PER_US * 1000 * 1000);
 
 		let mut buf = [0u8; 20];
@@ -88,7 +111,7 @@ fn start() -> ! {
 		lcd_str(0, 0, buf.as_str(),
 			lcd_color(255, 255, 255), lcd_color(0, 0, 0), &TERMINUS16);
 
-		let btns = buttons_read();
+
 		if btns & 1 == 0 {
 			ry -= 1;
 		}
@@ -108,7 +131,7 @@ fn start() -> ! {
 		lcd_rect(rx, ry, 20, 20, lcd_color(255, 0, 255));
 		delay_ms(20);
 
-		/*blueclear(0xFF);
+		blueclear(0xFF);
 		yellowclear(0xFF);
 
 		blueset(0xAA);

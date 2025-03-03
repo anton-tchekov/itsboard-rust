@@ -1,7 +1,7 @@
 use crate::decoder::*;
 use crate::sample::*;
 
-struct DecoderSPI {
+pub struct DecoderSPI {
 	pub mosi_pin: DecoderPin,
 	pub miso_pin: DecoderPin,
 	pub sck_pin: DecoderPin,

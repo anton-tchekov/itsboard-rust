@@ -22,9 +22,9 @@ ASM Dump:
 
 ### Anton Heute
 - Control using buttons on ITS Board
-- Hide / Show Channels with Checkboxes
 - Protocol Decoder GUIs
 - SD Info on init screen
+- Performant
 
 ### Ferien
 - Sampling / Buffering GPIO Port
