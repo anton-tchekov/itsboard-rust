@@ -776,9 +776,7 @@ impl Gui {
 				let mut rx = (3 + x * 7) * TERMINUS16.width;
 				let ry = CH_Y_BEGIN + y * 32;
 				let mut buf: [u8; 2] = [0; 2];
-				buf[0] = (idx / 10) as u8 + b'0';
-				buf[1] = (idx % 10) as u8 + b'0';
-
+				Self::channel_str(&mut buf, idx);
 				self.check_render(rx, ry, self.ch_selected == idx,
 					self.visible_channels & (1 << idx) != 0);
 
@@ -850,14 +848,10 @@ impl Gui {
 		}
 	}
 
-	fn da_update(&self, idx: u32, sel: bool) {
-		self.da_button(idx).render(sel);
-	}
-
 	fn da_open(&mut self) {
 		self.title_set("Add Protocol Decoder");
 		for i in 0..DECODER_COUNT {
-			self.da_update(i, i == self.da_selected);
+			self.da_button(i).render(i == self.da_selected);
 		}
 	}
 
@@ -865,6 +859,11 @@ impl Gui {
 		for i in 0..DECODER_COUNT {
 			self.da_button(i).undraw();
 		}
+	}
+
+	fn da_switch(&mut self, prev: u32) {
+		self.da_button(prev).deselect();
+		self.da_button(self.da_selected).select();
 	}
 
 	fn da_action(&mut self, action: Action) {
@@ -878,8 +877,7 @@ impl Gui {
 					self.da_selected = DECODER_COUNT - 1;
 				}
 
-				self.da_button(prev).deselect();
-				self.da_button(self.da_selected).select();
+				self.da_switch(prev);
 			},
 			Action::Down => {
 				let prev = self.da_selected;
@@ -890,8 +888,7 @@ impl Gui {
 					self.da_selected = 0;
 				}
 
-				self.da_button(prev).deselect();
-				self.da_button(self.da_selected).select();
+				self.da_switch(prev);
 			},
 			Action::Enter => {
 				self.da_enter();
@@ -903,9 +900,9 @@ impl Gui {
 		};
 	}
 
-	fn channel_str(channel: u32, out: &mut [u8]) {
-		out[0] = b'D';
-		out[1] = (channel / 10) as u8 + b'0';
-		out[2] = (channel % 10) as u8 + b'0';
+	/* === Helper === */
+	fn channel_str(out: &mut [u8], channel: u32) {
+		out[0] = (channel / 10) as u8 + b'0';
+		out[1] = (channel % 10) as u8 + b'0';
 	}
 }
