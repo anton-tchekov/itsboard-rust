@@ -21,15 +21,9 @@ ASM Dump:
 ## TODO
 
 ### Anton Heute
-1. Draw New Icons
-2. Main All Icons
-
-2. Finish Action Bar
-- Protocol Decoder Navigation
-- Protocol Decoder Undraw
-- SD Mock
-- SD Card Driver
-- SD Info on init screen
+1. Action Bar
+2. Protocol Decoder Menu
+3. SD Card Info
 
 ### Ferien
 - Start capture on Start + trigger

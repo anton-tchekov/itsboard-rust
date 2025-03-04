@@ -68,6 +68,10 @@ pub fn lcd_icon_bw(x: u32, y: u32, icon: u32) {
 	lcd_icon_color(x, y, icon, LCD_WHITE, LCD_BLACK);
 }
 
+pub fn lcd_icon_undraw(x: u32, y: u32) {
+	lcd_rect(x, y, 2 * TERMINUS16.width, TERMINUS16.height, LCD_BLACK);
+}
+
 pub fn lcd_rect_border(x: u32, y: u32, w: u32, h: u32, border: u32, color: u16) {
 	lcd_rect(x, y, w, border, color);
 	lcd_rect(x, y + border, border, h - 2 * border, color);

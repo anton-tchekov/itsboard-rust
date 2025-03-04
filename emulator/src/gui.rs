@@ -33,6 +33,7 @@ const CH_LABEL_X: u32 = 21;
 const CH_LABEL_Y: u32 = 1;
 
 const MA_ICONS: u32 = 3;
+const ICON_PADDING: u32 = 7;
 
 enum Action {
 	Up,
@@ -80,7 +81,6 @@ impl Button {
 		let text_x = self.x + self.w / 2 - text_w / 2;
 		let text_y = self.y + BUTTON_HEIGHT / 2 - text_h / 2;
 		lcd_rect(text_x, text_y, text_w, text_h, LCD_BLACK);
-
 		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
 			BORDER_SEL, LCD_BLACK);
 	}
@@ -96,6 +96,23 @@ impl Button {
 		lcd_rect_border(self.x + 1, self.y + 1, self.w - 2, BUTTON_HEIGHT - 2,
 			BORDER_DEFAULT, LCD_WHITE);
 	}
+}
+
+fn input_select(y: u32) {
+
+}
+
+fn input_change() {
+
+}
+
+fn input_undraw() {
+
+}
+
+fn input_deselect(y: u32) {
+	lcd_rect_border(DA_PADDING, Y_BEGIN + DA_PADDING + y * 40 + 16,
+		100, 20, 1, LCD_WHITE);
 }
 
 enum Align {
@@ -400,8 +417,8 @@ impl Gui {
 				LCD_HEIGHT - ICON_BOX, ICON_BOX, LCD_WHITE);
 		}
 
-		let mut x = LCD_WIDTH - 8 * (ICON_BOX + 1) + 7;
-		let y = LCD_HEIGHT - ICON_BOX + 7;
+		let mut x = LCD_WIDTH - 8 * (ICON_BOX + 1) + ICON_PADDING;
+		let y = LCD_HEIGHT - ICON_BOX + ICON_PADDING;
 		lcd_icon_bw(x, y, ICON_EXIT);
 		x += ICON_BOX + 1;
 		lcd_icon_bw(x, y, ICON_LEFT);
@@ -487,14 +504,14 @@ impl Gui {
 		self.cd_update(prev);
 	}
 
-	fn cd_sel_up(&mut self) {
+	fn cd_left(&mut self) {
 		let idx = self.cd_selected as usize;
 		let prev = self.sels[idx];
 		self.sels[idx] = cycle_bwd(self.sels[idx].into(), self.optcnt.into()) as u8;
 		self.cd_sel_update(prev);
 	}
 
-	fn cd_sel_down(&mut self) {
+	fn cd_right(&mut self) {
 		let idx = self.cd_selected as usize;
 		let prev = self.sels[idx];
 		self.sels[idx] = cycle_fwd(self.sels[idx].into(), self.optcnt.into()) as u8;
@@ -503,33 +520,12 @@ impl Gui {
 
 	fn cd_sel_update(&mut self, prev: u8) {
 		// TODO
+		input_change();
 	}
 
 	fn cd_update(&mut self, prev: u32) {
-		// TODO
-	}
-
-	fn option_render(&mut self) {
-		// TODO
-	}
-
-	fn select_render(&mut self, select: &Select) {
-		let new_cnt = select.options.len() as u8;
-
-		if self.optcnt > new_cnt {
-			// Erase
-			// lcd_rect();
-		}
-		else if self.optcnt < new_cnt {
-			// Add
-		}
-
-		let mut i = 0;
-		for option in select.options {
-			self.option_render();
-		}
-
-		self.optcnt = new_cnt;
+		input_deselect(prev);
+		input_select(self.cd_selected);
 	}
 
 	fn input_render(&mut self, input: &Input, y: u32, sel: bool) {
@@ -538,17 +534,17 @@ impl Gui {
 			input.label,
 			LCD_WHITE, LCD_BLACK, &TERMINUS16);
 
-		lcd_rect_border(DA_PADDING, Y_BEGIN + DA_PADDING + y * 40 + 16,
-			100, 20, 1, LCD_WHITE);
+		if sel {
+			input_select(y);
+		}
+		else {
+			input_deselect(y);
+		}
 
 		lcd_str(DA_PADDING + 2,
 			Y_BEGIN + DA_PADDING + y * 40 + 18,
 			"aaa.ggg.111",
 			LCD_WHITE, LCD_BLACK, &TERMINUS16);
-
-		if sel {
-			self.select_render(input.select);
-		}
 	}
 
 	fn cd_undraw(&mut self) {
@@ -568,8 +564,8 @@ impl Gui {
 		match action {
 			Action::Up => self.cd_up(),
 			Action::Down => self.cd_down(),
-			Action::SelUp => self.cd_sel_up(),
-			Action::SelDown => self.cd_sel_down(),
+			Action::Left => self.cd_left(),
+			Action::Right => self.cd_right(),
 			Action::Escape => self.mode_switch(Mode::DecoderAdd),
 			_ => {}
 		}
@@ -670,8 +666,8 @@ impl Gui {
 	fn ma_render(&mut self, i: u32, sel: bool) {
 		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
-		let x = i * (ICON_BOX + 1) + LCD_WIDTH - MA_ICONS * (ICON_BOX + 1) + 7;
-		lcd_icon_color(x, 7, ICONS[i as usize], fg, LCD_BLACK);
+		let x = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING;
+		lcd_icon_color(x, ICON_PADDING, ICONS[i as usize], fg, LCD_BLACK);
 	}
 
 	fn ma_top_box(&mut self) {
@@ -694,7 +690,13 @@ impl Gui {
 	}
 
 	fn ma_close(&mut self) {
-		// TODO: Undraw
+		for i in 0..MA_ICONS {
+			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
+				0, ICON_BOX, LCD_BLACK);
+			lcd_icon_undraw(
+				LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING,
+				ICON_PADDING);
+		}
 	}
 
 	fn ma_run(&mut self) {
@@ -761,7 +763,7 @@ impl Gui {
 		for y in 0..CH_ROWS {
 			for x in 0..CH_COLS {
 				let (rx, ry) = Self::ch_pos(x, y);
-				lcd_rect(rx, ry, w, h, LCD_BLACK);
+				lcd_icon_undraw(rx, ry);
 				lcd_rect(rx + CH_LABEL_X, ry + CH_LABEL_Y, w, h, LCD_BLACK);
 			}
 		}
