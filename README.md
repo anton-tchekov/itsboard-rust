@@ -20,11 +20,8 @@ ASM Dump:
 
 ## TODO
 
-### Heute
-SD Card Driver
-SD Card Info or Error
-
 ### Ferien
+- SD Card Driver + Info / Error Msg
 - Start capture on Start + trigger
 - Zoom in / Zoom out + Move forward / backward on timeline
 - Send Raw Captured data over UART
