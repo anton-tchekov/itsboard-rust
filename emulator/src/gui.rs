@@ -146,8 +146,9 @@ pub struct Input {
 	label: &'static str
 }
 
-const SELECT_PIN_LIST: [&'static str; 9] = [
-	"/", "0", "1", "2", "3", "4", "5", "6", "7"
+const SELECT_PIN_LIST: [&'static str; 17] = [
+	"/", "0", "1", "2", "3", "4", "5", "6", "7",
+	"8", "9", "10", "11", "12", "13", "14", "15"
 ];
 
 const SELECT_PARITY_LIST: [&'static str; 3] = [
@@ -387,7 +388,9 @@ pub struct Gui {
 	da_selected: u32,
 	cd_selected: u32,
 	sels: [u8; 8],
-	inputs: &'static [&'static Input]
+	inputs: &'static [&'static Input],
+	term_rows: u32,
+	term_lens: [u8; 16]
 }
 
 impl Gui {
@@ -399,19 +402,27 @@ impl Gui {
 		lcd_hline(0, LCD_HEIGHT - ICON_BOX - 1, LCD_WIDTH, LCD_WHITE);
 	}
 
-	pub fn print_info() {
+	pub fn term_print(&mut self, s: &str) {
+		lcd_str(TITLE_X, 60 + self.term_rows * TERMINUS16.height,
+			s, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 
+		self.term_lens[self.term_rows as usize] = s.len() as u8;
+		self.term_rows += 1;
+	}
+
+	pub fn term_undraw(&mut self) {
+		for i in 0..self.term_rows {
+			lcd_rect(TITLE_X, 60 + i * TERMINUS16.height,
+				self.term_lens[i as usize] as u32 * TERMINUS16.width,
+				TERMINUS16.height, LCD_BLACK);
+		}
+
+		self.term_rows = 0;
 	}
 
 	pub fn init() -> Self {
 		Self::top_divider();
 		Self::bottom_divider();
-
-		lcd_str(TITLE_X, LCD_HEIGHT - TITLE_Y - TERMINUS16.height,
-			"Created by Joel Kypke, Haron Nazari, Anton Tchekov",
-			LCD_WHITE, LCD_BLACK, &TERMINUS16);
-
-		Self::print_info();
 
 		let mut gui = Gui {
 			actions: &ACTIONS_INIT,
@@ -423,10 +434,19 @@ impl Gui {
 			ch_selected: 0,
 			cd_selected: 0,
 			sels: [0; 8],
-			inputs: &UART_INPUTS
+			inputs: &UART_INPUTS,
+			term_rows: 0,
+			term_lens: [0; 16]
 		};
 
-		gui.title_set("ITS-Board Logic Analyzer V0.1");
+		gui.title_set("Initializing ...");
+		gui.term_print("ITS-Board Logic Analyzer V0.1");
+		gui.term_print("Created by Joel Kypke, Haron Nazari, Anton Tchekov");
+		gui.term_print("");
+		gui.term_print("SD Card not found");
+		gui.term_print("");
+		gui.term_print("Press any key to continue ...");
+
 		gui.icon_box();
 		gui.actions_render();
 		gui
@@ -498,6 +518,7 @@ impl Gui {
 	pub fn action(&mut self, action: Action) {
 		match self.mode {
 			Mode::Init => {
+				self.term_undraw();
 				self.mode_switch(Mode::Main);
 			}
 			Mode::Main => { self.ma_action(action); }

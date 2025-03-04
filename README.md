@@ -20,8 +20,9 @@ ASM Dump:
 
 ## TODO
 
-### Anton Heute
-3. SD Card Info
+### Heute
+SD Card Driver
+SD Card Info or Error
 
 ### Ferien
 - Start capture on Start + trigger
