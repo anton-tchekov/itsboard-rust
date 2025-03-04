@@ -39,6 +39,16 @@ const ACTION_ICONS_SKIP: u32 = ICON_BOX + 1;
 const ACTION_ICONS_X: u32 = LCD_WIDTH - 8 * (ICON_BOX + 1) + ICON_PADDING;
 const ACTION_ICONS_Y: u32 = LCD_HEIGHT - ICON_BOX + ICON_PADDING;
 
+const INPUT_Y_SKIP: u32 = 40;
+const INPUT_WIDTH: u32 = 100;
+const INPUT_HEIGHT: u32 = 20;
+
+const INPUT_LABEL_Y: u32 = Y_BEGIN + DA_PADDING;
+const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
+
+const INPUT_TEXT_X: u32 = DA_PADDING + 2;
+const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action {
 	None,
@@ -65,6 +75,19 @@ enum Mode {
 	Channels
 }
 
+fn boxsel(x: u32, y: u32, w: u32, h: u32) {
+	lcd_rect_border(x, y, w, h, BORDER_SEL, COLOR_SEL);
+}
+
+fn boxdesel(x: u32, y: u32, w: u32, h: u32) {
+	lcd_rect_border(x, y, w, h, BORDER_DEFAULT, LCD_BLACK);
+	lcd_rect_border(x + 1, y + 1, w - 2, h - 2, BORDER_DEFAULT, LCD_WHITE);
+}
+
+fn boxundraw(x: u32, y: u32, w: u32, h: u32) {
+	lcd_rect_border(x, y, w, h, BORDER_SEL, LCD_BLACK);
+}
+
 pub struct Button {
 	x: u32,
 	y: u32,
@@ -88,40 +111,29 @@ impl Button {
 		let text_x = self.x + self.w / 2 - text_w / 2;
 		let text_y = self.y + BUTTON_HEIGHT / 2 - text_h / 2;
 		lcd_rect(text_x, text_y, text_w, text_h, LCD_BLACK);
-		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
-			BORDER_SEL, LCD_BLACK);
+		boxundraw(self.x, self.y, self.w, BUTTON_HEIGHT);
 	}
 
 	fn select(&self) {
-		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
-			BORDER_SEL, COLOR_SEL);
+		boxsel(self.x, self.y, self.w, BUTTON_HEIGHT);
 	}
 
 	fn deselect(&self) {
-		lcd_rect_border(self.x, self.y, self.w, BUTTON_HEIGHT,
-			BORDER_DEFAULT, LCD_BLACK);
-		lcd_rect_border(self.x + 1, self.y + 1, self.w - 2, BUTTON_HEIGHT - 2,
-			BORDER_DEFAULT, LCD_WHITE);
+		boxdesel(self.x, self.y, self.w, BUTTON_HEIGHT);
 	}
 }
 
 fn input_select(y: u32) {
-
-}
-
-fn input_change() {
-
-}
-
-fn input_undraw() {
-
+	boxsel(DA_PADDING, INPUT_BOX_Y + y * INPUT_Y_SKIP,
+		INPUT_WIDTH, INPUT_HEIGHT);
 }
 
 fn input_deselect(y: u32) {
-	lcd_rect_border(DA_PADDING, Y_BEGIN + DA_PADDING + y * 40 + 16,
-		100, 20, 1, LCD_WHITE);
+	boxdesel(DA_PADDING, INPUT_BOX_Y + y * INPUT_Y_SKIP,
+		INPUT_WIDTH, INPUT_HEIGHT);
 }
 
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum Align {
 	Left,
 	Right
@@ -380,7 +392,8 @@ pub struct Gui {
 	cd_selected: u32,
 	optcnt: u8,
 	incnt: u32,
-	sels: [u8; 8]
+	sels: [u8; 8],
+	inputs: &'static [&'static Input]
 }
 
 impl Gui {
@@ -417,7 +430,8 @@ impl Gui {
 			cd_selected: 0,
 			optcnt: 0,
 			incnt: 0,
-			sels: [0; 8]
+			sels: [0; 8],
+			inputs: &UART_INPUTS
 		};
 
 		gui.title_set("ITS-Board Logic Analyzer V0.1");
@@ -486,7 +500,7 @@ impl Gui {
 	}
 
 	fn button_to_action(&self, key: i32) -> Action {
-		self.actions[((BUTTON_COUNT - 1) - key as usize)]
+		self.actions[(BUTTON_COUNT - 1) - key as usize]
 	}
 
 	pub fn action(&mut self, action: Action) {
@@ -562,7 +576,6 @@ impl Gui {
 
 	fn cd_sel_update(&mut self, prev: u8) {
 		// TODO
-		input_change();
 	}
 
 	fn cd_update(&mut self, prev: u32) {
@@ -570,35 +583,59 @@ impl Gui {
 		input_select(self.cd_selected);
 	}
 
-	fn input_render(&mut self, input: &Input, y: u32, sel: bool) {
-		lcd_str(DA_PADDING,
-			Y_BEGIN + DA_PADDING + y * 40,
-			input.label,
-			LCD_WHITE, LCD_BLACK, &TERMINUS16);
+	fn input_text_x(align: Align, w: u32) -> u32 {
+		DA_PADDING + if align == Align::Right { INPUT_WIDTH - 2 - w } else { 2 }
+	}
 
-		if sel {
+	fn input_undraw(&mut self, input: &Input, y: u32) {
+		// Undraw Label
+		lcd_rect(DA_PADDING, Y_BEGIN + DA_PADDING + y * INPUT_Y_SKIP,
+			TERMINUS16.width(input.label), TERMINUS16.height, LCD_BLACK);
+
+		// Undraw Box
+		boxundraw(DA_PADDING, INPUT_BOX_Y + y * INPUT_Y_SKIP,
+			INPUT_WIDTH, INPUT_HEIGHT);
+
+		// Undraw Content
+		let text = input.select.options[self.sels[y as usize] as usize];
+		let w = TERMINUS16.width(text);
+		let y = INPUT_TEXT_Y + y * INPUT_Y_SKIP;
+		let x = Self::input_text_x(input.select.align, w);
+		lcd_rect(x, y, w, TERMINUS16.height, LCD_BLACK);
+	}
+
+	fn input_render(&mut self, input: &Input, y: u32) {
+		lcd_str(DA_PADDING, INPUT_LABEL_Y + y * INPUT_Y_SKIP,
+			input.label, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+
+		if y == self.cd_selected {
 			input_select(y);
 		}
 		else {
 			input_deselect(y);
 		}
 
-		lcd_str(DA_PADDING + 2,
-			Y_BEGIN + DA_PADDING + y * 40 + 18,
-			"aaa.ggg.111",
-			LCD_WHITE, LCD_BLACK, &TERMINUS16);
+		let text = input.select.options[self.sels[y as usize] as usize];
+		lcd_str(Self::input_text_x(input.select.align, TERMINUS16.width(text)),
+			INPUT_TEXT_Y + y * INPUT_Y_SKIP,
+			text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 	}
 
 	fn cd_undraw(&mut self) {
-		// TODO: Undraw
+		let mut y = 0;
+		for input in self.inputs {
+			self.input_undraw(input, y);
+			y += 1;
+		}
 	}
 
-	fn cd_render(&mut self, inputs: &[&Input]) {
+	fn cd_render(&mut self, inputs: &'static [&Input]) {
 		self.cd_selected = 0;
+		self.inputs = inputs;
 		self.actions_set(&ACTIONS_CH);
 		let mut y = 0;
 		for input in inputs {
-			self.input_render(input, y, y == self.cd_selected);
+			self.input_render(input, y);
 			y += 1;
 		}
 	}
@@ -636,6 +673,8 @@ impl Gui {
 			stopbits: item_to_stopbits(self.sels[4].into()),
 			baudrate: item_to_baudrate(self.sels[5].into())
 		};
+
+		// LATER: Store Decoder
 	}
 
 	/* === S MODE === */
@@ -659,7 +698,7 @@ impl Gui {
 			cs_pin: item_to_pin(self.sels[3].into())
 		};
 
-		// TODO: Store Decoder
+		// LATER: Store Decoder
 	}
 
 	/* === I MODE === */
@@ -681,7 +720,7 @@ impl Gui {
 			scl_pin: item_to_pin(self.sels[1].into())
 		};
 
-		// TODO: Store Decoder
+		// LATER: Store Decoder
 	}
 
 	/* === O MODE === */
@@ -702,7 +741,7 @@ impl Gui {
 			onewire_pin: item_to_pin(self.sels[0].into())
 		};
 
-		// TODO: Store Decoder
+		// LATER: Store Decoder
 	}
 
 	/* === MA MODE === */
@@ -744,7 +783,7 @@ impl Gui {
 	}
 
 	fn ma_run(&mut self) {
-		// TODO: Start sampling
+		// LATER: Start sampling
 	}
 
 	fn ma_enter(&mut self) {
