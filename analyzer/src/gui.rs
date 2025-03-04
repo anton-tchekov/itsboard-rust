@@ -53,14 +53,11 @@ const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 pub enum Action {
 	None,
 	Up,
-	SelUp,
 	Down,
-	SelDown,
 	Left,
 	Right,
 	Enter,
 	Escape,
-	Save,
 	Check
 }
 
@@ -149,12 +146,6 @@ pub struct Input {
 	label: &'static str
 }
 
-impl Input {
-	fn render(&self) {
-
-	}
-}
-
 const SELECT_PIN_LIST: [&'static str; 9] = [
 	"/", "0", "1", "2", "3", "4", "5", "6", "7"
 ];
@@ -168,21 +159,21 @@ const SELECT_STOP_BITS_LIST: [&'static str; 3] = [
 ];
 
 const SELECT_DATA_BITS_LIST: [&'static str; 5] = [
-	"5", "6", "7", "8", "9"
+	"8", "9", "5", "6", "7"
 ];
 
 const SELECT_BAUDRATE_LIST: [&'static str; 11] = [
-	"300",
-	"600",
-	"1200",
-	"1800",
-	"2400",
-	"4800",
 	"9600",
 	"19200",
 	"38400",
 	"57600",
-	"115200"
+	"115200",
+	"300",
+	"600",
+	"1200",
+	"1800",
+	"4800",
+	"2400",
 ];
 
 static BAUDRATES: [u32; 11] = [
@@ -381,6 +372,11 @@ const ACTIONS_CH: [Action; 8] = [
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
 
+const ACTIONS_CD: [Action; 8] = [
+	Action::Up, Action::Down, Action::Left, Action::Right,
+	Action::None, Action::None, Action::Escape, Action::Check
+];
+
 pub struct Gui {
 	actions: &'static [Action],
 	visible_channels: u32,
@@ -390,8 +386,6 @@ pub struct Gui {
 	ch_selected: u32,
 	da_selected: u32,
 	cd_selected: u32,
-	optcnt: u8,
-	incnt: u32,
 	sels: [u8; 8],
 	inputs: &'static [&'static Input]
 }
@@ -428,8 +422,6 @@ impl Gui {
 			da_selected: 0,
 			ch_selected: 0,
 			cd_selected: 0,
-			optcnt: 0,
-			incnt: 0,
 			sels: [0; 8],
 			inputs: &UART_INPUTS
 		};
@@ -470,7 +462,7 @@ impl Gui {
 			Action::Down => lcd_icon_bw(x, y, ICON_DOWN),
 			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
 			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
-			Action::Save => lcd_icon_bw(x, y, ICON_SAVE),
+			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
 			_ => lcd_icon_undraw(x, y)
 		}
 	}
@@ -550,32 +542,55 @@ impl Gui {
 	/* === CD COMMON === */
 	fn cd_up(&mut self) {
 		let prev = self.cd_selected;
-		self.cd_selected = cycle_bwd(self.cd_selected, self.incnt);
+		self.cd_selected = cycle_bwd(self.cd_selected, self.inputs.len() as u32);
 		self.cd_update(prev);
 	}
 
 	fn cd_down(&mut self) {
 		let prev = self.cd_selected;
-		self.cd_selected = cycle_fwd(self.cd_selected, self.incnt);
+		self.cd_selected = cycle_fwd(self.cd_selected, self.inputs.len() as u32);
 		self.cd_update(prev);
+	}
+
+	fn cur_num_options(&self) -> u32 {
+		self.inputs[self.cd_selected as usize].select.options.len() as u32
 	}
 
 	fn cd_left(&mut self) {
 		let idx = self.cd_selected as usize;
 		let prev = self.sels[idx];
-		self.sels[idx] = cycle_bwd(self.sels[idx].into(), self.optcnt.into()) as u8;
+		self.sels[idx] = cycle_bwd(self.sels[idx].into(), self.cur_num_options()) as u8;
 		self.cd_sel_update(prev);
 	}
 
 	fn cd_right(&mut self) {
 		let idx = self.cd_selected as usize;
 		let prev = self.sels[idx];
-		self.sels[idx] = cycle_fwd(self.sels[idx].into(), self.optcnt.into()) as u8;
+		self.sels[idx] = cycle_fwd(self.sels[idx].into(), self.cur_num_options()) as u8;
 		self.cd_sel_update(prev);
 	}
 
-	fn cd_sel_update(&mut self, prev: u8) {
-		// TODO
+	fn cd_sel_update(&mut self, prev_idx: u8) {
+		let y = self.cd_selected;
+		let input = self.inputs[y as usize];
+		let select = input.select;
+		let align = select.align;
+		let options = select.options;
+		let cur_idx = self.sels[y as usize];
+		let prev_text = options[prev_idx as usize];
+		let text = options[cur_idx as usize];
+		let w = TERMINUS16.width(text);
+		let x = Self::input_text_x(align, w);
+		let ry = INPUT_TEXT_Y + y * INPUT_Y_SKIP;
+
+		let wdiff = TERMINUS16.width(prev_text) as i32 - w as i32;
+		if wdiff > 0 {
+			let udiff = wdiff as u32;
+			let rx = if align == Align::Right { x - udiff } else { x + w };
+			lcd_rect(rx, ry, udiff, TERMINUS16.height, LCD_BLACK);
+		}
+
+		lcd_str(x, ry, text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 	}
 
 	fn cd_update(&mut self, prev: u32) {
@@ -632,10 +647,11 @@ impl Gui {
 	fn cd_render(&mut self, inputs: &'static [&Input]) {
 		self.cd_selected = 0;
 		self.inputs = inputs;
-		self.actions_set(&ACTIONS_CH);
+		self.actions_set(&ACTIONS_CD);
 		let mut y = 0;
 		for input in inputs {
-			self.input_render(input, y);
+			self.sels[y] = 0;
+			self.input_render(input, y as u32);
 			y += 1;
 		}
 	}
@@ -659,7 +675,7 @@ impl Gui {
 
 	fn u_action(&mut self, action: Action) {
 		match action {
-			Action::Save => self.u_save(),
+			Action::Check => self.u_save(),
 			_ => self.cd_action(action)
 		};
 	}
@@ -685,7 +701,7 @@ impl Gui {
 
 	fn s_action(&mut self, action: Action) {
 		match action {
-			Action::Save => self.s_save(),
+			Action::Check => self.s_save(),
 			_ => self.cd_action(action)
 		};
 	}
@@ -709,7 +725,7 @@ impl Gui {
 
 	fn i_action(&mut self, action: Action) {
 		match action {
-			Action::Save => self.i_save(),
+			Action::Check => self.i_save(),
 			_ => self.cd_action(action)
 		};
 	}
@@ -731,7 +747,7 @@ impl Gui {
 
 	fn o_action(&mut self, action: Action) {
 		match action {
-			Action::Save => self.o_save(),
+			Action::Check => self.o_save(),
 			_ => self.cd_action(action)
 		};
 	}

@@ -21,7 +21,6 @@ ASM Dump:
 ## TODO
 
 ### Anton Heute
-2. Protocol Decoder Menu
 3. SD Card Info
 
 ### Ferien
