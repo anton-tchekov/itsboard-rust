@@ -11,14 +11,10 @@ mod decoder_spi;
 mod decoder_i2c;
 mod decoder_onewire;
 
-use crate::font::*;
 use crate::graphics::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use lcd::*;
 use gui::*;
-use crate::terminus16_bold::TERMINUS16_BOLD;
 
 fn main() -> Result<(), String> {
 	let mut gui = Gui::init();

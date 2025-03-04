@@ -4,6 +4,7 @@ build:
 	arm-none-eabi-objcopy -O ihex target/thumbv7em-none-eabihf/release/itsboard-rust out.hex
 
 emu:
+	clear
 	cp src/gui.rs ../emulator/src/gui.rs
 	cp src/font.rs ../emulator/src/font.rs
 	cp src/terminus16_bold.rs ../emulator/src/terminus16_bold.rs

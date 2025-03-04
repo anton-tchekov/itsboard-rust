@@ -2,7 +2,6 @@ use crate::lcd::*;
 use crate::font::*;
 use crate::terminus16_bold::*;
 use crate::terminus16::*;
-use crate::sample::*;
 use crate::decoder_uart::*;
 use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
@@ -10,7 +9,6 @@ use crate::decoder_onewire::*;
 use crate::decoder::*;
 
 const BUTTON_COUNT: usize = 8;
-const CHANNEL_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
 
 const COLOR_SEL: u16 = lcd_color(0, 128, 255);
@@ -34,13 +32,18 @@ const CH_COLS: u32 = 8;
 const CH_LABEL_X: u32 = 21;
 const CH_LABEL_Y: u32 = 1;
 
+const MA_ICONS: u32 = 3;
+
 enum Action {
 	Up,
+	SelUp,
 	Down,
+	SelDown,
 	Left,
 	Right,
 	Enter,
-	Escape
+	Escape,
+	Save
 }
 
 enum Mode {
@@ -51,21 +54,7 @@ enum Mode {
 	DecoderSpi,
 	DecoderOneWire,
 	DecoderI2C,
-	Channels,
-	LoadCapture,
-	SaveCapture,
-}
-
-#[derive(Copy, Clone)]
-enum KeyIcon {
-	Up,
-	Down,
-	Left,
-	Right,
-	Enter,
-	Exit,
-	Settings,
-	Disabled
+	Channels
 }
 
 pub struct Button {
@@ -109,52 +98,14 @@ impl Button {
 	}
 }
 
-pub struct Checkbox<'a> {
-	x: u32,
-	y: u32,
-	label: &'a str
-}
-
-impl Checkbox<'_> {
-	fn render(&self, sel: bool, checked: bool) {
-
-	}
-
-	fn undraw(&self) {
-
-	}
-
-	fn select(&self) {
-
-	}
-
-	fn deselect(&self) {
-
-	}
-
-	fn check(&self) {
-
-	}
-
-	fn uncheck(&self) {
-
-	}
-}
-
 enum Align {
 	Left,
-	Center,
 	Right
 }
 
 pub struct Select {
 	align: Align,
 	options: &'static [&'static str]
-}
-
-pub struct Keyboard {
-	x: u32,
-	y: u32
 }
 
 pub struct Input {
@@ -366,18 +317,25 @@ fn item_to_stopbits(idx: usize) -> StopBits {
 	}
 }
 
+fn cycle_fwd(idx: u32, count: u32) -> u32 {
+	if idx == count - 1 { 0 } else { idx + 1 }
+}
+
+fn cycle_bwd(idx: u32, count: u32) -> u32 {
+	if idx == 0 { count - 1 } else { idx - 1 }
+}
+
 pub struct Gui {
-	icons: [KeyIcon; BUTTON_COUNT],
 	visible_channels: u32,
-	sample_offset: u32,
-	pixels_per_sample: u32,
 	cur_title: &'static str,
 	mode: Mode,
 	ma_selected: u32,
 	ch_selected: u32,
 	da_selected: u32,
 	cd_selected: u32,
-	optcnt: u32
+	optcnt: u8,
+	incnt: u32,
+	sels: [u8; 8]
 }
 
 impl Gui {
@@ -404,17 +362,16 @@ impl Gui {
 		Self::print_info();
 
 		let mut gui = Gui {
-			icons: [KeyIcon::Disabled; 8],
 			visible_channels: 0xAA55,
-			sample_offset: 0,
-			pixels_per_sample: 5,
 			cur_title: "",
 			mode: Mode::Init,
 			ma_selected: 0,
 			da_selected: 0,
 			ch_selected: 0,
 			cd_selected: 0,
-			optcnt: 0
+			optcnt: 0,
+			incnt: 0,
+			sels: [0; 8]
 		};
 
 		gui.title_set("ITS-Board Logic Analyzer V0.1");
@@ -462,10 +419,6 @@ impl Gui {
 		lcd_icon_bw(x, y, ICON_FOLDER);
 	}
 
-	pub fn waveform(&self, data: &[Sample]) {
-
-	}
-
 	fn button_to_action(key: i32) -> Option<Action> {
 		match key {
 			5 => Some(Action::Up),
@@ -492,7 +445,6 @@ impl Gui {
 				Mode::DecoderSpi => { self.s_action(action); }
 				Mode::DecoderI2C => { self.i_action(action); }
 				Mode::DecoderOneWire => { self.o_action(action); }
-				_ => {}
 			};
 		}
 	}
@@ -502,15 +454,14 @@ impl Gui {
 			Mode::Main => self.ma_close(),
 			Mode::Channels => self.ch_close(),
 			Mode::DecoderAdd => self.da_close(),
-			Mode::DecoderUart => self.u_close(),
-			Mode::DecoderSpi => self.s_close(),
-			Mode::DecoderI2C => self.i_close(),
-			Mode::DecoderOneWire => self.o_close(),
+			Mode::DecoderUart => self.cd_undraw(),
+			Mode::DecoderSpi => self.cd_undraw(),
+			Mode::DecoderI2C => self.cd_undraw(),
+			Mode::DecoderOneWire => self.cd_undraw(),
 			_ => {}
 		};
 
 		self.mode = new_mode;
-
 		match self.mode {
 			Mode::Main => self.ma_open(),
 			Mode::Channels => self.ch_open(),
@@ -524,10 +475,46 @@ impl Gui {
 	}
 
 	/* === CD COMMON === */
-	//fn option_render(&mut self,
+	fn cd_up(&mut self) {
+		let prev = self.cd_selected;
+		self.cd_selected = cycle_bwd(self.cd_selected, self.incnt);
+		self.cd_update(prev);
+	}
+
+	fn cd_down(&mut self) {
+		let prev = self.cd_selected;
+		self.cd_selected = cycle_fwd(self.cd_selected, self.incnt);
+		self.cd_update(prev);
+	}
+
+	fn cd_sel_up(&mut self) {
+		let idx = self.cd_selected as usize;
+		let prev = self.sels[idx];
+		self.sels[idx] = cycle_bwd(self.sels[idx].into(), self.optcnt.into()) as u8;
+		self.cd_sel_update(prev);
+	}
+
+	fn cd_sel_down(&mut self) {
+		let idx = self.cd_selected as usize;
+		let prev = self.sels[idx];
+		self.sels[idx] = cycle_fwd(self.sels[idx].into(), self.optcnt.into()) as u8;
+		self.cd_sel_update(prev);
+	}
+
+	fn cd_sel_update(&mut self, prev: u8) {
+		// TODO
+	}
+
+	fn cd_update(&mut self, prev: u32) {
+		// TODO
+	}
+
+	fn option_render(&mut self) {
+		// TODO
+	}
 
 	fn select_render(&mut self, select: &Select) {
-		let new_cnt = select.options.len() as u32;
+		let new_cnt = select.options.len() as u8;
 
 		if self.optcnt > new_cnt {
 			// Erase
@@ -539,7 +526,7 @@ impl Gui {
 
 		let mut i = 0;
 		for option in select.options {
-			// option_render();
+			self.option_render();
 		}
 
 		self.optcnt = new_cnt;
@@ -564,6 +551,10 @@ impl Gui {
 		}
 	}
 
+	fn cd_undraw(&mut self) {
+		// TODO: Undraw
+	}
+
 	fn cd_render(&mut self, inputs: &[&Input]) {
 		self.cd_selected = 0;
 		let mut y = 0;
@@ -573,43 +564,38 @@ impl Gui {
 		}
 	}
 
+	fn cd_action(&mut self, action: Action) {
+		match action {
+			Action::Up => self.cd_up(),
+			Action::Down => self.cd_down(),
+			Action::SelUp => self.cd_sel_up(),
+			Action::SelDown => self.cd_sel_down(),
+			Action::Escape => self.mode_switch(Mode::DecoderAdd),
+			_ => {}
+		}
+	}
+
 	/* === U MODE === */
 	fn u_open(&mut self) {
 		self.title_set("UART Decoder");
 		self.cd_render(&UART_INPUTS);
 	}
 
-	fn u_close(&mut self) {
-
-	}
-
-	fn u_update(&mut self) {
-
-	}
-
 	fn u_action(&mut self, action: Action) {
 		match action {
-			Action::Up => {
-				if self.cd_selected > 0 {
-					self.cd_selected -= 1;
-				}
-			}
-			Action::Down => {
-
-			}
-			Action::Escape => { self.mode_switch(Mode::DecoderAdd); }
-			_ => {}
+			Action::Save => self.u_save(),
+			_ => self.cd_action(action)
 		};
 	}
 
-	fn u_exit(&mut self) {
+	fn u_save(&mut self) {
 		let d = DecoderUart {
-			rx_pin: item_to_pin(1),
-			tx_pin: item_to_pin(1),
-			databits: item_to_databits(1),
-			parity: item_to_parity(1),
-			stopbits: item_to_stopbits(1),
-			baudrate: item_to_baudrate(1)
+			rx_pin: item_to_pin(self.sels[0].into()),
+			tx_pin: item_to_pin(self.sels[1].into()),
+			databits: item_to_databits(self.sels[2].into()),
+			parity: item_to_parity(self.sels[3].into()),
+			stopbits: item_to_stopbits(self.sels[4].into()),
+			baudrate: item_to_baudrate(self.sels[5].into())
 		};
 	}
 
@@ -619,24 +605,22 @@ impl Gui {
 		self.cd_render(&SPI_INPUTS);
 	}
 
-	fn s_close(&mut self) {
-
-	}
-
 	fn s_action(&mut self, action: Action) {
 		match action {
-			Action::Escape => { self.mode_switch(Mode::DecoderAdd); }
-			_ => {}
-		}
+			Action::Save => self.s_save(),
+			_ => self.cd_action(action)
+		};
 	}
 
-	fn s_exit(&mut self) {
+	fn s_save(&mut self) {
 		let d = DecoderSPI {
-			miso_pin: item_to_pin(1),
-			mosi_pin: item_to_pin(1),
-			sck_pin: item_to_pin(1),
-			cs_pin: item_to_pin(1)
+			miso_pin: item_to_pin(self.sels[0].into()),
+			mosi_pin: item_to_pin(self.sels[1].into()),
+			sck_pin: item_to_pin(self.sels[2].into()),
+			cs_pin: item_to_pin(self.sels[3].into())
 		};
+
+		// TODO: Store Decoder
 	}
 
 	/* === I MODE === */
@@ -645,22 +629,20 @@ impl Gui {
 		self.cd_render(&I2C_INPUTS);
 	}
 
-	fn i_close(&mut self) {
-
-	}
-
 	fn i_action(&mut self, action: Action) {
 		match action {
-			Action::Escape => { self.mode_switch(Mode::DecoderAdd); }
-			_ => {}
-		}
+			Action::Save => self.i_save(),
+			_ => self.cd_action(action)
+		};
 	}
 
-	fn i_exit(&mut self) {
+	fn i_save(&mut self) {
 		let d = DecoderI2C {
-			sda_pin: item_to_pin(1),
-			scl_pin: item_to_pin(1)
+			sda_pin: item_to_pin(self.sels[0].into()),
+			scl_pin: item_to_pin(self.sels[1].into())
 		};
+
+		// TODO: Store Decoder
 	}
 
 	/* === O MODE === */
@@ -669,37 +651,40 @@ impl Gui {
 		self.cd_render(&ONEWIRE_INPUTS);
 	}
 
-	fn o_close(&mut self) {
-
-	}
-
 	fn o_action(&mut self, action: Action) {
 		match action {
-			Action::Escape => { self.mode_switch(Mode::DecoderAdd); }
-			_ => {}
-		}
-	}
-
-	fn o_exit(&mut self) {
-		let d = DecoderOneWire {
-			onewire_pin: item_to_pin(1)
+			Action::Save => self.o_save(),
+			_ => self.cd_action(action)
 		};
 	}
 
+	fn o_save(&mut self) {
+		let d = DecoderOneWire {
+			onewire_pin: item_to_pin(self.sels[0].into())
+		};
+
+		// TODO: Store Decoder
+	}
+
 	/* === MA MODE === */
-	fn ma_update(&mut self, i: u32, sel: bool) {
-		const ICONS: [u32; 2] = [ ICON_ADD, ICON_SETTINGS ];
+	fn ma_render(&mut self, i: u32, sel: bool) {
+		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
-		let x = i * (ICON_BOX + 1) + LCD_WIDTH - 2 * (ICON_BOX + 1) + 7;
+		let x = i * (ICON_BOX + 1) + LCD_WIDTH - MA_ICONS * (ICON_BOX + 1) + 7;
 		lcd_icon_color(x, 7, ICONS[i as usize], fg, LCD_BLACK);
 	}
 
 	fn ma_top_box(&mut self) {
-		for i in 0..2 {
+		for i in 0..MA_ICONS {
 			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_WHITE);
-			self.ma_update(i, i == self.ma_selected);
+			self.ma_render(i, i == self.ma_selected);
 		}
+	}
+
+	fn ma_update(&mut self, prev: u32) {
+		self.ma_render(prev, false);
+		self.ma_render(self.ma_selected, true);
 	}
 
 	fn ma_open(&mut self) {
@@ -709,13 +694,18 @@ impl Gui {
 	}
 
 	fn ma_close(&mut self) {
+		// TODO: Undraw
+	}
 
+	fn ma_run(&mut self) {
+		// TODO: Start sampling
 	}
 
 	fn ma_enter(&mut self) {
 		match self.ma_selected {
-			0 => { self.mode_switch(Mode::DecoderAdd); }
-			1 => { self.mode_switch(Mode::Channels); }
+			0 => { self.ma_run(); }
+			1 => { self.mode_switch(Mode::DecoderAdd); }
+			2 => { self.mode_switch(Mode::Channels); }
 			_ => {}
 		}
 	}
@@ -727,18 +717,14 @@ impl Gui {
 			Action::Down => {
 			}
 			Action::Left => {
-				if self.ma_selected > 0 {
-					self.ma_update(self.ma_selected, false);
-					self.ma_selected -= 1;
-					self.ma_update(self.ma_selected, true);
-				}
+				let prev = self.ma_selected;
+				self.ma_selected = cycle_bwd(self.ma_selected, MA_ICONS);
+				self.ma_update(prev);
 			}
 			Action::Right => {
-				if self.ma_selected < 1 {
-					self.ma_update(self.ma_selected, false);
-					self.ma_selected += 1;
-					self.ma_update(self.ma_selected, true);
-				}
+				let prev = self.ma_selected;
+				self.ma_selected = cycle_fwd(self.ma_selected, MA_ICONS);
+				self.ma_update(prev);
 			}
 			Action::Enter => {
 				self.ma_enter();
@@ -837,6 +823,7 @@ impl Gui {
 			Action::Escape => {
 				self.mode_switch(Mode::Main);
 			},
+			_ => {}
 		}
 	}
 
@@ -883,24 +870,12 @@ impl Gui {
 		match action {
 			Action::Up => {
 				let prev = self.da_selected;
-				if self.da_selected > 0 {
-					self.da_selected -= 1;
-				}
-				else {
-					self.da_selected = DECODER_COUNT - 1;
-				}
-
+				self.da_selected = cycle_bwd(self.da_selected, DECODER_COUNT);
 				self.da_switch(prev);
 			},
 			Action::Down => {
 				let prev = self.da_selected;
-				if self.da_selected < DECODER_COUNT - 1 {
-					self.da_selected += 1;
-				}
-				else {
-					self.da_selected = 0;
-				}
-
+				self.da_selected = cycle_fwd(self.da_selected, DECODER_COUNT);
 				self.da_switch(prev);
 			},
 			Action::Enter => {

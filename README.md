@@ -21,15 +21,22 @@ ASM Dump:
 ## TODO
 
 ### Anton Heute
-- Protocol Decoder GUIs
-- SD Card Driver + SD Info on init screen
-- Blocking Sample Loop 16 channels
-- Select Sampling Frequency in GUI
+1. Draw New Icons
+2. Main All Icons
+
+2. Finish Action Bar
+- Protocol Decoder Navigation
+- Protocol Decoder Undraw
+- SD Mock
+- SD Card Driver
+- SD Info on init screen
+
+### Ferien
 - Start capture on Start + trigger
 - Zoom in / Zoom out + Move forward / backward on timeline
 - Send Raw Captured data over UART
-
-### Ferien
+- Blocking Sample Loop 16 channels
+- Select Sampling Frequency in GUI
 - Protocol decoding
 	1. I2C
 	2. UART
