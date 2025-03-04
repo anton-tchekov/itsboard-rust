@@ -35,7 +35,13 @@ const CH_LABEL_Y: u32 = 1;
 const MA_ICONS: u32 = 3;
 const ICON_PADDING: u32 = 7;
 
-enum Action {
+const ACTION_ICONS_SKIP: u32 = ICON_BOX + 1;
+const ACTION_ICONS_X: u32 = LCD_WIDTH - 8 * (ICON_BOX + 1) + ICON_PADDING;
+const ACTION_ICONS_Y: u32 = LCD_HEIGHT - ICON_BOX + ICON_PADDING;
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum Action {
+	None,
 	Up,
 	SelUp,
 	Down,
@@ -44,7 +50,8 @@ enum Action {
 	Right,
 	Enter,
 	Escape,
-	Save
+	Save,
+	Check
 }
 
 enum Mode {
@@ -342,7 +349,28 @@ fn cycle_bwd(idx: u32, count: u32) -> u32 {
 	if idx == 0 { count - 1 } else { idx - 1 }
 }
 
+const ACTIONS_INIT: [Action; 8] = [
+	Action::None, Action::None, Action::None, Action::None,
+	Action::None, Action::None, Action::None, Action::Enter
+];
+
+const ACTIONS_MAIN: [Action; 8] = [
+	Action::Up, Action::Down, Action::Left, Action::Right,
+	Action::None, Action::None, Action::None, Action::Enter
+];
+
+const ACTIONS_DA: [Action; 8] = [
+	Action::Up, Action::Down, Action::None, Action::None,
+	Action::None, Action::None, Action::Escape, Action::Enter
+];
+
+const ACTIONS_CH: [Action; 8] = [
+	Action::Up, Action::Down, Action::Left, Action::Right,
+	Action::None, Action::None, Action::Escape, Action::Enter
+];
+
 pub struct Gui {
+	actions: &'static [Action],
 	visible_channels: u32,
 	cur_title: &'static str,
 	mode: Mode,
@@ -379,6 +407,7 @@ impl Gui {
 		Self::print_info();
 
 		let mut gui = Gui {
+			actions: &ACTIONS_INIT,
 			visible_channels: 0xAA55,
 			cur_title: "",
 			mode: Mode::Init,
@@ -392,6 +421,8 @@ impl Gui {
 		};
 
 		gui.title_set("ITS-Board Logic Analyzer V0.1");
+		gui.icon_box();
+		gui.actions_render();
 		gui
 	}
 
@@ -411,59 +442,70 @@ impl Gui {
 
 	fn icon_box(&self) {
 		lcd_rect(0, LCD_HEIGHT - ICON_BOX, LCD_WIDTH, ICON_BOX, LCD_BLACK);
-
 		for i in 0..BUTTON_COUNT {
 			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
 				LCD_HEIGHT - ICON_BOX, ICON_BOX, LCD_WHITE);
 		}
-
-		let mut x = LCD_WIDTH - 8 * (ICON_BOX + 1) + ICON_PADDING;
-		let y = LCD_HEIGHT - ICON_BOX + ICON_PADDING;
-		lcd_icon_bw(x, y, ICON_EXIT);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_LEFT);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_UP);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_ENTER);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_DOWN);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_RIGHT);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_SCREENSHOT);
-		x += ICON_BOX + 1;
-		lcd_icon_bw(x, y, ICON_FOLDER);
 	}
 
-	fn button_to_action(key: i32) -> Option<Action> {
-		match key {
-			5 => Some(Action::Up),
-			3 => Some(Action::Down),
-			6 => Some(Action::Left),
-			2 => Some(Action::Right),
-			4 => Some(Action::Enter),
-			7 => Some(Action::Escape),
-			_ => None
+	fn action_icon_render(x: u32, y: u32, action: Action) {
+		match action {
+			Action::Left => lcd_icon_bw(x, y, ICON_LEFT),
+			Action::Right => lcd_icon_bw(x, y, ICON_RIGHT),
+			Action::Up => lcd_icon_bw(x, y, ICON_UP),
+			Action::Down => lcd_icon_bw(x, y, ICON_DOWN),
+			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
+			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
+			Action::Save => lcd_icon_bw(x, y, ICON_SAVE),
+			_ => lcd_icon_undraw(x, y)
 		}
+	}
+
+	fn actions_set(&mut self, a: &'static [Action]) {
+		let mut x = ACTION_ICONS_X;
+		for i in 0..BUTTON_COUNT {
+			if a[i] != self.actions[i] {
+				Self::action_icon_render(x, ACTION_ICONS_Y, a[i]);
+			}
+
+			x += ACTION_ICONS_SKIP;
+		}
+
+		self.actions = a;
+	}
+
+	fn actions_render(&self) {
+		let mut x = ACTION_ICONS_X;
+		for i in 0..BUTTON_COUNT {
+			if self.actions[i] != Action::None {
+				Self::action_icon_render(x, ACTION_ICONS_Y, self.actions[i]);
+			}
+
+			x += ACTION_ICONS_SKIP;
+		}
+	}
+
+	fn button_to_action(&self, key: i32) -> Action {
+		self.actions[((BUTTON_COUNT - 1) - key as usize)]
+	}
+
+	pub fn action(&mut self, action: Action) {
+		match self.mode {
+			Mode::Init => {
+				self.mode_switch(Mode::Main);
+			}
+			Mode::Main => { self.ma_action(action); }
+			Mode::Channels => { self.ch_action(action); }
+			Mode::DecoderAdd => { self.da_action(action); }
+			Mode::DecoderUart => { self.u_action(action); }
+			Mode::DecoderSpi => { self.s_action(action); }
+			Mode::DecoderI2C => { self.i_action(action); }
+			Mode::DecoderOneWire => { self.o_action(action); }
+		};
 	}
 
 	pub fn key(&mut self, key: i32) {
-		if let Some(action) = Self::button_to_action(key) {
-			match self.mode {
-				Mode::Init => {
-					self.icon_box();
-					self.mode_switch(Mode::Main);
-				}
-				Mode::Main => { self.ma_action(action); }
-				Mode::Channels => { self.ch_action(action); }
-				Mode::DecoderAdd => { self.da_action(action); }
-				Mode::DecoderUart => { self.u_action(action); }
-				Mode::DecoderSpi => { self.s_action(action); }
-				Mode::DecoderI2C => { self.i_action(action); }
-				Mode::DecoderOneWire => { self.o_action(action); }
-			};
-		}
+		self.action(self.button_to_action(key));
 	}
 
 	fn mode_switch(&mut self, new_mode: Mode) {
@@ -553,6 +595,7 @@ impl Gui {
 
 	fn cd_render(&mut self, inputs: &[&Input]) {
 		self.cd_selected = 0;
+		self.actions_set(&ACTIONS_CH);
 		let mut y = 0;
 		for input in inputs {
 			self.input_render(input, y, y == self.cd_selected);
@@ -685,6 +728,7 @@ impl Gui {
 
 	fn ma_open(&mut self) {
 		self.title_set("Logic Analyzer");
+		self.actions_set(&ACTIONS_MAIN);
 		self.da_selected = 0;
 		self.ma_top_box();
 	}
@@ -772,6 +816,7 @@ impl Gui {
 	fn ch_open(&mut self) {
 		self.ch_selected = 0;
 		self.title_set("Visible Channels");
+		self.actions_set(&ACTIONS_CH);
 		for y in 0..CH_ROWS {
 			for x in 0..CH_COLS {
 				let idx = y * CH_COLS + x;
@@ -852,6 +897,7 @@ impl Gui {
 
 	fn da_open(&mut self) {
 		self.title_set("Add Protocol Decoder");
+		self.actions_set(&ACTIONS_DA);
 		for i in 0..DECODER_COUNT {
 			self.da_button(i).render(i == self.da_selected);
 		}

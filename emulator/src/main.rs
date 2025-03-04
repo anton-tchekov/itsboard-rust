@@ -25,22 +25,40 @@ fn main() -> Result<(), String> {
 				Event::Quit {..} => {
 					break 'running;
 				},
-				Event::KeyDown { keycode: Some(Keycode::Escape) | Some(Keycode::Num1), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+					gui.action(Action::Escape);
+				},
+				Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
+					gui.action(Action::Left);
+				},
+				Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
+					gui.action(Action::Up);
+				},
+				Event::KeyDown { keycode: Some(Keycode::Space) | Some(Keycode::Return), .. } => {
+					gui.action(Action::Enter);
+				},
+				Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
+					gui.action(Action::Down);
+				},
+				Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
+					gui.action(Action::Right);
+				},
+				Event::KeyDown { keycode: Some(Keycode::Num1), .. } => {
 					gui.key(7);
 				},
-				Event::KeyDown { keycode: Some(Keycode::Left) | Some(Keycode::Num2), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Num2), .. } => {
 					gui.key(6);
 				},
-				Event::KeyDown { keycode: Some(Keycode::Up) | Some(Keycode::Num3), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Num3), .. } => {
 					gui.key(5);
 				},
-				Event::KeyDown { keycode: Some(Keycode::Space) | Some(Keycode::Return) | Some(Keycode::Num4), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Num4), .. } => {
 					gui.key(4);
 				},
-				Event::KeyDown { keycode: Some(Keycode::Down) | Some(Keycode::Num5), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Num5), .. } => {
 					gui.key(3);
 				},
-				Event::KeyDown { keycode: Some(Keycode::Right) | Some(Keycode::Num6), .. } => {
+				Event::KeyDown { keycode: Some(Keycode::Num6), .. } => {
 					gui.key(2);
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num7), .. } => {
