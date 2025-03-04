@@ -21,28 +21,23 @@ ASM Dump:
 ## TODO
 
 ### Anton Heute
-- Control using buttons on ITS Board
 - Protocol Decoder GUIs
-- SD Info on init screen
-- Performant
+- SD Card Driver + SD Info on init screen
+- Blocking Sample Loop 16 channels
+- Select Sampling Frequency in GUI
+- Start capture on Start + trigger
+- Zoom in / Zoom out + Move forward / backward on timeline
+- Send Raw Captured data over UART
 
 ### Ferien
-- Sampling / Buffering GPIO Port
-- Select Sampling Frequency in GUI
-- Blocking Sample Loop 16 channels
-- Start capture on Start + trigger
-- Zoom in / Zoom out
-- Move forward / backward on timeline
 - Protocol decoding
 	1. I2C
 	2. UART
 	3. SPI
 	4. OneWire
-- Send Raw Captured data over UART
 
 ### Im Semester (Wenn Zeit ist)
 
-- SD Card Driver
 - FAT File System Driver
 - Concurrent Sample Loop
 - Start / Stop capture

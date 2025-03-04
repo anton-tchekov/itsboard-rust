@@ -29,6 +29,11 @@ const DA_PADDING: u32 = 10;
 const Y_BEGIN: u32 = ICON_BOX + 1;
 const DA_BTN_WIDTH: u32 = 100;
 
+const CH_ROWS: u32 = 2;
+const CH_COLS: u32 = 8;
+const CH_LABEL_X: u32 = 21;
+const CH_LABEL_Y: u32 = 1;
+
 enum Action {
 	Up,
 	Down,
@@ -749,35 +754,47 @@ impl Gui {
 		lcd_icon_color(x, y, icon, color, LCD_BLACK);
 	}
 
-	fn ch_update(&self, sel: bool) {
-		let idx = self.ch_selected;
-		let x = idx % 8;
-		let y = idx / 8;
+	fn ch_pos(x: u32, y: u32) -> (u32, u32) {
 		let rx = (3 + x * 7) * TERMINUS16.width;
 		let ry = CH_Y_BEGIN + y * 32;
+		(rx, ry)
+	}
+
+	fn ch_update(&self, sel: bool) {
+		let idx = self.ch_selected;
+		let x = idx % CH_COLS;
+		let y = idx / CH_COLS;
+		let (rx, ry) = Self::ch_pos(x, y);
 		self.check_render(rx, ry, sel,
 			self.visible_channels & (1 << idx) != 0);
 	}
 
 	fn ch_close(&mut self) {
-
+		let w = 2 * TERMINUS16.width;
+		let h = TERMINUS16.height;
+		for y in 0..CH_ROWS {
+			for x in 0..CH_COLS {
+				let (rx, ry) = Self::ch_pos(x, y);
+				lcd_rect(rx, ry, w, h, LCD_BLACK);
+				lcd_rect(rx + CH_LABEL_X, ry + CH_LABEL_Y, w, h, LCD_BLACK);
+			}
+		}
 	}
 
 	fn ch_open(&mut self) {
 		self.ch_selected = 0;
 		self.title_set("Visible Channels");
-		for y in 0..2 {
-			for x in 0..8 {
-				let idx = y * 8 + x;
-				let mut rx = (3 + x * 7) * TERMINUS16.width;
-				let ry = CH_Y_BEGIN + y * 32;
+		for y in 0..CH_ROWS {
+			for x in 0..CH_COLS {
+				let idx = y * CH_COLS + x;
+				let (rx, ry) = Self::ch_pos(x, y);
 				let mut buf: [u8; 2] = [0; 2];
 				Self::channel_str(&mut buf, idx);
 				self.check_render(rx, ry, self.ch_selected == idx,
 					self.visible_channels & (1 << idx) != 0);
 
-				rx += 21;
-				lcd_str(rx, ry + 1, core::str::from_utf8(&buf).unwrap(),
+				lcd_str(rx + CH_LABEL_X, ry + CH_LABEL_Y,
+					core::str::from_utf8(&buf).unwrap(),
 					LCD_WHITE, LCD_BLACK, &TERMINUS16);
 			}
 		}
