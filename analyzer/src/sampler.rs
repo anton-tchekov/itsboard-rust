@@ -3,8 +3,8 @@ use crate::sample::*;
 
 const INTERVAL: u32 = 90;
 
-fn sample() -> u8 {
-	blueread()
+fn sample() -> Sample {
+	(blueread() as Sample) | (yellowread() as Sample) << 8
 }
 
 // 1. Iteration, just collect samples in a fixed loop

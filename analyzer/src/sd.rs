@@ -123,35 +123,28 @@ impl Sd {
 		spi_fast();
 		delay_ms(20);
 
-		/*
+	/*
 		sd_select();
-		if _command(CMD_SEND_CID, 0) != 0
-		{
+		if _command(CMD_SEND_CID, 0) != 0 {
 			sd_deselect();
 			return Err(());
 		}
 
-			while(_spi_xchg(0xFF) != 0xFE) ;
+		while(_spi_xchg(0xFF) != 0xFE) ;
 
-		let buf[u8; 18] = [0; 18];
-
-		for i in 0..buf.len() {
-			buf[i] = spi_xchg(0xFF);
-		}
-
-		info.manufacturer = buf[0];
-		info.oem[0] = buf[1];
-		info.oem[1] = buf[2];
-		info.product[0] = buf[3];
-		info.product[1] = buf[4];
-		info.product[2] = buf[5];
-		info.product[3] = buf[6];
-		info.product[4] = buf[7];
-		info.revision = buf[8];
-		into.serial |= buf[9] << ((12 - 9) * 8);
-		into.serial |= buf[10] << ((12 - 10) * 8);
-		into.serial |= buf[11] << ((12 - 11) * 8);
-		into.serial |= buf[12] << ((12 - 12) * 8);
+		info.manufacturer = spi_xchg(0xFF);
+		info.oem[0] = spi_xchg(0xFF);
+		info.oem[1] = spi_xchg(0xFF);
+		info.product[0] = spi_xchg(0xFF);
+		info.product[1] = spi_xchg(0xFF);
+		info.product[2] = spi_xchg(0xFF);
+		info.product[3] = spi_xchg(0xFF);
+		info.product[4] = spi_xchg(0xFF);
+		info.revision = spi_xchg(0xFF);
+		info.serial |= spi_xchg(0xFF) << 24;
+		info.serial |= spi_xchg(0xFF) << 16;
+		info.serial |= spi_xchg(0xFF) << 8;
+		info.serial |= spi_xchg(0xFF);
 
 		info.manufacturing_year = buf[13] << 4;
 		info.manufacturing_year |= buf[14] >> 4;
@@ -159,119 +152,73 @@ impl Sd {
 
 		let csd_read_bl_len = 0;
 		let csd_c_size_mult = 0;
-		let csd_structure = 0;
+
 		let csd_c_size = 0;
 
-		if _command(CMD_SEND_CSD, 0) != 0
-		{
+		if _command(CMD_SEND_CSD, 0) != 0 {
 			sd_deselect();
 			return 0;
 		}
 
 		while(_spi_xchg(0xFF) != 0xFE) ;
 
-			for(i = 0; i < 18; ++i)
-			{
-				b = _spi_xchg(0xFF);
-				if(i == 0)
-				{
-					csd_structure = b >> 6;
-				}
-				else if(i == 14)
-				{
-					if(b & 0x40)
-					{
-						info->flag_copy = 1;
-					}
+		for(i = 0; i < 18; ++i)
+		{
+			b = _spi_xchg(0xFF);
+		}
 
-					if(b & 0x20)
-					{
-						info->flag_write_protect = 1;
-					}
+		let csd_structure = buf[0] >> 6;
 
-					if(b & 0x10)
-					{
-						info->flag_write_protect_temp = 1;
-					}
+		let b = buf[14];
+		if(b & 0x40)
+		{
+			info.flag_copy = 1;
+		}
 
-					info->format = (b & 0x0C) >> 2;
-				}
-				else
-				{
-					if(csd_structure == 0x01)
-					{
-						switch(i)
-						{
-						case 7:
-						{
-							b &= 0x3f;
-						}
+		if(b & 0x20)
+		{
+			info.flag_write_protect = 1;
+		}
 
-						case 8:
-						case 9:
-						{
-							csd_c_size <<= 8;
-							csd_c_size |= b;
-							++csd_c_size;
-							info->capacity = (uint32_t)csd_c_size << 10;
-						}
-						}
-					}
-					else if(csd_structure == 0x00)
-					{
-						switch (i)
-						{
-						case 5:
-						{
-							csd_read_bl_len = b & 0x0F;
-							break;
-						}
+		if(b & 0x10)
+		{
+			info.flag_write_protect_temp = 1;
+		}
 
-						case 6:
-						{
-							csd_c_size = b & 0x03;
-							csd_c_size <<= 8;
-							break;
-						}
+		info.format = (b & 0x0C) >> 2;
 
-						case 7:
-						{
-							csd_c_size |= b;
-							csd_c_size <<= 2;
-							break;
-						}
+		if csd_structure == 0x01 {
+			csd_c_size <<= 8;
+			csd_c_size |= buf[7] & 0x3F;
+			++csd_c_size;
+			info->capacity = csd_c_size << 10;
 
-						case 8:
-						{
-							csd_c_size |= b >> 6;
-							++csd_c_size;
-							break;
-						}
+			csd_c_size <<= 8;
+			csd_c_size |= buf[8];
+			++csd_c_size;
+			info->capacity = csd_c_size << 10;
 
-						case 9:
-						{
-							csd_c_size_mult = b & 0x03;
-							csd_c_size_mult <<= 1;
-							break;
-						}
+			csd_c_size <<= 8;
+			csd_c_size |= buf[9];
+			++csd_c_size;
+			info->capacity = csd_c_size << 10;
+		}
+		else if csd_structure == 0x00 {
+			csd_read_bl_len = buf[5] & 0x0F;
+			csd_c_size = buf[6] & 0x03;
+			csd_c_size <<= 8;
+			csd_c_size |= buf[7];
+			csd_c_size <<= 2;
+			csd_c_size |= buf[8] >> 6;
+			++csd_c_size;
+			csd_c_size_mult = buf[9] & 0x03;
+			csd_c_size_mult <<= 1;
+			csd_c_size_mult |= buf[10] >> 7;
+			info->capacity = (csd_c_size << (csd_c_size_mult + csd_read_bl_len + 2)) >> 9;
+		}
 
-						case 10:
-						{
-							csd_c_size_mult |= b >> 7;
-							info->capacity = ((uint32_t)csd_c_size <<
-								(csd_c_size_mult + csd_read_bl_len + 2)) >> 9;
-							break;
-						}
-						}
-					}
-				}
-			}
-
-			sd_deselect();
-			return 1;
-		}*/
-
-		return Ok(sd);
+		sd_deselect();*/
+		Ok(sd)
 	}
 
 	fn command(cmd: u8, arg: u32) -> u8 {
@@ -280,7 +227,7 @@ impl Sd {
 		spi_xchg(((arg >> 24) & 0xFF) as u8);
 		spi_xchg(((arg >> 16) & 0xFF) as u8);
 		spi_xchg(((arg >> 8) & 0xFF) as u8);
-		spi_xchg(((arg >> 0) & 0xFF) as u8);
+		spi_xchg((arg & 0xFF) as u8);
 
 		if cmd == CMD_GO_IDLE_STATE {
 			spi_xchg(0x95);
@@ -303,7 +250,7 @@ impl Sd {
 			i += 1;
 		}
 
-		return response;
+		response
 	}
 
 	fn block_addr(card_type: u8, block: u32) -> u32 {
@@ -346,7 +293,7 @@ impl Sd {
 		spi_xchg(0xFF);
 		sd_deselect();
 		spi_xchg(0xFF);
-		return Ok(());
+		Ok(())
 	}
 
 	pub fn write(&self, block: u32, buf: &[u8]) -> Result<(), ()> {
@@ -388,6 +335,6 @@ impl Sd {
 
 		spi_xchg(0xFF);
 		sd_deselect();
-		return Ok(());
+		Ok(())
 	}
 }

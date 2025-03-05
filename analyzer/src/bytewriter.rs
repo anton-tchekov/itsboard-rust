@@ -46,7 +46,7 @@ impl fmt::Write for ByteMutWriter<'_> {
 		{
 			*i = b;
 		}
-		self.cursor = usize::min(cap, self.cursor + s.as_bytes().len());
+		self.cursor = usize::min(cap, self.cursor + s.len());
 		Ok(())
 	}
 }

@@ -20,26 +20,30 @@ ASM Dump:
 
 ## TODO
 
+### Diese Woche
+1. Start capture on Start + trigger + Blocking Sample Loop 16 channels
+2. Send Raw Captured data over UART
+3. SD Card Driver + Info / Error Msg
+
+### Later
+4. Select Sampling Frequency in GUI
+5. Render Waveform + Zoom in / Zoom out + Move forward / backward on timeline
+
+### Wenn Protocol Decoder Fertig
+6. Render Protocol Decoder Outputs
+
 ### Ferien
-- SD Card Driver + Info / Error Msg
-- Start capture on Start + trigger
-- Zoom in / Zoom out + Move forward / backward on timeline
-- Send Raw Captured data over UART
-- Blocking Sample Loop 16 channels
-- Select Sampling Frequency in GUI
 - Protocol decoding
 	1. I2C
 	2. UART
 	3. SPI
 	4. OneWire
 
-### Im Semester (Wenn Zeit ist)
-
+### Im Semester
 - FAT File System Driver
 - Concurrent Sample Loop
 - Start / Stop capture
 - Measure Time with cursors
-- Send all data over UART
 - Save capture to SD card
 - Save screenshots to SD card
 - Save Load Capture GUI

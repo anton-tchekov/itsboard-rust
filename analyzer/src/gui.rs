@@ -46,7 +46,6 @@ const INPUT_HEIGHT: u32 = 20;
 const INPUT_LABEL_Y: u32 = Y_BEGIN + DA_PADDING;
 const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 
-const INPUT_TEXT_X: u32 = DA_PADDING + 2;
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -97,7 +96,7 @@ impl Button {
 		let text_x = self.x + self.w / 2;
 		let text_y = self.y + BUTTON_HEIGHT / 2;
 		lcd_str_center(text_x, text_y, self.text,
-				LCD_WHITE, LCD_BLACK, &BUTTON_FONT);
+				LCD_WHITE, LCD_BLACK, BUTTON_FONT);
 
 		if sel { self.select(); } else { self.deselect(); }
 	}
@@ -146,24 +145,24 @@ pub struct Input {
 	label: &'static str
 }
 
-const SELECT_PIN_LIST: [&'static str; 17] = [
+const SELECT_PIN_LIST: [&str; 17] = [
 	"/", "0", "1", "2", "3", "4", "5", "6", "7",
 	"8", "9", "10", "11", "12", "13", "14", "15"
 ];
 
-const SELECT_PARITY_LIST: [&'static str; 3] = [
+const SELECT_PARITY_LIST: [&str; 3] = [
 	"None", "Even", "Odd"
 ];
 
-const SELECT_STOP_BITS_LIST: [&'static str; 3] = [
+const SELECT_STOP_BITS_LIST: [&str; 3] = [
 	"1", "1.5", "2"
 ];
 
-const SELECT_DATA_BITS_LIST: [&'static str; 5] = [
+const SELECT_DATA_BITS_LIST: [&str; 5] = [
 	"8", "9", "5", "6", "7"
 ];
 
-const SELECT_BAUDRATE_LIST: [&'static str; 11] = [
+const SELECT_BAUDRATE_LIST: [&str; 11] = [
 	"9600",
 	"19200",
 	"38400",
@@ -178,17 +177,17 @@ const SELECT_BAUDRATE_LIST: [&'static str; 11] = [
 ];
 
 static BAUDRATES: [u32; 11] = [
+	9600,
+	19200,
+	38400,
+	57600,
+	115200,
 	300,
 	600,
 	1200,
 	1800,
 	2400,
-	4800,
-	9600,
-	19200,
-	38400,
-	57600,
-	115200
+	4800
 ];
 
 const SELECT_PIN: Select = Select {
@@ -321,10 +320,10 @@ fn item_to_pin(idx: usize) -> DecoderPin {
 
 fn item_to_databits(idx: usize) -> DataBits {
 	match idx {
-		0 => DataBits::Five,
-		1 => DataBits::Six,
-		2 => DataBits::Seven,
-		4 => DataBits::Nine,
+		2 => DataBits::Five,
+		3 => DataBits::Six,
+		4 => DataBits::Seven,
+		1 => DataBits::Nine,
 		_ => DataBits::Eight
 	}
 }
@@ -791,7 +790,7 @@ impl Gui {
 
 	fn ma_top_box(&mut self) {
 		for i in 0..MA_ICONS {
-			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
+			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_WHITE);
 			self.ma_render(i, i == self.ma_selected);
 		}
@@ -811,7 +810,7 @@ impl Gui {
 
 	fn ma_close(&mut self) {
 		for i in 0..MA_ICONS {
-			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
+			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_BLACK);
 			lcd_icon_undraw(
 				LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING,
@@ -962,7 +961,7 @@ impl Gui {
 	}
 
 	fn da_button(&self, idx: u32) -> Button {
-		const LABELS: [&'static str; 4] = [ "UART", "SPI", "I2C", "OneWire" ];
+		const LABELS: [&str; DECODER_COUNT as usize] = [ "UART", "SPI", "I2C", "OneWire" ];
 		Button {
 			x: DA_PADDING,
 			y: idx * (BUTTON_HEIGHT + DA_PADDING) + ICON_BOX + 1 + DA_PADDING,
