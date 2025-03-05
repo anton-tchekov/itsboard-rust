@@ -18,17 +18,35 @@ const ILLEGAL_CMD            : u8 = 1 << 2;
 
 const SD_1                   : u8 = 1 << 0;
 const SD_2                   : u8 = 1 << 1;
-const SD_HC                  : u8 = 1 << 2;
+pub const SD_HC              : u8 = 1 << 2;
 
-struct Sd {
-	card_type: u8
+pub struct Sd {
+	pub serial: u32,
+	pub capacity: u32,
+	pub oem: [u8; 2],
+	pub product_name: [u8; 5],
+	pub manufacturer: u8,
+	pub revision: u8,
+	pub manufacturing_year: u8,
+	pub manufacturing_month: u8,
+	pub card_type: u8
 }
 
 impl Sd {
 	pub fn init() -> Result<Sd, ()> {
-		let mut sd = Sd { card_type: 0 };
+		let mut sd = Sd {
+			serial: 0,
+			capacity: 0,
+			oem: [0; 2],
+			product_name: [0; 5],
+			manufacturer: 0,
+			revision: 0,
+			manufacturing_year: 0,
+			manufacturing_month: 0,
+			card_type: 0
+		};
 
-		sd_deselect();
+		sd_cs_1();
 		spi_slow();
 		sd.card_type = 0;
 
@@ -40,7 +58,7 @@ impl Sd {
 			}
 		}
 
-		sd_select();
+		sd_cs_0();
 		{
 			let mut i = 0;
 			loop {
@@ -49,7 +67,7 @@ impl Sd {
 				}
 
 				if i == 0x1FF {
-					sd_deselect();
+					sd_cs_1();
 					return Err(());
 				}
 
@@ -91,7 +109,7 @@ impl Sd {
 				}
 
 				if i == 0x7FFF {
-					sd_deselect();
+					sd_cs_1();
 					return Err(());
 				}
 
@@ -101,7 +119,7 @@ impl Sd {
 
 		if sd.card_type & SD_2 != 0 {
 			if Self::command(CMD_READ_OCR, 0) != 0 {
-				sd_deselect();
+				sd_cs_1();
 				return Err(());
 			}
 
@@ -115,110 +133,78 @@ impl Sd {
 		}
 
 		if Self::command(CMD_SET_BLOCKLEN, 512) != 0 {
-			sd_deselect();
+			sd_cs_1();
 			return Err(());
 		}
 
-		sd_deselect();
+		sd_cs_1();
 		spi_fast();
 		delay_ms(20);
 
-	/*
-		sd_select();
-		if _command(CMD_SEND_CID, 0) != 0 {
-			sd_deselect();
+		sd_cs_0();
+		let mut buf: [u8; 18] = [0; 18];
+
+		Self::read_info(CMD_SEND_CID, &mut buf)?;
+
+		sd.manufacturer = buf[0];
+		sd.oem[0] = buf[1];
+		sd.oem[1] = buf[2];
+		sd.product_name[0] = buf[3];
+		sd.product_name[1] = buf[4];
+		sd.product_name[2] = buf[5];
+		sd.product_name[3] = buf[6];
+		sd.product_name[4] = buf[7];
+		sd.revision = buf[8];
+		sd.serial = ((buf[9] as u32) << 24) |
+			((buf[10] as u32) << 16) |
+			((buf[11] as u32) << 8) |
+			(buf[12] as u32);
+		sd.manufacturing_year = (buf[13] << 4) | (buf[14] >> 4);
+		sd.manufacturing_month = buf[14] & 0x0F;
+
+		Self::read_info(CMD_SEND_CSD, &mut buf)?;
+		let csd_structure = buf[0] >> 6;
+		sd.capacity = if csd_structure == 0x01 {
+			((((((((buf[7] as u32) & 0x3F) + 1) << 8 |
+				(buf[8] as u32)) + 1) << 8) |
+				(buf[9] as u32)) + 1) << 10
+		}
+		else if csd_structure == 0x00 {
+			let csd_read_bl_len: u32 = (buf[5] as u32) & 0x0F;
+			let csd_c_size = ((((((buf[6] as u32) & 0x03) << 8) |
+				(buf[7] as u32)) << 2) | ((buf[8] as u32) >> 6)) + 1;
+			let csd_c_size_mult = (((buf[9] as u32) & 0x03) << 1) | ((buf[10] as u32) >> 7);
+			(csd_c_size << (csd_c_size_mult + csd_read_bl_len + 2)) >> 9
+		} else {
+			0
+		};
+
+		sd_cs_1();
+		Ok(sd)
+	}
+
+	fn read_info(reg: u8, buf: &mut [u8]) -> Result<(), ()> {
+		if Self::command(reg, 0) != 0 {
+			sd_cs_1();
 			return Err(());
 		}
 
-		while(_spi_xchg(0xFF) != 0xFE) ;
-
-		info.manufacturer = spi_xchg(0xFF);
-		info.oem[0] = spi_xchg(0xFF);
-		info.oem[1] = spi_xchg(0xFF);
-		info.product[0] = spi_xchg(0xFF);
-		info.product[1] = spi_xchg(0xFF);
-		info.product[2] = spi_xchg(0xFF);
-		info.product[3] = spi_xchg(0xFF);
-		info.product[4] = spi_xchg(0xFF);
-		info.revision = spi_xchg(0xFF);
-		info.serial |= spi_xchg(0xFF) << 24;
-		info.serial |= spi_xchg(0xFF) << 16;
-		info.serial |= spi_xchg(0xFF) << 8;
-		info.serial |= spi_xchg(0xFF);
-
-		info.manufacturing_year = buf[13] << 4;
-		info.manufacturing_year |= buf[14] >> 4;
-		info.manufacturing_month = buf[14] & 0x0F;
-
-		let csd_read_bl_len = 0;
-		let csd_c_size_mult = 0;
-
-		let csd_c_size = 0;
-
-		if _command(CMD_SEND_CSD, 0) != 0 {
-			sd_deselect();
-			return 0;
+		let mut i = 0;
+		while spi_xchg(0xFF) != 0xFE {
+			i += 1;
+			if i > 0x7FFF {
+				sd_cs_1();
+				return Err(());
+			}
 		}
 
-		while(_spi_xchg(0xFF) != 0xFE) ;
-
-		for(i = 0; i < 18; ++i)
-		{
-			b = _spi_xchg(0xFF);
+		i = 0;
+		while i < 18 {
+			buf[i] = spi_xchg(0xFF);
+			i += 1;
 		}
 
-		let csd_structure = buf[0] >> 6;
-
-		let b = buf[14];
-		if(b & 0x40)
-		{
-			info.flag_copy = 1;
-		}
-
-		if(b & 0x20)
-		{
-			info.flag_write_protect = 1;
-		}
-
-		if(b & 0x10)
-		{
-			info.flag_write_protect_temp = 1;
-		}
-
-		info.format = (b & 0x0C) >> 2;
-
-		if csd_structure == 0x01 {
-			csd_c_size <<= 8;
-			csd_c_size |= buf[7] & 0x3F;
-			++csd_c_size;
-			info->capacity = csd_c_size << 10;
-
-			csd_c_size <<= 8;
-			csd_c_size |= buf[8];
-			++csd_c_size;
-			info->capacity = csd_c_size << 10;
-
-			csd_c_size <<= 8;
-			csd_c_size |= buf[9];
-			++csd_c_size;
-			info->capacity = csd_c_size << 10;
-		}
-		else if csd_structure == 0x00 {
-			csd_read_bl_len = buf[5] & 0x0F;
-			csd_c_size = buf[6] & 0x03;
-			csd_c_size <<= 8;
-			csd_c_size |= buf[7];
-			csd_c_size <<= 2;
-			csd_c_size |= buf[8] >> 6;
-			++csd_c_size;
-			csd_c_size_mult = buf[9] & 0x03;
-			csd_c_size_mult <<= 1;
-			csd_c_size_mult |= buf[10] >> 7;
-			info->capacity = (csd_c_size << (csd_c_size_mult + csd_read_bl_len + 2)) >> 9;
-		}
-
-		sd_deselect();*/
-		Ok(sd)
+		Ok(())
 	}
 
 	fn command(cmd: u8, arg: u32) -> u8 {
@@ -258,10 +244,10 @@ impl Sd {
 	}
 
 	pub fn read(&self, block: u32, buf: &mut [u8]) -> Result<(), ()> {
-		sd_select();
+		sd_cs_0();
 		if Self::command(CMD_READ_SINGLE_BLOCK,
 			Self::block_addr(self.card_type, block)) != 0 {
-			sd_deselect();
+			sd_cs_1();
 			return Err(());
 		}
 
@@ -273,7 +259,7 @@ impl Sd {
 				}
 
 				if i == 0xFFFF {
-					sd_deselect();
+					sd_cs_1();
 					return Err(());
 				}
 
@@ -291,16 +277,16 @@ impl Sd {
 
 		spi_xchg(0xFF);
 		spi_xchg(0xFF);
-		sd_deselect();
+		sd_cs_1();
 		spi_xchg(0xFF);
 		Ok(())
 	}
 
 	pub fn write(&self, block: u32, buf: &[u8]) -> Result<(), ()> {
-		sd_select();
+		sd_cs_0();
 		if Self::command(CMD_WRITE_SINGLE_BLOCK,
 			Self::block_addr(self.card_type, block)) != 0 {
-			sd_deselect();
+			sd_cs_1();
 			return Err(());
 		}
 
@@ -325,7 +311,7 @@ impl Sd {
 				}
 
 				if i == 0xFFFF {
-					sd_deselect();
+					sd_cs_1();
 					return Err(());
 				}
 
@@ -334,7 +320,7 @@ impl Sd {
 		}
 
 		spi_xchg(0xFF);
-		sd_deselect();
+		sd_cs_1();
 		Ok(())
 	}
 }

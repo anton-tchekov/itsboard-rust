@@ -10,14 +10,31 @@ mod decoder_uart;
 mod decoder_spi;
 mod decoder_i2c;
 mod decoder_onewire;
+mod sd;
+mod bytewriter;
 
 use crate::graphics::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use gui::*;
+use crate::sd::*;
 
 fn main() -> Result<(), String> {
-	let mut gui = Gui::init();
+	// let mut gui = Gui::init(None);
+
+	let mut gui = Gui::init(Some(
+		Sd {
+			serial: 0,
+			capacity: 0,
+			oem: [0; 2],
+			product_name: [0; 5],
+			manufacturer: 0,
+			revision: 0,
+			manufacturing_year: 0,
+			manufacturing_month: 0,
+			card_type: 0
+		}));
+
 	let mut gfx = Graphics::init()?;
 	'running: loop {
 		for event in gfx.events.poll_iter() {

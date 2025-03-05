@@ -7,6 +7,10 @@ use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
 use crate::decoder_onewire::*;
 use crate::decoder::*;
+use crate::sd::*;
+use crate::bytewriter::*;
+use core::fmt::Write;
+use core::str;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -47,6 +51,7 @@ const INPUT_LABEL_Y: u32 = Y_BEGIN + DA_PADDING;
 const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
+const TERM_Y: u32 = 40;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action {
@@ -57,7 +62,10 @@ pub enum Action {
 	Right,
 	Enter,
 	Escape,
-	Check
+	Check,
+	ZoomIn,
+	ZoomOut,
+	Screenshot
 }
 
 enum Mode {
@@ -359,7 +367,7 @@ const ACTIONS_INIT: [Action; 8] = [
 
 const ACTIONS_MAIN: [Action; 8] = [
 	Action::Up, Action::Down, Action::Left, Action::Right,
-	Action::None, Action::None, Action::None, Action::Enter
+	Action::ZoomIn, Action::ZoomOut, Action::Screenshot, Action::Enter
 ];
 
 const ACTIONS_DA: [Action; 8] = [
@@ -402,7 +410,7 @@ impl Gui {
 	}
 
 	pub fn term_print(&mut self, s: &str) {
-		lcd_str(TITLE_X, 60 + self.term_rows * TERMINUS16.height,
+		lcd_str(TITLE_X, TERM_Y + self.term_rows * TERMINUS16.height,
 			s, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 
 		self.term_lens[self.term_rows as usize] = s.len() as u8;
@@ -411,7 +419,7 @@ impl Gui {
 
 	pub fn term_undraw(&mut self) {
 		for i in 0..self.term_rows {
-			lcd_rect(TITLE_X, 60 + i * TERMINUS16.height,
+			lcd_rect(TITLE_X, TERM_Y + i * TERMINUS16.height,
 				self.term_lens[i as usize] as u32 * TERMINUS16.width,
 				TERMINUS16.height, LCD_BLACK);
 		}
@@ -419,7 +427,7 @@ impl Gui {
 		self.term_rows = 0;
 	}
 
-	pub fn init() -> Self {
+	pub fn init(sd: Option<Sd>) -> Self {
 		Self::top_divider();
 		Self::bottom_divider();
 
@@ -442,7 +450,57 @@ impl Gui {
 		gui.term_print("ITS-Board Logic Analyzer V0.1");
 		gui.term_print("Created by Joel Kypke, Haron Nazari, Anton Tchekov");
 		gui.term_print("");
-		gui.term_print("SD Card not found");
+
+		if let Some(c) = sd {
+			gui.term_print("=== SD Card Info ===");
+
+			let mut buf = [0u8; 60];
+			let mut buf = ByteMutWriter::new(&mut buf[..]);
+			buf.clear();
+			write!(&mut buf, "Card Type        : {}",
+				if c.card_type & SD_HC != 0 { "SDHC" } else { "SD" }).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "Manufacturer ID  : {:02x}",
+				c.manufacturer).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "OEM              : {}",
+				str::from_utf8(&c.oem).unwrap()).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "Product Name     : {}",
+				str::from_utf8(&c.product_name).unwrap()).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "Revision         : {}.{}",
+				((c.revision >> 4) + b'0') as char,
+				((c.revision & 0x0F) + b'0') as char).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "Serial Number    : 0x{:08x}",
+				c.serial).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "Manufacture Date : {:02}-{}",
+				c.manufacturing_month, 2000 + c.manufacturing_year as u32).unwrap();
+			gui.term_print(buf.as_str());
+
+			buf.clear();
+			write!(&mut buf, "Capacity         : {} blocks",
+				c.capacity).unwrap();
+			gui.term_print(buf.as_str());
+		}
+		else {
+			gui.term_print("SD Card not found");
+		}
+
 		gui.term_print("");
 		gui.term_print("Press any key to continue ...");
 
@@ -482,6 +540,9 @@ impl Gui {
 			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
 			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
 			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
+			Action::Screenshot => lcd_icon_bw(x, y, ICON_SCREENSHOT),
+			Action::ZoomIn => lcd_icon_bw(x, y, ICON_EXPAND),
+			Action::ZoomOut => lcd_icon_bw(x, y, ICON_SHRINK),
 			_ => lcd_icon_undraw(x, y)
 		}
 	}

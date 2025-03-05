@@ -9,9 +9,12 @@ use core::ptr::{read_volatile, write_volatile};
 
 use crate::delay_us;
 
+const SD_CS: u32 = 11;
 const LCD_RST: u32 = 12;
 const LCD_DC: u32 = 13;
 const LCD_CS: u32 = 14;
+
+const OFFSET_CLEAR: u32 = 16;
 
 pub const TICKS_PER_US: u32 = 90;
 
@@ -136,11 +139,27 @@ pub fn timer_get() -> u32 {
 }
 
 pub fn spi_slow() {
+/*
+SPI1->CR1 &= ~(1 << 6);
+SPI1->CR1 = (1 << 9) | (1 << 8) | (1 << 2) |
+	(SPI_BAUDRATEPRESCALER_256 & SPI_CR1_BR_Msk);
 
+SPI1->CR2 = 0;
+SPI1->I2SCFGR &= ~SPI_I2SCFGR_I2SMOD;
+SPI1->CR1 |= (1 << 6);
+*/
 }
 
 pub fn spi_fast() {
+/*
+SPI1->CR1 &= ~(1 << 6);
+SPI1->CR1 = (1 << 9) | (1 << 8) | (1 << 2) |
+	(SPI_BAUDRATEPRESCALER_16 & SPI_CR1_BR_Msk);
 
+SPI1->CR2 = 0;
+SPI1->I2SCFGR &= ~SPI_I2SCFGR_I2SMOD;
+SPI1->CR1 |= (1 << 6);
+*/
 }
 
 pub fn spi_xchg(val: u8) -> u8 {
@@ -181,7 +200,7 @@ pub fn blueset(val: u8) {
 }
 
 pub fn blueclear(val: u8) {
-	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits((val as u32) << 16)); }
+	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits((val as u32) << OFFSET_CLEAR)); }
 }
 
 pub fn yellowset(val: u8) {
@@ -189,11 +208,11 @@ pub fn yellowset(val: u8) {
 }
 
 pub fn yellowclear(val: u8) {
-	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits((val as u32) << 16)); }
+	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits((val as u32) << OFFSET_CLEAR)); }
 }
 
 pub fn lcd_rst_0() {
-	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (LCD_RST + 16))); }
+	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (LCD_RST + OFFSET_CLEAR))); }
 }
 
 pub fn lcd_rst_1() {
@@ -201,7 +220,7 @@ pub fn lcd_rst_1() {
 }
 
 pub fn lcd_dc_0() {
-	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (LCD_DC + 16))); }
+	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (LCD_DC + OFFSET_CLEAR))); }
 }
 
 pub fn lcd_dc_1() {
@@ -209,17 +228,17 @@ pub fn lcd_dc_1() {
 }
 
 pub fn lcd_cs_0() {
-	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << (LCD_CS + 16))); }
+	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << (LCD_CS + OFFSET_CLEAR))); }
 }
 
 pub fn lcd_cs_1() {
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
 }
 
-pub fn sd_select() {
-
+pub fn sd_cs_0() {
+	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(1 << (LCD_CS + OFFSET_CLEAR))); }
 }
 
-pub fn sd_deselect() {
-
+pub fn sd_cs_1() {
+	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
 }

@@ -15,6 +15,7 @@ emu:
 	cp src/decoder_spi.rs ../emulator/src/decoder_spi.rs
 	cp src/decoder_i2c.rs ../emulator/src/decoder_i2c.rs
 	cp src/decoder_onewire.rs ../emulator/src/decoder_onewire.rs
+	cp src/bytewriter.rs ../emulator/src/bytewriter.rs
 	cd ../emulator && cargo run
 
 dump:
