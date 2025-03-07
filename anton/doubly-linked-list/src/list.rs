@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cell::{Ref, RefMut, RefCell};
 
 pub struct List<T> where T: Ord {
@@ -38,50 +38,12 @@ impl<T> List<T> where T: Ord {
 		self.count
 	}
 
-
-    fn insert_helper(&mut self, cur: Link<T>, elem: T) {
-        match cur {
-            Some(old_head) => {
-                if old_head.borrow().elem > elem {
-                    // Insert before old_head
-                    let new_node = Node::new(elem);
-                    new_node.borrow_mut().next = Some(old_head.clone());
-                    new_node.borrow_mut().prev = old_head.borrow().prev.clone();
-
-                    if let Some(prev_node) = old_head.borrow_mut().prev.take() {
-                        prev_node.borrow_mut().next = Some(new_node.clone());
-                    } else {
-                        // We're inserting at the head
-                        self.head = Some(new_node.clone());
-                    }
-
-                    old_head.borrow_mut().prev = Some(new_node);
-                } else {
-                    // Continue searching
-                    self.insert_helper(old_head.borrow_mut().next.clone(), elem);
-                }
-            }
-            None => {
-                // Insert as the last element
-                let new_node = Node::new(elem);
-                if self.tail.is_none() {
-                    // List is empty
-                    self.head = Some(new_node.clone());
-                    self.tail = Some(new_node);
-                } else {
-                    // Update the tail
-                    self.tail.as_ref().unwrap().borrow_mut().next = Some(new_node.clone());
-                    new_node.borrow_mut().prev = self.tail.clone();
-                    self.tail = Some(new_node);
-                }
-            }
-        }
-    }
-
-    pub fn insert(&mut self, elem: T) {
-        let cur = self.head.take();
-        self.insert_helper(cur, elem);
-    }
+	pub fn insert(&mut self, elem: T) {
+		let node = Node::new(elem);
+		self.head = Some(node.clone());
+		self.tail = Some(node);
+		self.count += 1;
+	}
 
 	pub fn pop_max(&mut self) -> Option<T> {
 		self.tail.take().map(|old_tail| {
@@ -174,6 +136,8 @@ fn basics() {
 	list.insert(7);
 	list.insert(3);
 
+	println!("len = {}", list.len());
+
 	for elem in list.head.iter() {
 		let i: i32 = elem.borrow().elem;
 		println!("{}", i);
@@ -219,7 +183,9 @@ fn peek() {
 	assert!(list.peek_min_mut().is_none());
 	assert!(list.peek_max_mut().is_none());
 
-	list.insert(1); list.insert(2); list.insert(3);
+	list.insert(1);
+	list.insert(2);
+	list.insert(3);
 
 	assert_eq!(&*list.peek_min().unwrap(), &3);
 	assert_eq!(&mut *list.peek_min_mut().unwrap(), &mut 3);
@@ -230,7 +196,9 @@ fn peek() {
 #[test]
 fn into_iter() {
 	let mut list = List::new();
-	list.insert(1); list.insert(2); list.insert(3);
+	list.insert(1);
+	list.insert(2);
+	list.insert(3);
 
 	let mut iter = list.into_iter();
 	assert_eq!(iter.next(), Some(3));

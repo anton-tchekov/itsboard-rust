@@ -9,8 +9,7 @@ use crate::decoder_onewire::*;
 use crate::decoder::*;
 use crate::sd::*;
 use crate::bytewriter::*;
-use std::fmt::Write;
-use core::fmt;
+use core::fmt::Write;
 use core::str;
 
 const BUTTON_COUNT: usize = 8;

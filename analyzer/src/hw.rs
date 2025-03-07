@@ -114,6 +114,7 @@ pub fn hw_init() -> HW {
 			polarity: Polarity::IdleLow,
 			phase: Phase::CaptureOnFirstTransition,
 		},
+		//400.kHz(),
 		2.MHz(),
 		&clocks,
 	);

@@ -30,11 +30,12 @@ use panic_halt as _;
 fn start() -> ! {
 	let mut hw = hw_init();
 	let sd = Sd::init().ok();
+	//let sd = None;
 	lcd_init(lcd_color(0, 0, 0));
 	let mut gui = Gui::init(sd);
 
-	blueinput();
-	yellowinput();
+	//blueinput();
+	//yellowinput();
 
 	/*let mut data: [Sample; 50_000] = [0; 50_000];
 	let mut buf = SampleBuffer {

@@ -20,11 +20,12 @@ ASM Dump:
 
 ## TODO
 
+### Ferien
+- Cleanup Code, remove unsafe
 - Start capture on Start + trigger + Blocking Sample Loop 16 channels
 - Send Raw Captured data over UART
 - SD Card Driver + Info / Error Msg
 
-### Ferien
 - Render Waveform + Zoom in / Zoom out + Move forward / backward on timeline
 - Variable Sampling Frequency
 - Render Protocol Decoder Outputs
@@ -35,7 +36,6 @@ ASM Dump:
 	4. OneWire
 
 ### Im Semester
-- Cleanup Code
 - FAT File System Driver
 - Concurrent Sample Loop
 - Start / Stop capture
