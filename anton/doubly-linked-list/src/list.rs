@@ -1,4 +1,4 @@
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 use std::cell::{Ref, RefMut, RefCell};
 
 pub struct List<T> where T: Ord {
@@ -40,9 +40,54 @@ impl<T> List<T> where T: Ord {
 
 	pub fn insert(&mut self, elem: T) {
 		let node = Node::new(elem);
-		self.head = Some(node.clone());
-		self.tail = Some(node);
 		self.count += 1;
+
+		// If list is empty
+		if self.head.is_none() {
+			// Insert first element
+			self.head = Some(node.clone());
+			self.tail = Some(node);
+			return;
+		}
+
+		// If new element is smaller than current first element
+		if node.clone().as_ref().borrow().elem < self.head.as_ref().unwrap().borrow().elem {
+			// Insert before first element
+			node.clone().as_ref().borrow_mut().next = self.head.clone();
+			self.head.as_ref().unwrap().borrow_mut().prev = Some(node.clone());
+			self.head = Some(node.clone());
+			return;
+		}
+
+		// If new element is larger than current last element
+		if node.clone().as_ref().borrow().elem > self.tail.as_ref().unwrap().borrow().elem {
+			// Insert after last element
+			node.clone().as_ref().borrow_mut().prev = self.tail.clone();
+			self.tail.as_ref().unwrap().borrow_mut().next = Some(node.clone());
+			self.tail = Some(node.clone());
+			return;
+		}
+
+		// Otherwise, insert in between two elements at the correct location
+		let mut cur = self.head.clone().unwrap().clone();
+		while cur.borrow().next.is_some() {
+			cur = {
+				let mut cur_borrowed = cur.borrow_mut();
+				let next = cur_borrowed.next.as_ref().unwrap();
+
+				if node.clone().as_ref().borrow().elem < next.borrow().elem {
+					// Found position, insert
+					node.clone().as_ref().borrow_mut().prev = Some(cur.clone());
+					node.clone().as_ref().borrow_mut().next = Some(next.clone());
+
+					next.borrow_mut().prev = Some(node.clone());
+					cur_borrowed.next = Some(node.clone());
+					return;
+				}
+
+				next.clone()
+			};
+		}
 	}
 
 	pub fn pop_max(&mut self) -> Option<T> {
