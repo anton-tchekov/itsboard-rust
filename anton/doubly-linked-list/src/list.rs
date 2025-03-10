@@ -181,24 +181,15 @@ fn basics() {
 	list.insert(7);
 	list.insert(3);
 
-	println!("len = {}", list.len());
-
-	for elem in list.head.iter() {
-		let i: i32 = elem.borrow().elem;
-		println!("{}", i);
-	}
-
-	/*assert_eq!(list.pop_min(), Some(3));
+	assert_eq!(list.pop_min(), Some(3));
 	assert_eq!(list.pop_min(), Some(5));
-	assert_eq!(list.pop_min(), Some(7));*/
+	assert_eq!(list.pop_min(), Some(7));
 
-/*	list.insert(4);
+	list.insert(4);
 	list.insert(5);
 
-	assert_eq!(list.pop_min(), Some(5));
 	assert_eq!(list.pop_min(), Some(4));
-
-	assert_eq!(list.pop_min(), Some(1));
+	assert_eq!(list.pop_min(), Some(5));
 	assert_eq!(list.pop_min(), None);
 
 	assert_eq!(list.pop_max(), None);
@@ -217,7 +208,7 @@ fn basics() {
 	assert_eq!(list.pop_max(), Some(4));
 
 	assert_eq!(list.pop_max(), Some(1));
-	assert_eq!(list.pop_max(), None);*/
+	assert_eq!(list.pop_max(), None);
 }
 
 #[test]
@@ -232,10 +223,10 @@ fn peek() {
 	list.insert(2);
 	list.insert(3);
 
-	assert_eq!(&*list.peek_min().unwrap(), &3);
-	assert_eq!(&mut *list.peek_min_mut().unwrap(), &mut 3);
-	assert_eq!(&*list.peek_max().unwrap(), &1);
-	assert_eq!(&mut *list.peek_max_mut().unwrap(), &mut 1);
+	assert_eq!(&*list.peek_min().unwrap(), &1);
+	assert_eq!(&mut *list.peek_min_mut().unwrap(), &mut 1);
+	assert_eq!(&*list.peek_max().unwrap(), &3);
+	assert_eq!(&mut *list.peek_max_mut().unwrap(), &mut 3);
 }
 
 #[test]
@@ -246,8 +237,8 @@ fn into_iter() {
 	list.insert(3);
 
 	let mut iter = list.into_iter();
-	assert_eq!(iter.next(), Some(3));
-	assert_eq!(iter.next_back(), Some(1));
+	assert_eq!(iter.next(), Some(1));
+	assert_eq!(iter.next_back(), Some(3));
 	assert_eq!(iter.next(), Some(2));
 	assert_eq!(iter.next_back(), None);
 	assert_eq!(iter.next(), None);
