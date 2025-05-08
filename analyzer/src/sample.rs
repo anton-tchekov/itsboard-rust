@@ -7,10 +7,3 @@ pub struct SampleBuffer<'a> {
 	pub samples: &'a mut [Sample],
 	pub len: usize
 }
-
-impl SampleBuffer<'_> {
-	// To later make paging possible
-	pub fn get_sample(&self, idx: usize) -> Sample {
-		self.samples[idx]
-	}
-}

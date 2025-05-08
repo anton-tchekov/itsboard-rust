@@ -696,7 +696,7 @@ impl Gui {
 		}
 	}
 
-	/* === U MODE === */
+	/* === UART (U) MODE === */
 	fn u_open(&mut self) {
 		self.title_set("UART Decoder");
 		self.cd_render(&UART_INPUTS);
@@ -722,7 +722,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === S MODE === */
+	/* === SPI (S) MODE === */
 	fn s_open(&mut self) {
 		self.title_set("SPI Decoder");
 		self.cd_render(&SPI_INPUTS);
@@ -746,7 +746,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === I MODE === */
+	/* === I2C (I) MODE === */
 	fn i_open(&mut self) {
 		self.title_set("I2C Decoder");
 		self.cd_render(&I2C_INPUTS);
@@ -768,7 +768,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === O MODE === */
+	/* === ONEWIRE (O) MODE === */
 	fn o_open(&mut self) {
 		self.title_set("OneWire Decoder");
 		self.cd_render(&ONEWIRE_INPUTS);
@@ -789,7 +789,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === MA MODE === */
+	/* === MAIN (MA) MODE === */
 	fn ma_render(&mut self, i: u32, sel: bool) {
 		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
@@ -863,7 +863,7 @@ impl Gui {
 		}
 	}
 
-	/* === CH MODE === */
+	/* === CHANNEL (CH) MODE === */
 	fn check_render(&self, x: u32, y: u32, sel: bool, checked: bool) {
 		let icon = if checked { ICON_CHECKED } else { ICON_UNCHECKED };
 		let color = if sel { COLOR_SEL } else { LCD_WHITE };
@@ -958,7 +958,7 @@ impl Gui {
 		}
 	}
 
-	/* === DA MODE === */
+	/* === DECODER ADD (DA) MODE === */
 	fn da_enter(&mut self) {
 		match self.da_selected {
 			0 => { self.mode_switch(Mode::DecoderUart); },

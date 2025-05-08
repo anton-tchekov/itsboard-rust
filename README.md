@@ -57,6 +57,3 @@ for(;;)
 	- I2C (Joel, anfangen)
 	- SPI
 	- OneWire
-
-- Misc
-	- Unsafe entfernen so weit wie möglich (Anton, bis nächstes Praktikum)
