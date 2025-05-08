@@ -44,8 +44,7 @@ pub struct DecoderUart {
 }
 
 impl Decoder for DecoderUart {
-	fn decode(&self, samples: &SampleBuffer, range: Range, output: &mut [Section]) -> usize {
-		// TODO
-		0
+	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
+		Ok(())
 	}
 }

@@ -4,9 +4,10 @@
 // Switch to u16 later for 16 channels
 pub type Sample = u8;
 
+
 pub struct SampleBuffer<'a> {
-	pub sample_rate: u32,
 	pub samples: &'a [Sample],
+	pub time_stamps: &'a [u32],
 	pub len: usize
 }
 

@@ -17,30 +17,36 @@ pub enum SectionContent {
 
 #[derive(Copy, Clone, Default)]
 pub struct Section {
-	// Which sample the section starts on
-	pub start: usize,
+	// Which time the section starts on
+	pub start: u32,
 
-	// Length of the section in samples
-	pub len: usize,
+	// Which time the section ends on
+	pub end: u32,
 
 	// Arbitrary Content
 	pub content: SectionContent
 }
 
-// Range of samples
-pub struct Range {
-	// Sample the range starts on
-	pub start: usize,
-
-	// Size of the range
+pub struct SectionBuffer<'a> {
+	pub sections: &'a mut [Section],
 	pub len: usize
+}
+
+impl<'a> SectionBuffer<'a> {
+	pub fn push(&mut self, section: Section) -> Result<(), ()> {
+		if self.len >= self.sections.len() {
+			return Err(());
+		}
+
+		self.sections[self.len] = section;
+		self.len += 1;
+		Ok(())
+	}
 }
 
 // Decoder Interface
 pub trait Decoder {
-	// Decode a part of a SampleBuffer
-	// range is which part of the SampleBuffer is currently visible/to be decoded
-	// output is a fixed array (to avoid heap allocation) in which the Sections are to be placed
-	// Returns the number of Sections that were written to output
-	fn decode(&self, samples: &SampleBuffer, range: Range, output: &mut [Section]) -> usize;
+	// Decode a SampleBuffer
+	// output is a SectionBuffer
+	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()>;
 }
