@@ -7,7 +7,6 @@ use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
 use crate::decoder_onewire::*;
 use crate::decoder::*;
-use crate::sd::*;
 use crate::bytewriter::*;
 use core::fmt::Write;
 use core::str;
@@ -427,7 +426,7 @@ impl Gui {
 		self.term_rows = 0;
 	}
 
-	pub fn init(sd: Option<Sd>) -> Self {
+	pub fn init() -> Self {
 		Self::top_divider();
 		Self::bottom_divider();
 
@@ -449,57 +448,6 @@ impl Gui {
 		gui.title_set("Initializing ...");
 		gui.term_print("ITS-Board Logic Analyzer V0.1");
 		gui.term_print("Created by Joel Kypke, Haron Nazari, Anton Tchekov");
-		gui.term_print("");
-
-		if let Some(c) = sd {
-			gui.term_print("=== SD Card Info ===");
-
-			let mut buf = [0u8; 60];
-			let mut buf = ByteMutWriter::new(&mut buf[..]);
-			buf.clear();
-			write!(&mut buf, "Card Type        : {}",
-				if c.card_type & SD_HC != 0 { "SDHC" } else { "SD" }).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "Manufacturer ID  : {:02x}",
-				c.manufacturer).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "OEM              : {}",
-				str::from_utf8(&c.oem).unwrap()).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "Product Name     : {}",
-				str::from_utf8(&c.product_name).unwrap()).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "Revision         : {}.{}",
-				((c.revision >> 4) + b'0') as char,
-				((c.revision & 0x0F) + b'0') as char).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "Serial Number    : 0x{:08x}",
-				c.serial).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "Manufacture Date : {:02}-{}",
-				c.manufacturing_month, 2000 + c.manufacturing_year as u32).unwrap();
-			gui.term_print(buf.as_str());
-
-			buf.clear();
-			write!(&mut buf, "Capacity         : {} blocks",
-				c.capacity).unwrap();
-			gui.term_print(buf.as_str());
-		}
-		else {
-			gui.term_print("SD Card not found");
-		}
 
 		gui.term_print("");
 		gui.term_print("Press any key to continue ...");

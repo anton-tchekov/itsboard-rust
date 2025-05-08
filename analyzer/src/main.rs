@@ -5,7 +5,6 @@ mod hw;
 mod font;
 mod delay;
 mod lcd;
-mod sd;
 mod gui;
 mod sample;
 mod sampler;
@@ -22,17 +21,14 @@ use crate::hw::*;
 use crate::lcd::*;
 use crate::delay::*;
 use crate::gui::*;
-use crate::sd::*;
 
 use panic_halt as _;
 
 #[cortex_m_rt::entry]
 fn start() -> ! {
 	let mut hw = hw_init();
-	let sd = Sd::init().ok();
-	//let sd = None;
 	lcd_init(lcd_color(0, 0, 0));
-	let mut gui = Gui::init(sd);
+	let mut gui = Gui::init();
 
 	//blueinput();
 	//yellowinput();
