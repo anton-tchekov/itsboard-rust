@@ -139,30 +139,6 @@ pub fn timer_get() -> u32 {
 	unsafe { (*TIM2::ptr()).cnt().read().bits() }
 }
 
-pub fn spi_slow() {
-/*
-SPI1->CR1 &= ~(1 << 6);
-SPI1->CR1 = (1 << 9) | (1 << 8) | (1 << 2) |
-	(SPI_BAUDRATEPRESCALER_256 & SPI_CR1_BR_Msk);
-
-SPI1->CR2 = 0;
-SPI1->I2SCFGR &= ~SPI_I2SCFGR_I2SMOD;
-SPI1->CR1 |= (1 << 6);
-*/
-}
-
-pub fn spi_fast() {
-/*
-SPI1->CR1 &= ~(1 << 6);
-SPI1->CR1 = (1 << 9) | (1 << 8) | (1 << 2) |
-	(SPI_BAUDRATEPRESCALER_16 & SPI_CR1_BR_Msk);
-
-SPI1->CR2 = 0;
-SPI1->I2SCFGR &= ~SPI_I2SCFGR_I2SMOD;
-SPI1->CR1 |= (1 << 6);
-*/
-}
-
 pub fn spi_xchg(val: u8) -> u8 {
 	unsafe {
 		delay_us(1);
