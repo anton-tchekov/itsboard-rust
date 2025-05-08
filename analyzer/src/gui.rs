@@ -541,8 +541,7 @@ impl Gui {
 			Mode::DecoderSpi => self.cd_undraw(),
 			Mode::DecoderI2C => self.cd_undraw(),
 			Mode::DecoderOneWire => self.cd_undraw(),
-			Mode::Info => self.info_close(),
-			_ => {}
+			Mode::Info => self.info_close()
 		};
 
 		self.mode = new_mode;
@@ -554,8 +553,7 @@ impl Gui {
 			Mode::DecoderSpi => self.s_open(),
 			Mode::DecoderI2C => self.i_open(),
 			Mode::DecoderOneWire => self.o_open(),
-			Mode::Info => self.info_open(),
-			_ => {}
+			Mode::Info => self.info_open()
 		};
 	}
 
@@ -730,7 +728,7 @@ impl Gui {
 			baudrate: item_to_baudrate(self.sels[5].into())
 		};
 
-		// LATER: Store Decoder
+		// TODO: Store Decoder
 	}
 
 	/* === SPI (S) MODE === */
@@ -754,7 +752,7 @@ impl Gui {
 			cs_pin: item_to_pin(self.sels[3].into())
 		};
 
-		// LATER: Store Decoder
+		// TODO: Store Decoder
 	}
 
 	/* === I2C (I) MODE === */
@@ -776,7 +774,7 @@ impl Gui {
 			scl_pin: item_to_pin(self.sels[1].into())
 		};
 
-		// LATER: Store Decoder
+		// TODO: Store Decoder
 	}
 
 	/* === ONEWIRE (O) MODE === */
@@ -797,7 +795,7 @@ impl Gui {
 			onewire_pin: item_to_pin(self.sels[0].into())
 		};
 
-		// LATER: Store Decoder
+		// TODO: Store Decoder
 	}
 
 	/* === MAIN (MA) MODE === */
@@ -838,8 +836,21 @@ impl Gui {
 		}
 	}
 
+	fn ma_running(&mut self) {
+		lcd_icon_color(4, ACTION_ICONS_Y, ICON_DOT, LCD_GREEN, LCD_BLACK);
+		lcd_str(26, ACTION_ICONS_Y + 1, "RUNNING",
+			LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
+	}
+
+	fn ma_running_undraw(&mut self) {
+		lcd_rect(4, ACTION_ICONS_Y,
+			16 + 6 + TERMINUS16_BOLD.width("RUNNING"), 16, LCD_BLACK);
+	}
+
 	fn ma_run(&mut self) {
-		// LATER: Start sampling
+		self.ma_running();
+		// TODO: Start sampling
+		self.ma_running_undraw();
 	}
 
 	fn ma_enter(&mut self) {

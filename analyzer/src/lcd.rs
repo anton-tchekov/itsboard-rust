@@ -6,6 +6,12 @@ pub const LCD_HEIGHT: u32 = 320;
 
 pub const LCD_BLACK: u16 = 0x0000;
 pub const LCD_WHITE: u16 = 0xFFFF;
+pub const LCD_RED     : u16 = 0xF800;
+pub const LCD_YELLOW  : u16 = 0xFFE0;
+pub const LCD_GREEN   : u16 = 0x07E0;
+pub const LCD_CYAN    : u16 = 0x07FF;
+pub const LCD_BLUE    : u16 = 0x001F;
+pub const LCD_MAGENTA : u16 = 0xF81F;
 
 const LCD_INIT_CMDS: [u8; 103] = [
 	0xF9,
