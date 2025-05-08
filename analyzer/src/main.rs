@@ -35,7 +35,6 @@ fn start() -> ! {
 
 	/*let mut data: [Sample; 50_000] = [0; 50_000];
 	let mut buf = SampleBuffer {
-		sample_rate: 1_000_000,
 		samples: &mut data,
 		len: 0
 	};

@@ -1,6 +1,6 @@
 use crate::font::Font;
 
-const TERMINUS16_BITMAP: [u8; 2384] =
+const TERMINUS16_BITMAP: [u8; 2416] =
 [
 	0x00,
 	0x00,
@@ -2120,6 +2120,42 @@ const TERMINUS16_BITMAP: [u8; 2384] =
 	0x00,
 	0x00,
 
+	/* ICON_INFO part 1 */
+	0x0f,
+	0x3f,
+	0x70,
+	0x61,
+	0xc1,
+	0xc0,
+	0xc3,
+	0xc3,
+	0xc1,
+	0xc1,
+	0xc1,
+	0xc3,
+	0x63,
+	0x70,
+	0x3f,
+	0x0f,
+
+	/* ICON_INFO part 2 */
+	0xf0,
+	0xfc,
+	0x0e,
+	0x86,
+	0x83,
+	0x03,
+	0x83,
+	0x83,
+	0x83,
+	0x83,
+	0x83,
+	0xc3,
+	0xc6,
+	0x0e,
+	0xfc,
+	0xf0,
+
 	/* ICON_ZOOM_OUT part 1 */
 	0x3e,
 	0x41,
@@ -2600,19 +2636,20 @@ pub const ICON_ENTER: u32 = 147;
 pub const ICON_UNCHECKED: u32 = 149;
 pub const ICON_UP: u32 = 151;
 pub const ICON_RIGHT: u32 = 153;
-pub const ICON_ZOOM_OUT: u32 = 155;
-pub const ICON_SEL_UP: u32 = 157;
-pub const ICON_CHECKED: u32 = 159;
-pub const ICON_EXIT: u32 = 161;
-pub const ICON_DOWN: u32 = 163;
-pub const ICON_CANCEL: u32 = 165;
-pub const ICON_TRASH: u32 = 167;
-pub const ICON_SCREENSHOT: u32 = 169;
-pub const ICON_SHRINK: u32 = 171;
-pub const ICON_SETTINGS: u32 = 173;
-pub const ICON_FOLDER: u32 = 175;
-pub const ICON_START: u32 = 177;
-pub const ICON_ZOOM_IN: u32 = 179;
+pub const ICON_INFO: u32 = 155;
+pub const ICON_ZOOM_OUT: u32 = 157;
+pub const ICON_SEL_UP: u32 = 159;
+pub const ICON_CHECKED: u32 = 161;
+pub const ICON_EXIT: u32 = 163;
+pub const ICON_DOWN: u32 = 165;
+pub const ICON_CANCEL: u32 = 167;
+pub const ICON_TRASH: u32 = 169;
+pub const ICON_SCREENSHOT: u32 = 171;
+pub const ICON_SHRINK: u32 = 173;
+pub const ICON_SETTINGS: u32 = 175;
+pub const ICON_FOLDER: u32 = 177;
+pub const ICON_START: u32 = 179;
+pub const ICON_ZOOM_IN: u32 = 181;
 
 pub const TERMINUS16: Font = Font
 {

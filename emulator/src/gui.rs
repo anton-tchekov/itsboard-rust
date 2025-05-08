@@ -7,8 +7,6 @@ use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
 use crate::decoder_onewire::*;
 use crate::decoder::*;
-use crate::bytewriter::*;
-use core::fmt::Write;
 use core::str;
 
 const BUTTON_COUNT: usize = 8;
@@ -35,7 +33,7 @@ const CH_COLS: u32 = 8;
 const CH_LABEL_X: u32 = 21;
 const CH_LABEL_Y: u32 = 1;
 
-const MA_ICONS: u32 = 3;
+const MA_ICONS: u32 = 4;
 const ICON_PADDING: u32 = 7;
 
 const ACTION_ICONS_SKIP: u32 = ICON_BOX + 1;
@@ -446,9 +444,9 @@ impl Gui {
 		};
 
 		gui.title_set("Initializing ...");
+
 		gui.term_print("ITS-Board Logic Analyzer V0.1");
 		gui.term_print("Created by Joel Kypke, Haron Nazari, Anton Tchekov");
-
 		gui.term_print("");
 		gui.term_print("Press any key to continue ...");
 
@@ -696,7 +694,7 @@ impl Gui {
 		}
 	}
 
-	/* === U MODE === */
+	/* === UART (U) MODE === */
 	fn u_open(&mut self) {
 		self.title_set("UART Decoder");
 		self.cd_render(&UART_INPUTS);
@@ -722,7 +720,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === S MODE === */
+	/* === SPI (S) MODE === */
 	fn s_open(&mut self) {
 		self.title_set("SPI Decoder");
 		self.cd_render(&SPI_INPUTS);
@@ -746,7 +744,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === I MODE === */
+	/* === I2C (I) MODE === */
 	fn i_open(&mut self) {
 		self.title_set("I2C Decoder");
 		self.cd_render(&I2C_INPUTS);
@@ -768,7 +766,7 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === O MODE === */
+	/* === ONEWIRE (O) MODE === */
 	fn o_open(&mut self) {
 		self.title_set("OneWire Decoder");
 		self.cd_render(&ONEWIRE_INPUTS);
@@ -789,9 +787,9 @@ impl Gui {
 		// LATER: Store Decoder
 	}
 
-	/* === MA MODE === */
+	/* === MAIN (MA) MODE === */
 	fn ma_render(&mut self, i: u32, sel: bool) {
-		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS ];
+		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS, ICON_INFO ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
 		let x = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING;
 		lcd_icon_color(x, ICON_PADDING, ICONS[i as usize], fg, LCD_BLACK);
@@ -863,7 +861,7 @@ impl Gui {
 		}
 	}
 
-	/* === CH MODE === */
+	/* === CHANNEL (CH) MODE === */
 	fn check_render(&self, x: u32, y: u32, sel: bool, checked: bool) {
 		let icon = if checked { ICON_CHECKED } else { ICON_UNCHECKED };
 		let color = if sel { COLOR_SEL } else { LCD_WHITE };
@@ -958,7 +956,7 @@ impl Gui {
 		}
 	}
 
-	/* === DA MODE === */
+	/* === DECODER ADD (DA) MODE === */
 	fn da_enter(&mut self) {
 		match self.da_selected {
 			0 => { self.mode_switch(Mode::DecoderUart); },

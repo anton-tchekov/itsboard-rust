@@ -9,8 +9,6 @@ fn sample() -> Sample {
 
 // 1. Iteration, just collect samples in a fixed loop
 pub fn sample_blocking(buf: &mut SampleBuffer) {
-	buf.sample_rate = 1_000_000;
-
 	let first = sample();
 	while sample() == first {}
 
