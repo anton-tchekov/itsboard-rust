@@ -20,25 +20,20 @@ ASM Dump:
 
 ## TODO
 
-### Ferien
-- Cleanup Code, remove unsafe
-- Start capture on Start + trigger + Blocking Sample Loop 16 channels
-- Send Raw Captured data over UART
-- SD Card Driver + Info / Error Msg
+- Datenaufnahme
+	- Pin Change Interrupt: Save Port State and Timestamp
+	- Start / Stop Capture
 
-- Render Waveform + Zoom in / Zoom out + Move forward / backward on timeline
-- Variable Sampling Frequency
-- Render Protocol Decoder Outputs
-- Protocol decoding
-	1. I2C
-	2. UART
-	3. SPI
-	4. OneWire
+- Darstellung
+	- Render Waveform + Zoom in / Zoom out + Move forward / backward on timeline
+	- Measure Time with cursors
+	- Render Protocol Decoder Outputs
 
-### Im Semester
-- FAT File System Driver
-- Concurrent Sample Loop
-- Start / Stop capture
-- Measure Time with cursors
-- Save screenshots
-- Save and Load Capture
+- Protokoll Decoding
+	- I2C
+	- UART
+	- SPI
+	- OneWire
+
+- Misc
+	- Unsafe entfernen so weit wie möglich
