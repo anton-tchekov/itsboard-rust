@@ -66,8 +66,8 @@ pub enum Action {
 }
 
 enum Mode {
-	Init,
 	Main,
+	Info,
 	DecoderAdd,
 	DecoderUart,
 	DecoderSpi,
@@ -357,7 +357,7 @@ fn cycle_bwd(idx: u32, count: u32) -> u32 {
 	if idx == 0 { count - 1 } else { idx - 1 }
 }
 
-const ACTIONS_INIT: [Action; 8] = [
+const ACTIONS_INFO: [Action; 8] = [
 	Action::None, Action::None, Action::None, Action::None,
 	Action::None, Action::None, Action::None, Action::Enter
 ];
@@ -429,10 +429,10 @@ impl Gui {
 		Self::bottom_divider();
 
 		let mut gui = Gui {
-			actions: &ACTIONS_INIT,
+			actions: &ACTIONS_MAIN,
 			visible_channels: 0xAA55,
 			cur_title: "",
-			mode: Mode::Init,
+			mode: Mode::Main,
 			ma_selected: 0,
 			da_selected: 0,
 			ch_selected: 0,
@@ -443,15 +443,9 @@ impl Gui {
 			term_lens: [0; 16]
 		};
 
-		gui.title_set("Initializing ...");
-
-		gui.term_print("ITS-Board Logic Analyzer V0.1");
-		gui.term_print("Created by Joel Kypke, Haron Nazari, Anton Tchekov");
-		gui.term_print("");
-		gui.term_print("Press any key to continue ...");
-
 		gui.icon_box();
 		gui.actions_render();
+		gui.ma_open();
 		gui
 	}
 
@@ -523,10 +517,7 @@ impl Gui {
 
 	pub fn action(&mut self, action: Action) {
 		match self.mode {
-			Mode::Init => {
-				self.term_undraw();
-				self.mode_switch(Mode::Main);
-			}
+			Mode::Info => { self.info_action(action); }
 			Mode::Main => { self.ma_action(action); }
 			Mode::Channels => { self.ch_action(action); }
 			Mode::DecoderAdd => { self.da_action(action); }
@@ -550,6 +541,7 @@ impl Gui {
 			Mode::DecoderSpi => self.cd_undraw(),
 			Mode::DecoderI2C => self.cd_undraw(),
 			Mode::DecoderOneWire => self.cd_undraw(),
+			Mode::Info => self.info_close(),
 			_ => {}
 		};
 
@@ -562,8 +554,29 @@ impl Gui {
 			Mode::DecoderSpi => self.s_open(),
 			Mode::DecoderI2C => self.i_open(),
 			Mode::DecoderOneWire => self.o_open(),
+			Mode::Info => self.info_open(),
 			_ => {}
 		};
+	}
+
+	/* === INFO === */
+	fn info_action(&mut self, action: Action) {
+		if action == Action::Enter {
+			self.mode_switch(Mode::Main);
+		}
+	}
+
+	fn info_close(&mut self) {
+		self.term_undraw();
+	}
+
+	fn info_open(&mut self) {
+		self.actions_set(&ACTIONS_INFO);
+		self.title_set("About");
+		self.term_print("ITS-Board Logic Analyzer V0.1");
+		self.term_print("Created by Joel Kypke, Haron Nazari, Anton Tchekov");
+		self.term_print("");
+		self.term_print("Press any key to continue ...");
 	}
 
 	/* === CD COMMON === */
@@ -834,6 +847,7 @@ impl Gui {
 			0 => { self.ma_run(); }
 			1 => { self.mode_switch(Mode::DecoderAdd); }
 			2 => { self.mode_switch(Mode::Channels); }
+			3 => { self.mode_switch(Mode::Info); }
 			_ => {}
 		}
 	}
