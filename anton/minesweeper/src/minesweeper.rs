@@ -30,12 +30,17 @@ fn get_byte(minefield: &[&str], x: usize, y: usize) -> u8 {
 }
 
 fn get_field(minefield: &[&str], x: i32, y: i32) -> u32 {
-	if y < 0 || y >= minefield.len() as i32 ||
-		x < 0 || x >= minefield[y as usize].len() as i32 {
-		return 0;
+	if let Ok(y) = usize::try_from(y) {
+		if let Some(row) = minefield.get(y) {
+			if let Ok(x) = usize::try_from(x) {
+				if let Some(v) = row.as_bytes().get(x) {
+					return if *v == b'*' { 1 } else { 0 };
+				}
+			}
+		}
 	}
 
-	if get_byte(minefield, x as usize, y as usize) == b'*' { 1 } else { 0 }
+	0
 }
 
 fn verify(minefield: &[&str]) -> Result<(), MinesweeperError> {

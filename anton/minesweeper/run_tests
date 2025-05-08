@@ -1,0 +1,38 @@
+#!/bin/sh
+
+cargo build
+
+exe_file="../target/debug/minesweeper"
+
+# generate directory with test cases
+rm -rf tests
+mkdir tests
+cd tests
+cp ../test_files/*.mines .
+cp ../test_files/*.expected .
+cp ../test_files/*.error .
+
+# run all tests
+for file in *.mines ; do
+   echo "Run test $file"
+   output_file="${file%.*}.out"
+   expected_result_file="${file%.*}.expected"
+   $exe_file $file
+   diff $expected_result_file $output_file
+   if [[ $? -ne 0 ]]; then
+      exit 1
+   fi
+done
+
+echo "DONE1"
+
+for file in *.error ; do
+   echo "Run test $file"
+   $exe_file $file
+   if [[ $? -eq 0 ]]; then
+      exit 1
+   fi
+
+done
+
+echo "DONE2"
