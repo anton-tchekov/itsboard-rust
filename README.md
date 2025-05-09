@@ -21,15 +21,12 @@ ASM Dump:
 ## TODO
 
 ### Praktikum 3
-- Simple Polling Sample Loop
-- Start/Stop Recording
 - Render Waveform + Zoom in / Zoom out + Move forward / backward on timeline
 	- Display all visible waveforms
 	- Waveform undraw
 	- Waveform rendering optimization (Vertical line overlap)
 	- Zoom In / Out Steps (window size)
 		- Display in Bottom Bar
-
 	- Forward / backward
 		- Quarter of current window size
 
@@ -40,11 +37,11 @@ ASM Dump:
 - I2C
 
 ### Praktikum 5
-- Measure Time with cursors
 - SPI
 - OneWire
 
 ### Praktikum 6
+- Measure Time with cursors
 - Dokumentation
 - Code aufräumen
 - Puffer

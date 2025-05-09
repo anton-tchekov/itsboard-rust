@@ -13,6 +13,7 @@ use crate::sampler;
 use crate::sample::SampleBuffer;
 use core::str;
 use core::fmt::Write;
+use crate::bytewriter::ByteMutWriter;
 
 const TICKS_PER_S: u32 = 90_000_000;
 
@@ -26,6 +27,8 @@ const TITLE_FONT: &Font = &TERMINUS16_BOLD;
 const BUTTON_HEIGHT: u32 = 26;
 const BUTTON_FONT: &Font = &TERMINUS16_BOLD;
 const DECODER_COUNT: u32 = 4;
+
+const MA_BOTTOM_TEXT_X: u32 = 26;
 
 const TITLE_Y: u32 = ICON_BOX / 2 - TITLE_FONT.width;
 const TITLE_X: u32 = TITLE_Y;
@@ -865,6 +868,22 @@ impl Gui {
 	}
 
 	/* === MAIN (MA) MODE === */
+	fn zoomlevel_render(&self, l: &ZoomLevel) {
+		let mut a: [u8; 16] = [0; 16];
+		let mut buf = ByteMutWriter::new(&mut a);
+		write!(&mut buf, "{:>3} {}", l.value,
+			match l.unit
+			{
+				TimeUnit::Second => "s",
+				TimeUnit::Millisecond => "ms",
+				TimeUnit::Microsecond => "µs",
+				TimeUnit::Nanosecond => "ns"
+			}).unwrap();
+
+		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, buf.as_str(),
+			LCD_WHITE, LCD_BLACK, &TERMINUS16);
+	}
+
 	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64 {
 		(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 	}
@@ -949,7 +968,7 @@ impl Gui {
 
 	fn ma_running(&mut self) {
 		lcd_icon_color(4, ACTION_ICONS_Y, ICON_DOT, LCD_GREEN, LCD_BLACK);
-		lcd_str(26, ACTION_ICONS_Y + 1, "RUNNING",
+		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, "RUNNING",
 			LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
 	}
 
@@ -966,6 +985,9 @@ impl Gui {
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
 		self.waveform_render(50, 0, LCD_WHITE);
+
+		self.zoomlevel_render(&ZoomLevel { value: 500, unit: TimeUnit::Microsecond });
+
 		self.write_buf_as_csv();
 	}
 

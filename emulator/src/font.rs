@@ -36,8 +36,8 @@ pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font) {
 	lcd_window_end();
 }
 
-pub fn lcd_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
-	let mut o = c as u32;
+pub fn lcd_char(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font) {
+	let mut o = c;
 	if o < 32 {
 		o = 127;
 	}
@@ -48,7 +48,12 @@ pub fn lcd_char(x: u32, y: u32, c: char, fg: u16, bg: u16, font: &Font) {
 pub fn lcd_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font) {
 	let mut x0 = x;
 	for c in s.chars() {
-		lcd_char(x0, y, c, fg, bg, font);
+		let mc = match c as u32 {
+			0xB5 => CHAR_MICRO,
+			_ => c as u32
+		};
+
+		lcd_char(x0, y, mc, fg, bg, font);
 		x0 += font.width;
 	}
 }
