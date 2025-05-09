@@ -65,8 +65,7 @@ pub enum Action {
 	Check,
 	ZoomIn,
 	ZoomOut,
-	Stop,
-	Screenshot
+	Stop
 }
 
 enum Mode {
@@ -373,7 +372,7 @@ const ACTIONS_SAMPLING: [Action; 8] = [
 
 const ACTIONS_MAIN: [Action; 8] = [
 	Action::Up, Action::Down, Action::Left, Action::Right,
-	Action::ZoomIn, Action::ZoomOut, Action::Screenshot, Action::Enter
+	Action::ZoomIn, Action::ZoomOut, Action::None, Action::Enter
 ];
 
 const ACTIONS_DA: [Action; 8] = [
@@ -404,7 +403,9 @@ pub struct Gui {
 	inputs: &'static [&'static Input],
 	term_rows: u32,
 	term_lens: [u8; 16],
-	buf: SampleBuffer
+	buf: SampleBuffer,
+	t_start: u32,
+	t_end: u32
 }
 
 impl Gui {
@@ -455,7 +456,9 @@ impl Gui {
 				samples: [0; sample::BUF_SIZE],
 				timestamps: [0; sample::BUF_SIZE],
 				len: 0
-			}
+			},
+			t_start: 0,
+			t_end: 5 * 90_000_000
 		};
 
 		gui.icon_box();
@@ -495,7 +498,6 @@ impl Gui {
 			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
 			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
 			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
-			Action::Screenshot => lcd_icon_bw(x, y, ICON_SCREENSHOT),
 			Action::ZoomIn => lcd_icon_bw(x, y, ICON_EXPAND),
 			Action::ZoomOut => lcd_icon_bw(x, y, ICON_SHRINK),
 			Action::Stop => lcd_icon_bw(x, y, ICON_STOP),
@@ -815,6 +817,42 @@ impl Gui {
 	}
 
 	/* === MAIN (MA) MODE === */
+	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64 {
+		(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+	}
+
+	fn t_to_x(&self, t: u32) -> u32 {
+		let max = (LCD_WIDTH - 1) as f64;
+		let x = Self::map(t.into(), self.t_start.into(), self.t_end.into(), 0.0, max);
+		f64::min(f64::max(x, 0.0), max) as u32
+	}
+
+	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32) {
+		let h = 20;
+
+		let x0 = self.t_to_x(t0);
+		let x1 = self.t_to_x(t1);
+
+		let w = x1 - x0 + 1;
+		let y0 = y + (if p0 { 0 } else { h });
+		lcd_hline(x0, y0, w, LCD_WHITE);
+		if p0 != p1 && t0 >= self.t_start && t1 <= self.t_end {
+			lcd_vline(x1, y, h, LCD_WHITE);
+		}
+	}
+
+	fn waveform_render(&mut self, y: u32, ch: u32) {
+		let s = self.buf.find_start(self.t_start);
+		let e = self.buf.find_end(self.t_end);
+
+		let mut prev = self.buf.get(s, ch);
+		for i in s..=e {
+			let cur = self.buf.get(i, ch);
+			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1);
+			prev = cur;
+		}
+	}
+
 	fn ma_render(&mut self, i: u32, sel: bool) {
 		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS, ICON_INFO ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
@@ -869,6 +907,7 @@ impl Gui {
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
+		self.waveform_render(50, 0);
 	}
 
 	fn ma_enter(&mut self) {

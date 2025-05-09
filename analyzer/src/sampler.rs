@@ -7,7 +7,9 @@ fn sample() -> Sample {
 
 pub fn sample_blocking(buf: &mut SampleBuffer) {
 	let mut prev = sample();
-	buf.len = 0;
+	buf.clear();
+	buf.push(sample(), 0);
+	timer_set(0);
 	loop {
 		let buttons = buttons_read() & 0x80;
 		if buttons != 0x80
@@ -23,9 +25,9 @@ pub fn sample_blocking(buf: &mut SampleBuffer) {
 				break;
 			}
 
-			buf.samples[buf.len] = port;
-			buf.timestamps[buf.len] = ts;
-			buf.len += 1;
+			buf.push(port, ts);
 		}
 	}
+
+	buf.push(sample(), timer_get());
 }
