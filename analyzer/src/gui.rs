@@ -458,7 +458,7 @@ impl Gui {
 				len: 0
 			},
 			t_start: 0,
-			t_end: 5 * 90_000_000
+			t_end: 1 * (90_000_000 / 1)
 		};
 
 		gui.icon_box();
@@ -827,7 +827,7 @@ impl Gui {
 		f64::min(f64::max(x, 0.0), max) as u32
 	}
 
-	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32) {
+	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16) {
 		let h = 20;
 
 		let x0 = self.t_to_x(t0);
@@ -835,9 +835,9 @@ impl Gui {
 
 		let w = x1 - x0 + 1;
 		let y0 = y + (if p0 { 0 } else { h });
-		lcd_hline(x0, y0, w, LCD_WHITE);
+		lcd_hline(x0, y0, w, color);
 		if p0 != p1 && t0 >= self.t_start && t1 <= self.t_end {
-			lcd_vline(x1, y, h, LCD_WHITE);
+			lcd_vline(x1, y, h, color);
 		}
 	}
 
@@ -848,7 +848,24 @@ impl Gui {
 		let mut prev = self.buf.get(s, ch);
 		for i in s..=e {
 			let cur = self.buf.get(i, ch);
-			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1);
+			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, LCD_WHITE);
+			prev = cur;
+		}
+	}
+
+	fn waveform_unrender(&mut self, y: u32, ch: u32) {
+		if self.buf.len < 1
+		{
+			return;
+		}
+
+		let s = self.buf.find_start(self.t_start);
+		let e = self.buf.find_end(self.t_end);
+
+		let mut prev = self.buf.get(s, ch);
+		for i in s..=e {
+			let cur = self.buf.get(i, ch);
+			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, LCD_BLACK);
 			prev = cur;
 		}
 	}
@@ -902,6 +919,7 @@ impl Gui {
 	}
 
 	fn ma_run(&mut self) {
+		self.waveform_unrender(50, 0); /* Remove last Waveform */
 		self.ma_running();
 		self.actions_set(&ACTIONS_SAMPLING);
 		sampler::sample_blocking(&mut self.buf);
