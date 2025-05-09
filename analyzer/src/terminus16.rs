@@ -1,6 +1,6 @@
 use crate::font::Font;
 
-const TERMINUS16_BITMAP: [u8; 2480] =
+const TERMINUS16_BITMAP: [u8; 2576] =
 [
 	0x00,
 	0x00,
@@ -2012,6 +2012,42 @@ const TERMINUS16_BITMAP: [u8; 2480] =
 	0x01,
 	0xfe,
 
+	/* ICON_TIME_SHRINK part 1 */
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x08,
+	0x0c,
+	0xfe,
+	0xfe,
+	0x0c,
+	0x08,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+
+	/* ICON_TIME_SHRINK part 2 */
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x10,
+	0x30,
+	0x7f,
+	0x7f,
+	0x30,
+	0x10,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+
 	/* ICON_ENTER part 1 */
 	0x00,
 	0x00,
@@ -2444,6 +2480,42 @@ const TERMINUS16_BITMAP: [u8; 2480] =
 	0x07,
 	0x03,
 
+	/* ICON_TIME_EXPAND part 1 */
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x20,
+	0x60,
+	0xfe,
+	0xfe,
+	0x60,
+	0x20,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+
+	/* ICON_TIME_EXPAND part 2 */
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x04,
+	0x06,
+	0x7f,
+	0x7f,
+	0x06,
+	0x04,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+
 	/* ICON_TRASH part 1 */
 	0x07,
 	0x7f,
@@ -2549,6 +2621,42 @@ const TERMINUS16_BITMAP: [u8; 2480] =
 	0x00,
 	0x00,
 	0x00,
+	0x00,
+	0x00,
+
+	/* ICON_CYCLE part 1 */
+	0x00,
+	0x00,
+	0x1f,
+	0x3f,
+	0x00,
+	0x00,
+	0x00,
+	0x30,
+	0x78,
+	0xfc,
+	0x30,
+	0x30,
+	0x3f,
+	0x1f,
+	0x00,
+	0x00,
+
+	/* ICON_CYCLE part 2 */
+	0x00,
+	0x00,
+	0xf8,
+	0xfc,
+	0x0c,
+	0x0c,
+	0x3f,
+	0x1e,
+	0x0c,
+	0x00,
+	0x00,
+	0x00,
+	0xfc,
+	0xf8,
 	0x00,
 	0x00,
 
@@ -2705,25 +2813,28 @@ pub const ICON_SEL_DOWN: u32 = 141;
 pub const ICON_CHECK: u32 = 143;
 pub const ICON_STOP: u32 = 145;
 pub const ICON_SAVE: u32 = 147;
-pub const ICON_ENTER: u32 = 149;
-pub const ICON_UNCHECKED: u32 = 151;
-pub const ICON_UP: u32 = 153;
-pub const ICON_RIGHT: u32 = 155;
-pub const ICON_INFO: u32 = 157;
-pub const ICON_ZOOM_OUT: u32 = 159;
-pub const ICON_SEL_UP: u32 = 161;
-pub const ICON_CHECKED: u32 = 163;
-pub const ICON_EXIT: u32 = 165;
-pub const ICON_DOWN: u32 = 167;
-pub const ICON_DOT: u32 = 169;
-pub const ICON_CANCEL: u32 = 171;
-pub const ICON_TRASH: u32 = 173;
-pub const ICON_SCREENSHOT: u32 = 175;
-pub const ICON_SHRINK: u32 = 177;
-pub const ICON_SETTINGS: u32 = 179;
-pub const ICON_FOLDER: u32 = 181;
-pub const ICON_START: u32 = 183;
-pub const ICON_ZOOM_IN: u32 = 185;
+pub const ICON_TIME_SHRINK: u32 = 149;
+pub const ICON_ENTER: u32 = 151;
+pub const ICON_UNCHECKED: u32 = 153;
+pub const ICON_UP: u32 = 155;
+pub const ICON_RIGHT: u32 = 157;
+pub const ICON_INFO: u32 = 159;
+pub const ICON_ZOOM_OUT: u32 = 161;
+pub const ICON_SEL_UP: u32 = 163;
+pub const ICON_CHECKED: u32 = 165;
+pub const ICON_EXIT: u32 = 167;
+pub const ICON_DOWN: u32 = 169;
+pub const ICON_DOT: u32 = 171;
+pub const ICON_CANCEL: u32 = 173;
+pub const ICON_TIME_EXPAND: u32 = 175;
+pub const ICON_TRASH: u32 = 177;
+pub const ICON_SCREENSHOT: u32 = 179;
+pub const ICON_SHRINK: u32 = 181;
+pub const ICON_CYCLE: u32 = 183;
+pub const ICON_SETTINGS: u32 = 185;
+pub const ICON_FOLDER: u32 = 187;
+pub const ICON_START: u32 = 189;
+pub const ICON_ZOOM_IN: u32 = 191;
 
 pub const TERMINUS16: Font = Font
 {

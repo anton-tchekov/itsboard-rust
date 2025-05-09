@@ -46,6 +46,9 @@ fn main() -> Result<(), String> {
 				Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
 					gui.action(Action::Right);
 				},
+				Event::KeyDown { keycode: Some(Keycode::Tab), .. } => {
+					gui.action(Action::Cycle);
+				},
 				Event::KeyDown { keycode: Some(Keycode::Num1), .. } => {
 					gui.key(7);
 				},

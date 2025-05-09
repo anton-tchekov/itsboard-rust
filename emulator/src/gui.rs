@@ -65,6 +65,7 @@ pub enum Action {
 	Check,
 	ZoomIn,
 	ZoomOut,
+	Cycle,
 	Stop
 }
 
@@ -372,7 +373,7 @@ const ACTIONS_SAMPLING: [Action; 8] = [
 
 const ACTIONS_MAIN: [Action; 8] = [
 	Action::Up, Action::Down, Action::Left, Action::Right,
-	Action::ZoomIn, Action::ZoomOut, Action::None, Action::Enter
+	Action::ZoomIn, Action::ZoomOut, Action::Cycle, Action::Enter
 ];
 
 const ACTIONS_DA: [Action; 8] = [
@@ -458,7 +459,7 @@ impl Gui {
 				len: 0
 			},
 			t_start: 0,
-			t_end: 5 * 90_000_000
+			t_end: 1 * (90_000_000 / 1)
 		};
 
 		gui.icon_box();
@@ -498,8 +499,9 @@ impl Gui {
 			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
 			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
 			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
-			Action::ZoomIn => lcd_icon_bw(x, y, ICON_EXPAND),
-			Action::ZoomOut => lcd_icon_bw(x, y, ICON_SHRINK),
+			Action::ZoomIn => lcd_icon_bw(x, y, ICON_TIME_EXPAND),
+			Action::ZoomOut => lcd_icon_bw(x, y, ICON_TIME_SHRINK),
+			Action::Cycle => lcd_icon_bw(x, y, ICON_CYCLE),
 			Action::Stop => lcd_icon_bw(x, y, ICON_STOP),
 			_ => lcd_icon_undraw(x, y)
 		}
@@ -827,7 +829,7 @@ impl Gui {
 		f64::min(f64::max(x, 0.0), max) as u32
 	}
 
-	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32) {
+	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16) {
 		let h = 20;
 
 		let x0 = self.t_to_x(t0);
@@ -835,20 +837,25 @@ impl Gui {
 
 		let w = x1 - x0 + 1;
 		let y0 = y + (if p0 { 0 } else { h });
-		lcd_hline(x0, y0, w, LCD_WHITE);
+		lcd_hline(x0, y0, w, color);
 		if p0 != p1 && t0 >= self.t_start && t1 <= self.t_end {
-			lcd_vline(x1, y, h, LCD_WHITE);
+			lcd_vline(x1, y, h, color);
 		}
 	}
 
-	fn waveform_render(&mut self, y: u32, ch: u32) {
+	fn waveform_render(&mut self, y: u32, ch: u32, color: u16) {
+		if self.buf.len < 1
+		{
+			return;
+		}
+
 		let s = self.buf.find_start(self.t_start);
 		let e = self.buf.find_end(self.t_end);
 
 		let mut prev = self.buf.get(s, ch);
 		for i in s..=e {
 			let cur = self.buf.get(i, ch);
-			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1);
+			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, color);
 			prev = cur;
 		}
 	}
@@ -902,12 +909,13 @@ impl Gui {
 	}
 
 	fn ma_run(&mut self) {
+		self.waveform_render(50, 0, LCD_BLACK); /* Remove last Waveform */
 		self.ma_running();
 		self.actions_set(&ACTIONS_SAMPLING);
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
-		self.waveform_render(50, 0);
+		self.waveform_render(50, 0, LCD_WHITE);
 	}
 
 	fn ma_enter(&mut self) {
@@ -927,11 +935,10 @@ impl Gui {
 			Action::Down => {
 			}
 			Action::Left => {
-				let prev = self.ma_selected;
-				self.ma_selected = cycle_bwd(self.ma_selected, MA_ICONS);
-				self.ma_update(prev);
 			}
 			Action::Right => {
+			}
+			Action::Cycle => {
 				let prev = self.ma_selected;
 				self.ma_selected = cycle_fwd(self.ma_selected, MA_ICONS);
 				self.ma_update(prev);

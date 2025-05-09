@@ -65,6 +65,7 @@ pub enum Action {
 	Check,
 	ZoomIn,
 	ZoomOut,
+	Cycle,
 	Stop
 }
 
@@ -372,7 +373,7 @@ const ACTIONS_SAMPLING: [Action; 8] = [
 
 const ACTIONS_MAIN: [Action; 8] = [
 	Action::Up, Action::Down, Action::Left, Action::Right,
-	Action::ZoomIn, Action::ZoomOut, Action::None, Action::Enter
+	Action::ZoomIn, Action::ZoomOut, Action::Cycle, Action::Enter
 ];
 
 const ACTIONS_DA: [Action; 8] = [
@@ -498,8 +499,9 @@ impl Gui {
 			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
 			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
 			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
-			Action::ZoomIn => lcd_icon_bw(x, y, ICON_EXPAND),
-			Action::ZoomOut => lcd_icon_bw(x, y, ICON_SHRINK),
+			Action::ZoomIn => lcd_icon_bw(x, y, ICON_TIME_EXPAND),
+			Action::ZoomOut => lcd_icon_bw(x, y, ICON_TIME_SHRINK),
+			Action::Cycle => lcd_icon_bw(x, y, ICON_CYCLE),
 			Action::Stop => lcd_icon_bw(x, y, ICON_STOP),
 			_ => lcd_icon_undraw(x, y)
 		}
@@ -841,19 +843,7 @@ impl Gui {
 		}
 	}
 
-	fn waveform_render(&mut self, y: u32, ch: u32) {
-		let s = self.buf.find_start(self.t_start);
-		let e = self.buf.find_end(self.t_end);
-
-		let mut prev = self.buf.get(s, ch);
-		for i in s..=e {
-			let cur = self.buf.get(i, ch);
-			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, LCD_WHITE);
-			prev = cur;
-		}
-	}
-
-	fn waveform_unrender(&mut self, y: u32, ch: u32) {
+	fn waveform_render(&mut self, y: u32, ch: u32, color: u16) {
 		if self.buf.len < 1
 		{
 			return;
@@ -865,7 +855,7 @@ impl Gui {
 		let mut prev = self.buf.get(s, ch);
 		for i in s..=e {
 			let cur = self.buf.get(i, ch);
-			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, LCD_BLACK);
+			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, color);
 			prev = cur;
 		}
 	}
@@ -919,13 +909,13 @@ impl Gui {
 	}
 
 	fn ma_run(&mut self) {
-		self.waveform_unrender(50, 0); /* Remove last Waveform */
+		self.waveform_render(50, 0, LCD_BLACK); /* Remove last Waveform */
 		self.ma_running();
 		self.actions_set(&ACTIONS_SAMPLING);
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
-		self.waveform_render(50, 0);
+		self.waveform_render(50, 0, LCD_WHITE);
 	}
 
 	fn ma_enter(&mut self) {
@@ -945,11 +935,10 @@ impl Gui {
 			Action::Down => {
 			}
 			Action::Left => {
-				let prev = self.ma_selected;
-				self.ma_selected = cycle_bwd(self.ma_selected, MA_ICONS);
-				self.ma_update(prev);
 			}
 			Action::Right => {
+			}
+			Action::Cycle => {
 				let prev = self.ma_selected;
 				self.ma_selected = cycle_fwd(self.ma_selected, MA_ICONS);
 				self.ma_update(prev);
