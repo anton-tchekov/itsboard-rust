@@ -138,6 +138,10 @@ pub fn timer_get() -> u32 {
 	unsafe { (*TIM2::ptr()).cnt().read().bits() }
 }
 
+pub fn timer_set(v: u32) {
+	unsafe { (*TIM2::ptr()).cnt().write(|w| w.bits(v)); }
+}
+
 pub fn spi_xchg(val: u8) -> u8 {
 	unsafe {
 		delay_us(1);

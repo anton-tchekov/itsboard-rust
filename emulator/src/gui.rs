@@ -7,6 +7,9 @@ use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
 use crate::decoder_onewire::*;
 use crate::decoder::*;
+use crate::sample;
+use crate::sampler;
+use crate::sample::SampleBuffer;
 use core::str;
 
 const BUTTON_COUNT: usize = 8;
@@ -62,6 +65,7 @@ pub enum Action {
 	Check,
 	ZoomIn,
 	ZoomOut,
+	Stop,
 	Screenshot
 }
 
@@ -362,6 +366,11 @@ const ACTIONS_INFO: [Action; 8] = [
 	Action::None, Action::None, Action::None, Action::Enter
 ];
 
+const ACTIONS_SAMPLING: [Action; 8] = [
+	Action::Stop, Action::None, Action::None, Action::None,
+	Action::None, Action::None, Action::None, Action::None
+];
+
 const ACTIONS_MAIN: [Action; 8] = [
 	Action::Up, Action::Down, Action::Left, Action::Right,
 	Action::ZoomIn, Action::ZoomOut, Action::Screenshot, Action::Enter
@@ -394,7 +403,8 @@ pub struct Gui {
 	sels: [u8; 8],
 	inputs: &'static [&'static Input],
 	term_rows: u32,
-	term_lens: [u8; 16]
+	term_lens: [u8; 16],
+	buf: SampleBuffer
 }
 
 impl Gui {
@@ -440,7 +450,12 @@ impl Gui {
 			sels: [0; 8],
 			inputs: &UART_INPUTS,
 			term_rows: 0,
-			term_lens: [0; 16]
+			term_lens: [0; 16],
+			buf: SampleBuffer {
+				samples: [0; sample::BUF_SIZE],
+				timestamps: [0; sample::BUF_SIZE],
+				len: 0
+			}
 		};
 
 		gui.icon_box();
@@ -483,6 +498,7 @@ impl Gui {
 			Action::Screenshot => lcd_icon_bw(x, y, ICON_SCREENSHOT),
 			Action::ZoomIn => lcd_icon_bw(x, y, ICON_EXPAND),
 			Action::ZoomOut => lcd_icon_bw(x, y, ICON_SHRINK),
+			Action::Stop => lcd_icon_bw(x, y, ICON_STOP),
 			_ => lcd_icon_undraw(x, y)
 		}
 	}
@@ -844,14 +860,15 @@ impl Gui {
 
 	fn ma_running_undraw(&mut self) {
 		lcd_rect(4, ACTION_ICONS_Y,
-			16 + 6 + TERMINUS16_BOLD.width("RUNNING"), 16, LCD_RED);
+			16 + 6 + TERMINUS16_BOLD.width("RUNNING"), 16, LCD_BLACK);
 	}
 
 	fn ma_run(&mut self) {
-		self.ma_running_undraw();
 		self.ma_running();
-
-		// TODO: Start sampling
+		self.actions_set(&ACTIONS_SAMPLING);
+		sampler::sample_blocking(&mut self.buf);
+		self.actions_set(&ACTIONS_MAIN);
+		self.ma_running_undraw();
 	}
 
 	fn ma_enter(&mut self) {

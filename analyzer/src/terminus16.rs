@@ -1,6 +1,6 @@
 use crate::font::Font;
 
-const TERMINUS16_BITMAP: [u8; 2448] =
+const TERMINUS16_BITMAP: [u8; 2480] =
 [
 	0x00,
 	0x00,
@@ -1724,7 +1724,6 @@ const TERMINUS16_BITMAP: [u8; 2448] =
 	0x00,
 	0x00,
 
-
 	/* ICON_EXPAND part 1 */
 	0x00,
 	0x00,
@@ -1937,6 +1936,42 @@ const TERMINUS16_BITMAP: [u8; 2448] =
 	0xc0,
 	0x80,
 	0x00,
+	0x00,
+	0x00,
+	0x00,
+
+	/* ICON_STOP part 1 */
+	0x00,
+	0x00,
+	0x00,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x1f,
+	0x00,
+	0x00,
+	0x00,
+
+	/* ICON_STOP part 2 */
+	0x00,
+	0x00,
+	0x00,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
+	0xf8,
 	0x00,
 	0x00,
 	0x00,
@@ -2668,26 +2703,27 @@ pub const ICON_SUB: u32 = 137;
 pub const ICON_ADD: u32 = 139;
 pub const ICON_SEL_DOWN: u32 = 141;
 pub const ICON_CHECK: u32 = 143;
-pub const ICON_SAVE: u32 = 145;
-pub const ICON_ENTER: u32 = 147;
-pub const ICON_UNCHECKED: u32 = 149;
-pub const ICON_UP: u32 = 151;
-pub const ICON_RIGHT: u32 = 153;
-pub const ICON_INFO: u32 = 155;
-pub const ICON_ZOOM_OUT: u32 = 157;
-pub const ICON_SEL_UP: u32 = 159;
-pub const ICON_CHECKED: u32 = 161;
-pub const ICON_EXIT: u32 = 163;
-pub const ICON_DOWN: u32 = 165;
-pub const ICON_DOT: u32 = 167;
-pub const ICON_CANCEL: u32 = 169;
-pub const ICON_TRASH: u32 = 171;
-pub const ICON_SCREENSHOT: u32 = 173;
-pub const ICON_SHRINK: u32 = 175;
-pub const ICON_SETTINGS: u32 = 177;
-pub const ICON_FOLDER: u32 = 179;
-pub const ICON_START: u32 = 181;
-pub const ICON_ZOOM_IN: u32 = 183;
+pub const ICON_STOP: u32 = 145;
+pub const ICON_SAVE: u32 = 147;
+pub const ICON_ENTER: u32 = 149;
+pub const ICON_UNCHECKED: u32 = 151;
+pub const ICON_UP: u32 = 153;
+pub const ICON_RIGHT: u32 = 155;
+pub const ICON_INFO: u32 = 157;
+pub const ICON_ZOOM_OUT: u32 = 159;
+pub const ICON_SEL_UP: u32 = 161;
+pub const ICON_CHECKED: u32 = 163;
+pub const ICON_EXIT: u32 = 165;
+pub const ICON_DOWN: u32 = 167;
+pub const ICON_DOT: u32 = 169;
+pub const ICON_CANCEL: u32 = 171;
+pub const ICON_TRASH: u32 = 173;
+pub const ICON_SCREENSHOT: u32 = 175;
+pub const ICON_SHRINK: u32 = 177;
+pub const ICON_SETTINGS: u32 = 179;
+pub const ICON_FOLDER: u32 = 181;
+pub const ICON_START: u32 = 183;
+pub const ICON_ZOOM_IN: u32 = 185;
 
 pub const TERMINUS16: Font = Font
 {

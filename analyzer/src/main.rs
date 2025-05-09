@@ -29,22 +29,8 @@ fn start() -> ! {
 	let mut hw = hw_init();
 	lcd_init(lcd_color(0, 0, 0));
 	let mut gui = Gui::init();
-
-	//blueinput();
-	//yellowinput();
-
-	/*let mut data: [Sample; 50_000] = [0; 50_000];
-	let mut buf = SampleBuffer {
-		samples: &mut data,
-		len: 0
-	};
-
-	sample_blocking(&mut buf);
-
-	for i in 0..buf.len {
-		let sample = buf.samples[i];
-		writeln!(hw.tx, "{:02x}", sample);
-	}*/
+	blueinput();
+	yellowinput();
 
 	let mut ticks: [u32; 8] = [0; 8];
 	let mut last_check = 0;

@@ -11,6 +11,7 @@ mod decoder_spi;
 mod decoder_i2c;
 mod decoder_onewire;
 mod bytewriter;
+mod sampler;
 
 use crate::graphics::*;
 use sdl2::event::Event;
