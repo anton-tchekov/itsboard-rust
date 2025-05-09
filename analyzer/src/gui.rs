@@ -14,6 +14,8 @@ use crate::sample::SampleBuffer;
 use core::str;
 use core::fmt::Write;
 
+const TICKS_PER_S: u32 = 90_000_000;
+
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
 
@@ -388,9 +390,49 @@ const ACTIONS_CH: [Action; 8] = [
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
 
-const ACTIONS_CD: [Action; 8] = [
+const ACTIONS_CD: [Action; 8] =
+[
 	Action::Up, Action::Down, Action::Left, Action::Right,
 	Action::None, Action::None, Action::Escape, Action::Check
+];
+
+enum TimeUnit
+{
+	Second,
+	Millisecond,
+	Microsecond,
+	Nanosecond
+}
+
+struct ZoomLevel
+{
+	value: u32,
+	unit: TimeUnit
+}
+
+const ZOOM_LEVELS: [ZoomLevel; 21] =
+[
+	ZoomLevel { value:   5, unit: TimeUnit::Second },
+	ZoomLevel { value:   2, unit: TimeUnit::Second },
+	ZoomLevel { value:   1, unit: TimeUnit::Second },
+	ZoomLevel { value: 500, unit: TimeUnit::Millisecond },
+	ZoomLevel { value: 200, unit: TimeUnit::Millisecond },
+	ZoomLevel { value: 100, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:  50, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:  20, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:  10, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:   5, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:   2, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:   1, unit: TimeUnit::Millisecond },
+	ZoomLevel { value: 500, unit: TimeUnit::Microsecond },
+	ZoomLevel { value: 200, unit: TimeUnit::Microsecond },
+	ZoomLevel { value: 100, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:  50, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:  20, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:  10, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:   5, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:   2, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:   1, unit: TimeUnit::Microsecond }
 ];
 
 pub struct Gui {
@@ -862,6 +904,10 @@ impl Gui {
 			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, color);
 			prev = cur;
 		}
+	}
+
+	fn waveforms_render(&mut self, color: u16) {
+		//for
 	}
 
 	fn ma_render(&mut self, i: u32, sel: bool) {

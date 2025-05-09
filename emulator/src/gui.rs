@@ -1,3 +1,4 @@
+use crate::hw::HW;
 use crate::lcd::*;
 use crate::font::*;
 use crate::terminus16_bold::*;
@@ -11,6 +12,9 @@ use crate::sample;
 use crate::sampler;
 use crate::sample::SampleBuffer;
 use core::str;
+use core::fmt::Write;
+
+const TICKS_PER_S: u32 = 90_000_000;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -386,9 +390,49 @@ const ACTIONS_CH: [Action; 8] = [
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
 
-const ACTIONS_CD: [Action; 8] = [
+const ACTIONS_CD: [Action; 8] =
+[
 	Action::Up, Action::Down, Action::Left, Action::Right,
 	Action::None, Action::None, Action::Escape, Action::Check
+];
+
+enum TimeUnit
+{
+	Second,
+	Millisecond,
+	Microsecond,
+	Nanosecond
+}
+
+struct ZoomLevel
+{
+	value: u32,
+	unit: TimeUnit
+}
+
+const ZOOM_LEVELS: [ZoomLevel; 10] =
+[
+	ZoomLevel { value:   5, unit: TimeUnit::Second },
+	ZoomLevel { value:   2, unit: TimeUnit::Second },
+	ZoomLevel { value:   1, unit: TimeUnit::Second },
+	ZoomLevel { value: 500, unit: TimeUnit::Millisecond },
+	ZoomLevel { value: 200, unit: TimeUnit::Millisecond },
+	ZoomLevel { value: 100, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:  50, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:  20, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:  10, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:   5, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:   2, unit: TimeUnit::Millisecond },
+	ZoomLevel { value:   1, unit: TimeUnit::Millisecond },
+	ZoomLevel { value: 500, unit: TimeUnit::Microsecond },
+	ZoomLevel { value: 200, unit: TimeUnit::Microsecond },
+	ZoomLevel { value: 100, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:  50, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:  20, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:  10, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:   5, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:   2, unit: TimeUnit::Microsecond },
+	ZoomLevel { value:   1, unit: TimeUnit::Microsecond }
 ];
 
 pub struct Gui {
@@ -406,7 +450,8 @@ pub struct Gui {
 	term_lens: [u8; 16],
 	buf: SampleBuffer,
 	t_start: u32,
-	t_end: u32
+	t_end: u32,
+	hw: HW,
 }
 
 impl Gui {
@@ -436,7 +481,7 @@ impl Gui {
 		self.term_rows = 0;
 	}
 
-	pub fn init() -> Self {
+	pub fn init(hw: HW) -> Self {
 		Self::top_divider();
 		Self::bottom_divider();
 
@@ -459,7 +504,8 @@ impl Gui {
 				len: 0
 			},
 			t_start: 0,
-			t_end: 1 * (90_000_000 / 1)
+			t_end: 1 * (90_000_000 / 1),
+			hw: hw,
 		};
 
 		gui.icon_box();
@@ -860,6 +906,10 @@ impl Gui {
 		}
 	}
 
+	fn waveforms_render(&mut self, color: u16) {
+		//for
+	}
+
 	fn ma_render(&mut self, i: u32, sel: bool) {
 		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS, ICON_INFO ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
@@ -916,6 +966,18 @@ impl Gui {
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
 		self.waveform_render(50, 0, LCD_WHITE);
+		self.write_buf_as_csv();
+	}
+
+	fn write_buf_as_csv(&mut self) {
+		writeln!(self.hw.tx, "Timestamp,Data").unwrap();
+
+		for i in 0..self.buf.len {
+			let sample_data = self.buf.samples[i];
+			let sample_ts = self.buf.timestamps[i];
+
+			writeln!(self.hw.tx, "{},{}", sample_ts, sample_data).unwrap();
+		}
 	}
 
 	fn ma_enter(&mut self) {
