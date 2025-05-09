@@ -4,6 +4,8 @@ mod sample;
 
 use std::fs::read_to_string;
 
+use csv::*;
+
 use crate::sample::SampleBuffer;
 use crate::decoder::{Decoder, Section, SectionBuffer};
 use crate::decoder_uart::{Parity, DataBits, StopBits, DecoderUart};
@@ -11,11 +13,24 @@ use crate::decoder_uart::{Parity, DataBits, StopBits, DecoderUart};
 fn main() {
 	let n = 9375;
 
-	let buf = SampleBuffer {
-		samples: &[ 0, 1, 0, 1, 0, 1, 0, 1 ],
-		time_stamps: &[ 0*n, 1*n, 2*n, 3*n, 4*n, 5*n, 6*n, 7*n ],
-		len: 8,
+	let mut buf = SampleBuffer {
+		samples: [0; sample::BUF_SIZE],
+		timestamps: [0; sample::BUF_SIZE],
+		len: 0
 	};
+
+	/* 
+	Das Format ist PROTOCOL_CONFIG_BAUDRATE_DATA
+	also sende ich hier über UART 8 Bits ohne Parity Bit und einem Stop Bit
+	bei einer Baudrate von 300 den Character 'H'
+	*/
+	load_buf_from_csv("../sample_data/UART/UART_8N1_300_H.csv", &mut buf).unwrap();
+
+	/* Printed die Daten die man aus der CSV gelesen hat zur Überprüfung, kann gerne weg */
+	for i in 0..buf.len
+	{
+		println!("{},{}", buf.timestamps[i], buf.samples[i]);
+	}
 
 	let uart = DecoderUart {
 		rx_pin: 1,
@@ -32,4 +47,22 @@ fn main() {
 	};
 
 	let count = uart.decode(&buf, &mut out_sections);
+}
+
+/* Diese Funktion kannst du gerne irgendwoanders hinpacken aber damit kannst du die CSVs die ich dir gebe laden */
+fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
+{
+	let mut rdr = ReaderBuilder::new().has_headers(true).from_path(filename)?;
+
+	for result in rdr.records()
+	{
+		let record = result?;
+
+		let timestamp = &record[0].parse::<u32>().unwrap();
+		let data = &record[1].parse::<u16>().unwrap();
+
+		buf.push(*data, *timestamp);
+	}
+
+	Ok(())
 }
