@@ -26,9 +26,9 @@ use panic_halt as _;
 
 #[cortex_m_rt::entry]
 fn start() -> ! {
-	let mut hw = hw_init();
+	let hw = hw_init();
 	lcd_init(lcd_color(0, 0, 0));
-	let mut gui = Gui::init();
+	let mut gui = Gui::init(hw);
 	blueinput();
 	yellowinput();
 
