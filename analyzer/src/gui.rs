@@ -14,8 +14,7 @@ use crate::sample::SampleBuffer;
 use core::str;
 use core::fmt::Write;
 use crate::bytewriter::ByteMutWriter;
-
-const TICKS_PER_S: u32 = 90_000_000;
+use crate::hw;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -360,12 +359,24 @@ fn item_to_stopbits(idx: usize) -> StopBits {
 	}
 }
 
-fn cycle_fwd(idx: u32, count: u32) -> u32 {
+fn cycle_fwd(idx: u32, count: u32) -> u32
+{
 	if idx == count - 1 { 0 } else { idx + 1 }
 }
 
-fn cycle_bwd(idx: u32, count: u32) -> u32 {
+fn cycle_bwd(idx: u32, count: u32) -> u32
+{
 	if idx == 0 { count - 1 } else { idx - 1 }
+}
+
+fn inc_limit(idx: usize, count: usize) -> usize
+{
+	if idx == count - 1 { idx } else { idx + 1 }
+}
+
+fn dec_limit(idx: usize) -> usize
+{
+	if idx == 0 { idx } else { idx - 1 }
 }
 
 const ACTIONS_INFO: [Action; 8] = [
@@ -403,8 +414,7 @@ enum TimeUnit
 {
 	Second,
 	Millisecond,
-	Microsecond,
-	Nanosecond
+	Microsecond
 }
 
 struct ZoomLevel
@@ -455,6 +465,7 @@ pub struct Gui {
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
+	zoom: usize
 }
 
 impl Gui {
@@ -509,6 +520,7 @@ impl Gui {
 			t_start: 0,
 			t_end: 1 * (90_000_000 / 1),
 			hw: hw,
+			zoom: 0
 		};
 
 		gui.icon_box();
@@ -868,33 +880,37 @@ impl Gui {
 	}
 
 	/* === MAIN (MA) MODE === */
-	fn zoomlevel_render(&self, l: &ZoomLevel) {
+	fn zoomlevel_render(&self)
+	{
+		let l = &ZOOM_LEVELS[self.zoom];
 		let mut a: [u8; 16] = [0; 16];
 		let mut buf = ByteMutWriter::new(&mut a);
 		write!(&mut buf, "{:>3} {}", l.value,
 			match l.unit
 			{
-				TimeUnit::Second => "s",
+				TimeUnit::Second => "s ",
 				TimeUnit::Millisecond => "ms",
-				TimeUnit::Microsecond => "µs",
-				TimeUnit::Nanosecond => "ns"
+				TimeUnit::Microsecond => "µs"
 			}).unwrap();
 
 		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, buf.as_str(),
 			LCD_WHITE, LCD_BLACK, &TERMINUS16);
 	}
 
-	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64 {
+	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64
+	{
 		(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 	}
 
-	fn t_to_x(&self, t: u32) -> u32 {
+	fn t_to_x(&self, t: u32) -> u32
+	{
 		let max = (LCD_WIDTH - 1) as f64;
 		let x = Self::map(t.into(), self.t_start.into(), self.t_end.into(), 0.0, max);
 		f64::min(f64::max(x, 0.0), max) as u32
 	}
 
-	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16) {
+	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16)
+	{
 		let h = 20;
 
 		let x0 = self.t_to_x(t0);
@@ -908,7 +924,8 @@ impl Gui {
 		}
 	}
 
-	fn waveform_render(&mut self, y: u32, ch: u32, color: u16) {
+	fn waveform_render(&mut self, y: u32, ch: u32, color: u16)
+	{
 		if self.buf.len < 1
 		{
 			return;
@@ -925,18 +942,22 @@ impl Gui {
 		}
 	}
 
-	fn waveforms_render(&mut self, color: u16) {
+	fn waveforms_render(&mut self, color: u16)
+	{
+		self.waveform_render(50, 0, color);
 		//for
 	}
 
-	fn ma_render(&mut self, i: u32, sel: bool) {
+	fn ma_render(&mut self, i: u32, sel: bool)
+	{
 		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS, ICON_INFO ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
 		let x = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING;
 		lcd_icon_color(x, ICON_PADDING, ICONS[i as usize], fg, LCD_BLACK);
 	}
 
-	fn ma_top_box(&mut self) {
+	fn ma_top_box(&mut self)
+	{
 		for i in 0..MA_ICONS {
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_WHITE);
@@ -944,19 +965,24 @@ impl Gui {
 		}
 	}
 
-	fn ma_update(&mut self, prev: u32) {
+	fn ma_update(&mut self, prev: u32)
+	{
 		self.ma_render(prev, false);
 		self.ma_render(self.ma_selected, true);
 	}
 
-	fn ma_open(&mut self) {
+	fn ma_open(&mut self)
+	{
 		self.title_set("Logic Analyzer");
 		self.actions_set(&ACTIONS_MAIN);
 		self.da_selected = 0;
 		self.ma_top_box();
+		self.waveforms_render(LCD_WHITE);
 	}
 
-	fn ma_close(&mut self) {
+	fn ma_close(&mut self)
+	{
+		self.waveforms_render(LCD_BLACK);
 		for i in 0..MA_ICONS {
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_BLACK);
@@ -966,35 +992,37 @@ impl Gui {
 		}
 	}
 
-	fn ma_running(&mut self) {
+	fn ma_running(&mut self)
+	{
 		lcd_icon_color(4, ACTION_ICONS_Y, ICON_DOT, LCD_GREEN, LCD_BLACK);
 		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, "RUNNING",
 			LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
 	}
 
-	fn ma_running_undraw(&mut self) {
+	fn ma_running_undraw(&mut self)
+	{
 		lcd_rect(4, ACTION_ICONS_Y,
 			16 + 6 + TERMINUS16_BOLD.width("RUNNING"), 16, LCD_BLACK);
 	}
 
-	fn ma_run(&mut self) {
-		self.waveform_render(50, 0, LCD_BLACK); /* Remove last Waveform */
+	fn ma_run(&mut self)
+	{
+		self.waveforms_render(LCD_BLACK);
 		self.ma_running();
 		self.actions_set(&ACTIONS_SAMPLING);
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
-		self.waveform_render(50, 0, LCD_WHITE);
-
-		self.zoomlevel_render(&ZoomLevel { value: 500, unit: TimeUnit::Microsecond });
-
+		self.zoomlevel_render();
+		self.waveforms_render(LCD_WHITE);
 		self.write_buf_as_csv();
 	}
 
-	fn write_buf_as_csv(&mut self) {
+	fn write_buf_as_csv(&mut self)
+	{
 		writeln!(self.hw.tx, "Timestamp,Data").unwrap();
-
-		for i in 0..self.buf.len {
+		for i in 0..self.buf.len
+		{
 			let sample_data = self.buf.samples[i];
 			let sample_ts = self.buf.timestamps[i];
 
@@ -1002,8 +1030,10 @@ impl Gui {
 		}
 	}
 
-	fn ma_enter(&mut self) {
-		match self.ma_selected {
+	fn ma_enter(&mut self)
+	{
+		match self.ma_selected
+		{
 			0 => { self.ma_run(); }
 			1 => { self.mode_switch(Mode::DecoderAdd); }
 			2 => { self.mode_switch(Mode::Channels); }
@@ -1012,7 +1042,27 @@ impl Gui {
 		}
 	}
 
-	fn ma_action(&mut self, action: Action) {
+	fn zoomlevel_to_ticks(&self) -> u32
+	{
+		let l = &ZOOM_LEVELS[self.zoom];
+		l.value * match l.unit
+		{
+			TimeUnit::Second => hw::TICKS_PER_US * 1_000_000,
+			TimeUnit::Millisecond => hw::TICKS_PER_US * 1_000,
+			TimeUnit::Microsecond => hw::TICKS_PER_US
+		}
+	}
+
+	fn zoomlevel_update(&mut self)
+	{
+		self.zoomlevel_render();
+		self.waveforms_render(LCD_BLACK);
+		self.t_end = self.t_start + self.zoomlevel_to_ticks();
+		self.waveforms_render(LCD_WHITE);
+	}
+
+	fn ma_action(&mut self, action: Action)
+	{
 		match action {
 			Action::Up => {
 			}
@@ -1021,7 +1071,15 @@ impl Gui {
 			Action::Left => {
 			}
 			Action::Right => {
-			}
+			},
+			Action::ZoomIn => {
+				self.zoom = inc_limit(self.zoom, ZOOM_LEVELS.len());
+				self.zoomlevel_update();
+			},
+			Action::ZoomOut => {
+				self.zoom = dec_limit(self.zoom);
+				self.zoomlevel_update();
+			},
 			Action::Cycle => {
 				let prev = self.ma_selected;
 				self.ma_selected = cycle_fwd(self.ma_selected, MA_ICONS);
@@ -1035,13 +1093,15 @@ impl Gui {
 	}
 
 	/* === CHANNEL (CH) MODE === */
-	fn check_render(&self, x: u32, y: u32, sel: bool, checked: bool) {
+	fn check_render(&self, x: u32, y: u32, sel: bool, checked: bool)
+	{
 		let icon = if checked { ICON_CHECKED } else { ICON_UNCHECKED };
 		let color = if sel { COLOR_SEL } else { LCD_WHITE };
 		lcd_icon_color(x, y, icon, color, LCD_BLACK);
 	}
 
-	fn ch_pos(x: u32, y: u32) -> (u32, u32) {
+	fn ch_pos(x: u32, y: u32) -> (u32, u32)
+	{
 		let rx = (3 + x * 7) * TERMINUS16.width;
 		let ry = CH_Y_BEGIN + y * 32;
 		(rx, ry)
