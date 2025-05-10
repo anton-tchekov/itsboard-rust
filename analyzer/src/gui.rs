@@ -1056,17 +1056,13 @@ impl Gui {
 			DecoderStorage::OneWire(dcd) => decoder = dcd,
 		}
 
-		let num_pins = decoder.num_pins();
-
-		for i in 0..num_pins
+		let mut i = 0;
+		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
-			let pin_num = decoder.get_pin(i).unwrap();
-			if pin_num == -1 {continue;}
-
-			let text = decoder.get_pin_name(i).unwrap();
+			if pin_num == -1 { continue; }
 			let y = 62 + pin_num * 30;
-
 			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+			i += 1;
 		}
 	}
 

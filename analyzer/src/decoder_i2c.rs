@@ -15,27 +15,12 @@ impl Decoder for DecoderI2C
 		// TODO
 	}
 
-	fn num_pins(&self) -> usize
-	{
-		2
-	}
-
-	fn get_pin(&self, idx: usize) -> Option<DecoderPin>
+	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)>
 	{
 		match idx
 		{
-			0 => Some(self.sda_pin),
-			1 => Some(self.scl_pin),
-			_ => None,
-		}
-	}
-
-	fn get_pin_name(&self, idx: usize) -> Option<&'static str>
-	{
-		match idx
-		{
-			0 => Some("SDA"),
-			1 => Some("SCL"),
+			0 => Some(("SDA", self.sda_pin)),
+			1 => Some(("SCL", self.scl_pin)),
 			_ => None,
 		}
 	}
