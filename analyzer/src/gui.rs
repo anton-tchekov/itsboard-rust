@@ -46,7 +46,7 @@ const CH_COLS: u32 = 8;
 const CH_LABEL_X: u32 = 21;
 const CH_LABEL_Y: u32 = 1;
 
-const MA_ICONS: u32 = 4;
+const MA_ICONS: u32 = 3;
 const ICON_PADDING: u32 = 7;
 
 const ACTION_ICONS_SKIP: u32 = ICON_BOX + 1;
@@ -89,8 +89,7 @@ enum Mode {
 	DecoderUart,
 	DecoderSpi,
 	DecoderOneWire,
-	DecoderI2C,
-	Channels
+	DecoderI2C
 }
 
 fn boxsel(x: u32, y: u32, w: u32, h: u32) {
@@ -472,7 +471,6 @@ pub enum DecoderStorage
 
 pub struct Gui {
 	actions: &'static [Action],
-	visible_channels: u32,
 	cur_title: &'static str,
 	mode: Mode,
 	ma_selected: u32,
@@ -489,8 +487,7 @@ pub struct Gui {
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
-	zoom: usize,
-	waveform_offset: u32
+	zoom: usize
 }
 
 impl Gui {
@@ -526,7 +523,6 @@ impl Gui {
 
 		let mut gui = Gui {
 			actions: &ACTIONS_MAIN,
-			visible_channels: 0x0F,
 			cur_title: "",
 			mode: Mode::Main,
 			ma_selected: 0,
@@ -550,8 +546,7 @@ impl Gui {
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
-			zoom: 0,
-			waveform_offset: 0
+			zoom: 0
 		};
 
 		/* For Debug Reasons */
@@ -639,7 +634,6 @@ impl Gui {
 		match self.mode {
 			Mode::Info => { self.info_action(action); }
 			Mode::Main => { self.ma_action(action); }
-			Mode::Channels => { self.ch_action(action); }
 			Mode::DecoderAdd => { self.da_action(action); }
 			Mode::DecoderUart => { self.u_action(action); }
 			Mode::DecoderSpi => { self.s_action(action); }
@@ -655,7 +649,6 @@ impl Gui {
 	fn mode_switch(&mut self, new_mode: Mode) {
 		match self.mode {
 			Mode::Main => self.ma_close(),
-			Mode::Channels => self.ch_close(),
 			Mode::DecoderAdd => self.da_close(),
 			Mode::DecoderUart => self.cd_undraw(),
 			Mode::DecoderSpi => self.cd_undraw(),
@@ -667,7 +660,6 @@ impl Gui {
 		self.mode = new_mode;
 		match self.mode {
 			Mode::Main => self.ma_open(),
-			Mode::Channels => self.ch_open(),
 			Mode::DecoderAdd => self.da_open(),
 			Mode::DecoderUart => self.u_open(),
 			Mode::DecoderSpi => self.s_open(),
@@ -1115,28 +1107,13 @@ impl Gui {
 
 	fn waveforms_render(&mut self, color: u16)
 	{
-		let mut cnt = 0;
-		let mut idx = 0;
-		for i in 0..16
+		for i in 0..8
 		{
-			if self.visible_channels & (1 << i) != 0
-			{
-				if idx >= self.waveform_offset
-				{
-					self.waveform_render(50 + i * 30, idx, color);
-					cnt += 1;
-					if cnt >= WAVEFORMS_ON_SCREEN
-					{
-						break;
-					}
-				}
-
-				idx += 1;
-			}
+			self.waveform_render(50 + i * 30, i, color);
 		}
 
 		// TODO: Weiß nicht ob das hier hingehört
-		if self.visible_channels != 0 && color != LCD_BLACK
+		if color != LCD_BLACK
 		{
 			self.decoder_render();
 			self.sidebar_render();
@@ -1145,7 +1122,7 @@ impl Gui {
 
 	fn ma_render(&mut self, i: u32, sel: bool)
 	{
-		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_SETTINGS, ICON_INFO ];
+		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_INFO ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
 		let x = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING;
 		lcd_icon_color(x, ICON_PADDING, ICONS[i as usize], fg, LCD_BLACK);
@@ -1172,7 +1149,6 @@ impl Gui {
 		self.title_set("Logic Analyzer");
 		self.actions_set(&ACTIONS_MAIN);
 		self.da_selected = 0;
-		self.waveform_offset = 0;
 		self.ma_top_box();
 		self.waveforms_render(LCD_WHITE);
 		self.zoomlevel_draw();
@@ -1238,8 +1214,7 @@ impl Gui {
 		{
 			0 => { self.ma_run(); }
 			1 => { self.mode_switch(Mode::DecoderAdd); }
-			2 => { self.mode_switch(Mode::Channels); }
-			3 => { self.mode_switch(Mode::Info); }
+			2 => { self.mode_switch(Mode::Info); }
 			_ => {}
 		}
 	}
@@ -1268,12 +1243,6 @@ impl Gui {
 		if self.buf.len == 0 { 0 } else { self.buf.timestamps[self.buf.len - 1] }
 	}
 
-	fn max_vertical_scroll(&self) -> u32
-	{
-		let channels = self.visible_channels.count_ones();
-		if channels >= WAVEFORMS_ON_SCREEN { channels - WAVEFORMS_ON_SCREEN } else { 0 }
-	}
-
 	fn max_horizontal_scroll(&self) -> u32
 	{
 		let last = self.last_ts();
@@ -1289,14 +1258,8 @@ impl Gui {
 	{
 		match action {
 			Action::Up => {
-				self.waveforms_render(LCD_BLACK);
-				limit_dec!(self.waveform_offset, 0);
-				self.waveforms_render(LCD_WHITE);
 			}
 			Action::Down => {
-				self.waveforms_render(LCD_BLACK);
-				limit_inc!(self.waveform_offset, self.max_vertical_scroll());
-				self.waveforms_render(LCD_WHITE);
 			}
 			Action::Left => {
 				self.waveforms_render(LCD_BLACK);
@@ -1332,103 +1295,6 @@ impl Gui {
 		}
 	}
 
-	/* === CHANNEL (CH) MODE === */
-	fn check_render(&self, x: u32, y: u32, sel: bool, checked: bool)
-	{
-		let icon = if checked { ICON_CHECKED } else { ICON_UNCHECKED };
-		let color = if sel { COLOR_SEL } else { LCD_WHITE };
-		lcd_icon_color(x, y, icon, color, LCD_BLACK);
-	}
-
-	fn ch_pos(x: u32, y: u32) -> (u32, u32)
-	{
-		let rx = (3 + x * 7) * TERMINUS16.width;
-		let ry = CH_Y_BEGIN + y * 32;
-		(rx, ry)
-	}
-
-	fn ch_update(&self, sel: bool) {
-		let idx = self.ch_selected;
-		let x = idx % CH_COLS;
-		let y = idx / CH_COLS;
-		let (rx, ry) = Self::ch_pos(x, y);
-		self.check_render(rx, ry, sel,
-			self.visible_channels & (1 << idx) != 0);
-	}
-
-	fn ch_close(&mut self) {
-		let w = 2 * TERMINUS16.width;
-		let h = TERMINUS16.height;
-		for y in 0..CH_ROWS {
-			for x in 0..CH_COLS {
-				let (rx, ry) = Self::ch_pos(x, y);
-				lcd_icon_undraw(rx, ry);
-				lcd_rect(rx + CH_LABEL_X, ry + CH_LABEL_Y, w, h, LCD_BLACK);
-			}
-		}
-	}
-
-	fn ch_open(&mut self) {
-		self.ch_selected = 0;
-		self.title_set("Visible Channels");
-		self.actions_set(&ACTIONS_CH);
-		for y in 0..CH_ROWS {
-			for x in 0..CH_COLS {
-				let idx = y * CH_COLS + x;
-				let (rx, ry) = Self::ch_pos(x, y);
-				let mut buf: [u8; 2] = [0; 2];
-				Self::channel_str(&mut buf, idx);
-				self.check_render(rx, ry, self.ch_selected == idx,
-					self.visible_channels & (1 << idx) != 0);
-
-				lcd_str(rx + CH_LABEL_X, ry + CH_LABEL_Y,
-					core::str::from_utf8(&buf).unwrap(),
-					LCD_WHITE, LCD_BLACK, &TERMINUS16);
-			}
-		}
-	}
-
-	fn ch_action(&mut self, action: Action) {
-		match action {
-			Action::Down => {
-				if self.ch_selected < 8 {
-					self.ch_update(false);
-					self.ch_selected += 8;
-					self.ch_update(true);
-				}
-			},
-			Action::Up => {
-				if self.ch_selected >= 8 {
-					self.ch_update(false);
-					self.ch_selected -= 8;
-					self.ch_update(true);
-				}
-			},
-			Action::Left => {
-				if self.ch_selected > 0 {
-					self.ch_update(false);
-					self.ch_selected -= 1;
-					self.ch_update(true);
-				}
-			},
-			Action::Right => {
-				if self.ch_selected < 15 {
-					self.ch_update(false);
-					self.ch_selected += 1;
-					self.ch_update(true);
-				}
-			},
-			Action::Enter => {
-				self.visible_channels ^= 1 << self.ch_selected;
-				self.ch_update(true);
-			},
-			Action::Escape => {
-				self.mode_switch(Mode::Main);
-			},
-			_ => {}
-		}
-	}
-
 	/* === DECODER ADD (DA) MODE === */
 	fn da_enter(&mut self) {
 		match self.da_selected {
@@ -1451,7 +1317,7 @@ impl Gui {
 	}
 
 	fn da_open(&mut self) {
-		self.title_set("Add Protocol Decoder");
+		self.title_set("Select Protocol Decoder");
 		self.actions_set(&ACTIONS_DA);
 		for i in 0..DECODER_COUNT {
 			self.da_button(i).render(i == self.da_selected);
@@ -1489,11 +1355,5 @@ impl Gui {
 			},
 			_ => {}
 		};
-	}
-
-	/* === Helper === */
-	fn channel_str(out: &mut [u8], channel: u32) {
-		out[0] = (channel / 10) as u8 + b'0';
-		out[1] = (channel % 10) as u8 + b'0';
 	}
 }

@@ -2,7 +2,7 @@ use crate::hw::*;
 use crate::sample::*;
 
 fn sample() -> Sample {
-	(blueread() as Sample) | (yellowread() as Sample) << 8
+	blueread() as Sample
 }
 
 pub fn sample_blocking(buf: &mut SampleBuffer) {

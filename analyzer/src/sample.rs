@@ -1,5 +1,5 @@
 // Type used to store one sample containing multiple channels in
-pub type Sample = u16;
+pub type Sample = u8;
 
 pub const BUF_SIZE: usize = 10_000;
 
