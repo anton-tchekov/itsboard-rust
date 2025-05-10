@@ -1,4 +1,4 @@
-use crate::sample::*;
+use crate::{bytewriter::ByteMutWriter, sample::*};
 
 pub type DecoderPin = i32;
 
