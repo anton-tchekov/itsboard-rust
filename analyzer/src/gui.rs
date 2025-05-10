@@ -64,6 +64,7 @@ const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
 
 const WAVEFORMS_ON_SCREEN: u32 = 8;
+const CHANNEL_LABEL_WIDTH: u32 = 32;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action {
@@ -958,9 +959,9 @@ impl Gui {
 
 	fn t_to_x(&self, t: u32) -> u32
 	{
-		let max = (LCD_WIDTH - 1) as f64;
+		let max = (LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH) as f64;
 		let x = Self::map(t.into(), self.t_start.into(), self.t_end.into(), 0.0, max);
-		f64::min(f64::max(x, 0.0), max) as u32
+		f64::min(f64::max(x, 0.0), max) as u32 + CHANNEL_LABEL_WIDTH
 	}
 
 	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16)
@@ -1012,12 +1013,12 @@ impl Gui {
 			let x0 = self.t_to_x(cur.start);
 			let x1 = self.t_to_x(cur.end);
 			let w = x1 - x0;
-			
+
 			let mut text: [u8; 64] = [0; 64];
 			let mut buf = ByteMutWriter::new(&mut text);
-			
+
 			/* TODO: In decoder.rs auslagern */
-			match cur.content 
+			match cur.content
 			{
 				SectionContent::Empty => 	write!(buf, " Empty").unwrap(),
 				SectionContent::Byte(v) => 	write!(buf, " 0x{:X}", v).unwrap(),
