@@ -350,11 +350,11 @@ fn item_to_databits(idx: usize) -> DataBits {
 	}
 }
 
-fn item_to_parity(idx: usize) -> ParitySetting {
+fn item_to_parity(idx: usize) -> Parity {
 	match idx {
-		1 => ParitySetting::Even,
-		2 => ParitySetting::Odd,
-		_ => ParitySetting::None
+		1 => Parity::Even,
+		2 => Parity::Odd,
+		_ => Parity::None
 	}
 }
 
@@ -467,6 +467,7 @@ pub enum DecoderStorage
 	Uart(DecoderUart),
 	SPI(DecoderSPI),
 	I2C(DecoderI2C),
+	OneWire(DecoderOneWire),
 }
 
 pub struct Gui {
@@ -563,6 +564,7 @@ impl Gui {
 		gui.icon_box();
 		gui.actions_render();
 		gui.ma_open();
+		gui.sidebar_render();
 		gui
 	}
 
@@ -883,6 +885,7 @@ impl Gui {
 		};
 
 		self.cur_decoder = DecoderStorage::SPI(d);
+		Self::draw_config_saved_animation();
 	}
 
 	/* === I2C (I) MODE === */
@@ -905,6 +908,7 @@ impl Gui {
 		};
 
 		self.cur_decoder = DecoderStorage::I2C(d);
+		Self::draw_config_saved_animation();
 	}
 
 	/* === ONEWIRE (O) MODE === */
@@ -925,7 +929,8 @@ impl Gui {
 			onewire_pin: item_to_pin(self.sels[0].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::OneWire(d);
+		Self::draw_config_saved_animation();
 	}
 
 	/* === MAIN (MA) MODE === */
@@ -979,13 +984,18 @@ impl Gui {
 		}
 	}
 
-	fn decoder_render(&mut self)
+	fn decoder_clear(&self)
+	{
+		lcd_rect(1, ICON_BOX+2, LCD_WIDTH, TERMINUS16.height, LCD_BLACK);
+		// TODO: Mit Buffer nur neues malen um Flicker zu vermeiden
+	}
+
+	fn decoder_render(&self)
 	{
 		let zoom = self.zoom;
 
 		/* Clear previous Sections */
-		lcd_rect(0, ICON_BOX+2, LCD_WIDTH, TERMINUS16.height, LCD_BLACK);
-		// TODO: Schnellere Methode finden die Previous sachen zu clearen, z.b. letzte gemalte buffern und dann clearen
+		self.decoder_clear();
 
 		/* Get all Sections which are in our current view */
 		let sec_default = Section::default();
@@ -1003,14 +1013,12 @@ impl Gui {
 			}
 		}
 
-		writeln!(self.hw.tx, "view_buf_size: {view_buf_size}").unwrap();
-
 		/* Draw all Sections which are in our current view */
 		for i in 0..view_buf_size
 		{
 			let cur = view_buf[i];
 
-			let x0 = self.t_to_x(cur.start);
+			let x0 = self.t_to_x(cur.start) + 1;
 			let x1 = self.t_to_x(cur.end);
 			let w = x1 - x0;
 
@@ -1038,6 +1046,53 @@ impl Gui {
 				lcd_str(x0+1, ICON_BOX+2, buf.as_str(), LCD_BLACK, LCD_GREEN, &TERMINUS16_BOLD);
 			}
 		}
+	}
+
+	fn sidebar_clear(&self)
+	{
+		lcd_rect(0, ICON_BOX, CHANNEL_LABEL_WIDTH, LCD_HEIGHT-(ICON_BOX*2), LCD_BLACK);
+	}
+
+	fn sidebar_render_decoder_pins(&self)
+	{
+		/* Incase theres a Decoder, Render its Pin information */
+		let decoder: &dyn Decoder;
+
+		match &self.cur_decoder {
+			DecoderStorage::None => return,
+			DecoderStorage::Uart(dcd) => decoder = dcd,
+			DecoderStorage::SPI(dcd) => decoder = dcd,
+			DecoderStorage::I2C(dcd) => decoder = dcd,
+			DecoderStorage::OneWire(dcd) => decoder = dcd,
+		}
+
+		let num_pins = decoder.num_pins();
+
+		for i in 0..num_pins {
+			let pin_num = decoder.get_pin(i).unwrap();
+			if pin_num == -1 {continue;}
+
+			let text = decoder.get_pin_name(i).unwrap();
+			let y = 62 + pin_num * 30;
+
+			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+		}
+	}
+
+	fn sidebar_render(&self)
+	{
+		/* Render Lines */
+		for i in 0..8
+		{
+			let y = 50 + i * 30;
+			lcd_char(CHANNEL_LABEL_WIDTH/2, y, '0' as u32 + i, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+			lcd_hline(0, y, CHANNEL_LABEL_WIDTH, LCD_WHITE);
+		}
+
+		/* Drawing the decoder pins before the vline allows 4 characters as the pin name without glitches */
+		self.sidebar_render_decoder_pins();
+
+		lcd_vline(CHANNEL_LABEL_WIDTH-1, ICON_BOX, LCD_HEIGHT-(ICON_BOX*2), LCD_WHITE);
 	}
 
 	fn waveform_render(&mut self, y: u32, ch: u32, color: u16)
@@ -1081,9 +1136,10 @@ impl Gui {
 		}
 
 		// TODO: Weiß nicht ob das hier hingehört
-		if self.visible_channels != 0
+		if self.visible_channels != 0 && color != LCD_BLACK
 		{
 			self.decoder_render();
+			self.sidebar_render();
 		}
 	}
 
@@ -1124,6 +1180,8 @@ impl Gui {
 
 	fn ma_close(&mut self)
 	{
+		self.decoder_clear();
+		self.sidebar_clear();
 		self.zoomlevel_undraw();
 		self.waveforms_render(LCD_BLACK);
 		for i in 0..MA_ICONS

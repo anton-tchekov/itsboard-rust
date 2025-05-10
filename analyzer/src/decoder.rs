@@ -51,4 +51,13 @@ pub trait Decoder {
 	// Decode a SampleBuffer
 	// output is a SectionBuffer
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()>;
+
+	// Gives back the number of pins that the decoder uses
+	fn num_pins(&self) -> usize;
+
+	// Gives back the DecoderPin at index, None if no such index exists
+	fn get_pin(&self, idx: usize) -> Option<DecoderPin>;
+
+	// Gives back the Name of a Pin at the given index
+	fn get_pin_name(&self, idx: usize) -> Option<&'static str>;
 }

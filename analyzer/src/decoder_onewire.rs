@@ -10,4 +10,24 @@ impl Decoder for DecoderOneWire {
 		Ok(())
 		// TODO
 	}
+	
+	fn num_pins(&self) -> usize {
+		1
+	}
+	
+	fn get_pin(&self, idx: usize) -> Option<DecoderPin> {
+		match idx
+		{
+			0 => Some(self.onewire_pin),
+			_ => None,
+		}
+	}
+	
+	fn get_pin_name(&self, idx: usize) -> Option<&'static str> {
+		match idx
+		{
+			0 => Some("OW"),
+			_ => None,
+		}
+	}
 }
