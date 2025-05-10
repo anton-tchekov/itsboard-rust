@@ -20,7 +20,6 @@ pub enum StopBits {
 	OneAndHalf,
 	Two
 }
-
 pub struct DecoderUart {
 	pub rx_pin: DecoderPin,
 	pub tx_pin: DecoderPin,
@@ -31,7 +30,8 @@ pub struct DecoderUart {
 }
 
 impl Decoder for DecoderUart {
-	fn decode(&self, samples: &SampleBuffer) {
+	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
+		Ok(())
 		// TODO
 	}
 }

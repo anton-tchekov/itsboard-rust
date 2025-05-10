@@ -42,7 +42,7 @@ fn main() {
 	};
 
 	let mut out_sections = SectionBuffer {
-		sections: &mut [Section::default(); 128],
+		sections: [Section::default(); decoder::SECBUF_SIZE],
 		len: 0
 	};
 

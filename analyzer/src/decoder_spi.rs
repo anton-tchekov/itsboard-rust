@@ -9,7 +9,8 @@ pub struct DecoderSPI {
 }
 
 impl Decoder for DecoderSPI {
-	fn decode(&self, samples: &SampleBuffer) {
+	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
+		Ok(())
 		// TODO
 	}
 }

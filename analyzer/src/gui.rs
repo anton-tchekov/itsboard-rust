@@ -1,3 +1,7 @@
+use stm32f4xx_hal::hal_02::blocking::serial::write;
+
+use crate::decoder;
+use crate::delay::delay_ms;
 use crate::hw::HW;
 use crate::lcd::*;
 use crate::font::*;
@@ -456,6 +460,14 @@ const ZOOM_LEVELS: [ZoomLevel; 21] =
 	ZoomLevel { value:   1, unit: TimeUnit::Microsecond }
 ];
 
+pub enum DecoderStorage
+{
+	None,
+	Uart(DecoderUart),
+	SPI(DecoderSPI),
+	I2C(DecoderI2C),
+}
+
 pub struct Gui {
 	actions: &'static [Action],
 	visible_channels: u32,
@@ -470,6 +482,8 @@ pub struct Gui {
 	term_rows: u32,
 	term_lens: [u8; 16],
 	buf: SampleBuffer,
+	sec_buf: SectionBuffer,
+	cur_decoder: DecoderStorage,
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
@@ -526,12 +540,24 @@ impl Gui {
 				timestamps: [0; sample::BUF_SIZE],
 				len: 0
 			},
+			sec_buf: SectionBuffer {
+				sections: [Section::default(); decoder::SECBUF_SIZE],
+				len: 0
+			},
+			cur_decoder: DecoderStorage::None,
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
 			zoom: 0,
 			waveform_offset: 0
 		};
+
+		/* For Debug Reasons */
+		let debug_section1: Section = Section{start: 0, end: 1_000_000, content: SectionContent::Byte(0xAA)};
+		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0xAA)};
+
+		let _ = gui.sec_buf.push(debug_section1);
+		let _ = gui.sec_buf.push(debug_section2);
 
 		gui.icon_box();
 		gui.actions_render();
@@ -796,6 +822,17 @@ impl Gui {
 		}
 	}
 
+	fn draw_config_saved_animation() {
+		for i in 0..5
+		{
+			lcd_str(200, 200-(i*10), "Configuration Saved",
+			LCD_GREEN, LCD_BLACK, TITLE_FONT);
+			delay_ms(50);
+			lcd_str(200, 200-(i*10), "Configuration Saved",
+			LCD_BLACK, LCD_BLACK, TITLE_FONT);
+		}
+	}
+
 	/* === UART (U) MODE === */
 	fn u_open(&mut self) {
 		self.title_set("UART Decoder");
@@ -819,7 +856,8 @@ impl Gui {
 			baudrate: item_to_baudrate(self.sels[5].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::Uart(d);
+		Self::draw_config_saved_animation();
 	}
 
 	/* === SPI (S) MODE === */
@@ -843,7 +881,7 @@ impl Gui {
 			cs_pin: item_to_pin(self.sels[3].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::SPI(d);
 	}
 
 	/* === I2C (I) MODE === */
@@ -865,7 +903,7 @@ impl Gui {
 			scl_pin: item_to_pin(self.sels[1].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::I2C(d);
 	}
 
 	/* === ONEWIRE (O) MODE === */
@@ -940,6 +978,67 @@ impl Gui {
 		}
 	}
 
+	fn decoder_render(&mut self)
+	{
+		let zoom = self.zoom;
+
+		/* Clear previous Sections */
+		lcd_rect(0, ICON_BOX+2, LCD_WIDTH, TERMINUS16.height, LCD_BLACK);
+		// TODO: Schnellere Methode finden die Previous sachen zu clearen, z.b. letzte gemalte buffern und dann clearen
+
+		/* Get all Sections which are in our current view */
+		let sec_default = Section::default();
+  		let mut view_buf = [&sec_default; SECBUF_SIZE];
+		let mut view_buf_size = 0;
+
+		for i in 0..self.sec_buf.len
+		{
+			let cur_sec = self.sec_buf.sections[i];
+
+			if cur_sec.start >= self.t_start || cur_sec.end <= self.t_end
+			{
+				view_buf[view_buf_size] = &self.sec_buf.sections[i];
+				view_buf_size += 1;
+			}
+		}
+
+		writeln!(self.hw.tx, "view_buf_size: {view_buf_size}").unwrap();
+
+		/* Draw all Sections which are in our current view */
+		for i in 0..view_buf_size
+		{
+			let cur = view_buf[i];
+
+			let x0 = self.t_to_x(cur.start);
+			let x1 = self.t_to_x(cur.end);
+			let w = x1 - x0;
+			
+			let mut text: [u8; 64] = [0; 64];
+			let mut buf = ByteMutWriter::new(&mut text);
+			
+			/* TODO: In decoder.rs auslagern */
+			match cur.content 
+			{
+				SectionContent::Empty => 	write!(buf, " Empty").unwrap(),
+				SectionContent::Byte(v) => 	write!(buf, " 0x{:X}", v).unwrap(),
+				SectionContent::Bit(v) => 	write!(buf, " {}", v).unwrap(),
+				SectionContent::StartBit => write!(buf, " Start").unwrap(),
+				SectionContent::StopBit => 	write!(buf, " Stop").unwrap(),
+				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
+			};
+
+			if w < (buf.as_str().len() as u32 * TERMINUS16_BOLD.width)
+			{
+				lcd_rect(x0, ICON_BOX+2, x1, TERMINUS16_BOLD.height, LCD_GREEN);
+			}
+			else
+			{
+				lcd_rect(x0, ICON_BOX+2, x1, TERMINUS16_BOLD.height, LCD_GREEN);
+				lcd_str(x0+1, ICON_BOX+2, buf.as_str(), LCD_BLACK, LCD_GREEN, &TERMINUS16_BOLD);
+			}
+		}
+	}
+
 	fn waveform_render(&mut self, y: u32, ch: u32, color: u16)
 	{
 		if self.buf.len < 1
@@ -978,6 +1077,12 @@ impl Gui {
 
 				idx += 1;
 			}
+		}
+
+		// TODO: Weiß nicht ob das hier hingehört
+		if self.visible_channels != 0
+		{
+			self.decoder_render();
 		}
 	}
 

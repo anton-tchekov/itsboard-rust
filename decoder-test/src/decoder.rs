@@ -2,6 +2,8 @@ use crate::sample::*;
 
 pub type DecoderPin = i32;
 
+pub const SECBUF_SIZE: usize = 100;
+
 // GUI is responsible for choosing representation, colors, etc.
 #[derive(Copy, Clone, Default)]
 pub enum SectionContent {
@@ -27,12 +29,12 @@ pub struct Section {
 	pub content: SectionContent
 }
 
-pub struct SectionBuffer<'a> {
-	pub sections: &'a mut [Section],
+pub struct SectionBuffer {
+	pub sections: [Section; SECBUF_SIZE],
 	pub len: usize
 }
 
-impl<'a> SectionBuffer<'a> {
+impl SectionBuffer {
 	pub fn push(&mut self, section: Section) -> Result<(), ()> {
 		if self.len >= self.sections.len() {
 			return Err(());
