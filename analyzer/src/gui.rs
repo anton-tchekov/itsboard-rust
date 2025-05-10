@@ -1,3 +1,5 @@
+use crate::decoder;
+use crate::delay::delay_ms;
 use crate::hw::HW;
 use crate::lcd::*;
 use crate::font::*;
@@ -456,6 +458,14 @@ const ZOOM_LEVELS: [ZoomLevel; 21] =
 	ZoomLevel { value:   1, unit: TimeUnit::Microsecond }
 ];
 
+pub enum DecoderStorage
+{
+	None,
+	Uart(DecoderUart),
+	SPI(DecoderSPI),
+	I2C(DecoderI2C),
+}
+
 pub struct Gui {
 	actions: &'static [Action],
 	visible_channels: u32,
@@ -470,6 +480,8 @@ pub struct Gui {
 	term_rows: u32,
 	term_lens: [u8; 16],
 	buf: SampleBuffer,
+	sec_buf: SectionBuffer,
+	cur_decoder: DecoderStorage,
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
@@ -526,6 +538,11 @@ impl Gui {
 				timestamps: [0; sample::BUF_SIZE],
 				len: 0
 			},
+			sec_buf: SectionBuffer {
+				sections: [Section::default(); decoder::SECBUF_SIZE],
+				len: 0
+			},
+			cur_decoder: DecoderStorage::None,
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
@@ -796,6 +813,17 @@ impl Gui {
 		}
 	}
 
+	fn draw_config_saved_animation() {
+		for i in 0..5
+		{
+			lcd_str(200, 200-(i*10), "Configuration Saved",
+			LCD_GREEN, LCD_BLACK, TITLE_FONT);
+			delay_ms(50);
+			lcd_str(200, 200-(i*10), "Configuration Saved",
+			LCD_BLACK, LCD_BLACK, TITLE_FONT);
+		}
+	}
+
 	/* === UART (U) MODE === */
 	fn u_open(&mut self) {
 		self.title_set("UART Decoder");
@@ -819,7 +847,8 @@ impl Gui {
 			baudrate: item_to_baudrate(self.sels[5].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::Uart(d);
+		Self::draw_config_saved_animation();
 	}
 
 	/* === SPI (S) MODE === */
@@ -843,7 +872,7 @@ impl Gui {
 			cs_pin: item_to_pin(self.sels[3].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::SPI(d);
 	}
 
 	/* === I2C (I) MODE === */
@@ -865,7 +894,7 @@ impl Gui {
 			scl_pin: item_to_pin(self.sels[1].into())
 		};
 
-		// TODO: Store Decoder
+		self.cur_decoder = DecoderStorage::I2C(d);
 	}
 
 	/* === ONEWIRE (O) MODE === */
