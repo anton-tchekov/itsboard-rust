@@ -1,20 +1,6 @@
 use crate::decoder::*;
 use crate::sample::*;
 
-static BAUDRATES: &'static [i32] = &[
-	300,
-	600,
-	1200,
-	1800,
-	2400,
-	4800,
-	9600,
-	19200,
-	38400,
-	57600,
-	115200
-];
-
 pub enum Parity {
 	None,
 	Even,
@@ -31,9 +17,9 @@ pub enum DataBits {
 
 pub enum StopBits {
 	One = 1,
+	OneAndHalf,
 	Two
 }
-
 pub struct DecoderUart {
 	pub rx_pin: DecoderPin,
 	pub tx_pin: DecoderPin,
@@ -44,7 +30,31 @@ pub struct DecoderUart {
 }
 
 impl Decoder for DecoderUart {
+
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
 		Ok(())
+		// TODO
+	}
+	
+	fn num_pins(&self) -> usize {
+		2
+	}
+	
+	fn get_pin(&self, idx: usize) -> Option<DecoderPin> {
+		match idx
+		{
+			0 => Some(self.rx_pin),
+			1 => Some(self.tx_pin),
+			_ => None,
+		}
+	}
+	
+	fn get_pin_name(&self, idx: usize) -> Option<&'static str> {
+		match idx
+		{
+			0 => Some("RX"),
+			1 => Some("TX"),
+			_ => None,
+		}
 	}
 }
