@@ -64,7 +64,7 @@ const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
 
 const WAVEFORMS_ON_SCREEN: u32 = 8;
-const CHANNEL_LABEL_WIDTH: u32 = 32;
+const CHANNEL_LABEL_WIDTH: u32 = 33;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action {
@@ -559,7 +559,6 @@ impl Gui {
 		gui.icon_box();
 		gui.actions_render();
 		gui.ma_open();
-		gui.sidebar_render();
 		gui
 	}
 
@@ -1010,7 +1009,7 @@ impl Gui {
 		{
 			let cur = view_buf[i];
 
-			let x0 = self.t_to_x(cur.start) + 1;
+			let x0 = self.t_to_x(cur.start);
 			let x1 = self.t_to_x(cur.end);
 			let w = x1 - x0;
 
@@ -1020,11 +1019,11 @@ impl Gui {
 			/* TODO: In decoder.rs auslagern */
 			match cur.content
 			{
-				SectionContent::Empty => 	write!(buf, " Empty").unwrap(),
-				SectionContent::Byte(v) => 	write!(buf, " 0x{:X}", v).unwrap(),
-				SectionContent::Bit(v) => 	write!(buf, " {}", v).unwrap(),
+				SectionContent::Empty    => write!(buf, " Empty").unwrap(),
+				SectionContent::Byte(v)  => write!(buf, " 0x{:X}", v).unwrap(),
+				SectionContent::Bit(v)   => write!(buf, " {}", v).unwrap(),
 				SectionContent::StartBit => write!(buf, " Start").unwrap(),
-				SectionContent::StopBit => 	write!(buf, " Stop").unwrap(),
+				SectionContent::StopBit  => write!(buf, " Stop").unwrap(),
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 			};
 
@@ -1042,7 +1041,8 @@ impl Gui {
 
 	fn sidebar_clear(&self)
 	{
-		lcd_rect(0, ICON_BOX, CHANNEL_LABEL_WIDTH, LCD_HEIGHT-(ICON_BOX*2), LCD_BLACK);
+		lcd_rect(0, ICON_BOX + 1, CHANNEL_LABEL_WIDTH,
+			LCD_HEIGHT - ((ICON_BOX + 1) * 2), LCD_BLACK);
 	}
 
 	fn sidebar_render_decoder_pins(&self)
@@ -1077,14 +1077,14 @@ impl Gui {
 		for i in 0..8
 		{
 			let y = 50 + i * 30;
-			lcd_char(CHANNEL_LABEL_WIDTH/2, y, '0' as u32 + i, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+			lcd_char(CHANNEL_LABEL_WIDTH / 2, y, '0' as u32 + i, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 			lcd_hline(0, y, CHANNEL_LABEL_WIDTH, LCD_WHITE);
 		}
 
-		/* Drawing the decoder pins before the vline allows 4 characters as the pin name without glitches */
 		self.sidebar_render_decoder_pins();
 
-		lcd_vline(CHANNEL_LABEL_WIDTH-1, ICON_BOX, LCD_HEIGHT-(ICON_BOX*2), LCD_WHITE);
+		lcd_vline(CHANNEL_LABEL_WIDTH - 1, ICON_BOX + 1,
+			LCD_HEIGHT - ((ICON_BOX + 1) * 2), LCD_WHITE);
 	}
 
 	fn waveform_render(&mut self, y: u32, ch: u32, color: u16)
@@ -1107,16 +1107,15 @@ impl Gui {
 
 	fn waveforms_render(&mut self, color: u16)
 	{
-		for i in 0..8
-		{
-			self.waveform_render(50 + i * 30, i, color);
-		}
-
-		// TODO: Weiß nicht ob das hier hingehört
 		if color != LCD_BLACK
 		{
 			self.decoder_render();
 			self.sidebar_render();
+		}
+
+		for i in 0..8
+		{
+			self.waveform_render(50 + i * 30, i, color);
 		}
 	}
 
