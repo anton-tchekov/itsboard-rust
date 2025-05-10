@@ -550,6 +550,11 @@ impl Gui {
 			waveform_offset: 0
 		};
 
+		/* For Debug Reasons */
+		let debug_section: Section = Section{start: 0, end: 100, content: SectionContent::Byte(0xAA)};
+
+		let _ = gui.sec_buf.push(debug_section);
+
 		gui.icon_box();
 		gui.actions_render();
 		gui.ma_open();
