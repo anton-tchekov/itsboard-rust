@@ -991,7 +991,8 @@ impl Gui {
 
 	fn ma_top_box(&mut self)
 	{
-		for i in 0..MA_ICONS {
+		for i in 0..MA_ICONS
+		{
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_WHITE);
 			self.ma_render(i, i == self.ma_selected);
@@ -1019,7 +1020,8 @@ impl Gui {
 	{
 		self.zoomlevel_undraw();
 		self.waveforms_render(LCD_BLACK);
-		for i in 0..MA_ICONS {
+		for i in 0..MA_ICONS
+		{
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
 				0, ICON_BOX, LCD_BLACK);
 			lcd_icon_undraw(
