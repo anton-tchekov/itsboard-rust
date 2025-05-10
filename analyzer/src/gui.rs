@@ -29,7 +29,7 @@ const BORDER_DEFAULT: u32 = 1;
 const TITLE_FONT: &Font = &TERMINUS16_BOLD;
 const BUTTON_HEIGHT: u32 = 26;
 const BUTTON_FONT: &Font = &TERMINUS16_BOLD;
-const DECODER_COUNT: u32 = 4;
+const DECODER_COUNT: u32 = 5;
 
 const MA_BOTTOM_TEXT_X: u32 = 26;
 
@@ -811,20 +811,29 @@ impl Gui {
 			Action::Down => self.cd_down(),
 			Action::Left => self.cd_left(),
 			Action::Right => self.cd_right(),
-			Action::Escape => self.mode_switch(Mode::DecoderAdd),
+			Action::Escape => self.mode_switch(Mode::Main),
 			_ => {}
 		}
 	}
 
-	fn draw_config_saved_animation() {
+	fn draw_config_saved_animation()
+	{
+		let s = "Configuration Saved";
 		for i in 0..5
 		{
-			lcd_str(200, 200-(i*10), "Configuration Saved",
-			LCD_GREEN, LCD_BLACK, TITLE_FONT);
+			let x = 200;
+			let y = 200 - (i * 10);
+			lcd_str(x, y, s, LCD_GREEN, LCD_BLACK, TITLE_FONT);
 			delay_ms(50);
-			lcd_str(200, 200-(i*10), "Configuration Saved",
-			LCD_BLACK, LCD_BLACK, TITLE_FONT);
+			lcd_str(x, y, s, LCD_BLACK, LCD_BLACK, TITLE_FONT);
 		}
+	}
+
+	fn decoder_done(&mut self, d: DecoderStorage)
+	{
+		self.cur_decoder = d;
+		Self::draw_config_saved_animation();
+		self.mode_switch(Mode::Main);
 	}
 
 	/* === UART (U) MODE === */
@@ -841,17 +850,14 @@ impl Gui {
 	}
 
 	fn u_save(&mut self) {
-		let d = DecoderUart {
+		self.decoder_done(DecoderStorage::Uart(DecoderUart {
 			rx_pin: item_to_pin(self.sels[0].into()),
 			tx_pin: item_to_pin(self.sels[1].into()),
 			databits: item_to_databits(self.sels[2].into()),
 			parity: item_to_parity(self.sels[3].into()),
 			stopbits: item_to_stopbits(self.sels[4].into()),
 			baudrate: item_to_baudrate(self.sels[5].into())
-		};
-
-		self.cur_decoder = DecoderStorage::Uart(d);
-		Self::draw_config_saved_animation();
+		}));
 	}
 
 	/* === SPI (S) MODE === */
@@ -868,15 +874,12 @@ impl Gui {
 	}
 
 	fn s_save(&mut self) {
-		let d = DecoderSPI {
+		self.decoder_done(DecoderStorage::SPI(DecoderSPI {
 			miso_pin: item_to_pin(self.sels[0].into()),
 			mosi_pin: item_to_pin(self.sels[1].into()),
 			sck_pin: item_to_pin(self.sels[2].into()),
 			cs_pin: item_to_pin(self.sels[3].into())
-		};
-
-		self.cur_decoder = DecoderStorage::SPI(d);
-		Self::draw_config_saved_animation();
+		}));
 	}
 
 	/* === I2C (I) MODE === */
@@ -893,13 +896,10 @@ impl Gui {
 	}
 
 	fn i_save(&mut self) {
-		let d = DecoderI2C {
+		self.decoder_done(DecoderStorage::I2C(DecoderI2C {
 			sda_pin: item_to_pin(self.sels[0].into()),
 			scl_pin: item_to_pin(self.sels[1].into())
-		};
-
-		self.cur_decoder = DecoderStorage::I2C(d);
-		Self::draw_config_saved_animation();
+		}));
 	}
 
 	/* === ONEWIRE (O) MODE === */
@@ -916,12 +916,9 @@ impl Gui {
 	}
 
 	fn o_save(&mut self) {
-		let d = DecoderOneWire {
+		self.decoder_done(DecoderStorage::OneWire(DecoderOneWire {
 			onewire_pin: item_to_pin(self.sels[0].into())
-		};
-
-		self.cur_decoder = DecoderStorage::OneWire(d);
-		Self::draw_config_saved_animation();
+		}));
 	}
 
 	/* === MAIN (MA) MODE === */
@@ -1301,12 +1298,13 @@ impl Gui {
 			1 => { self.mode_switch(Mode::DecoderSpi); },
 			2 => { self.mode_switch(Mode::DecoderI2C); },
 			3 => { self.mode_switch(Mode::DecoderOneWire); },
+			4 => { self.decoder_done(DecoderStorage::None); },
 			_ => {}
 		}
 	}
 
 	fn da_button(&self, idx: u32) -> Button {
-		const LABELS: [&str; DECODER_COUNT as usize] = [ "UART", "SPI", "I2C", "OneWire" ];
+		const LABELS: [&str; DECODER_COUNT as usize] = [ "UART", "SPI", "I2C", "OneWire", "None" ];
 		Button {
 			x: DA_PADDING,
 			y: idx * (BUTTON_HEIGHT + DA_PADDING) + ICON_BOX + 1 + DA_PADDING,
