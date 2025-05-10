@@ -1047,7 +1047,8 @@ impl Gui {
 		/* Incase theres a Decoder, Render its Pin information */
 		let decoder: &dyn Decoder;
 
-		match &self.cur_decoder {
+		match &self.cur_decoder
+		{
 			DecoderStorage::None => return,
 			DecoderStorage::Uart(dcd) => decoder = dcd,
 			DecoderStorage::SPI(dcd) => decoder = dcd,
@@ -1057,7 +1058,8 @@ impl Gui {
 
 		let num_pins = decoder.num_pins();
 
-		for i in 0..num_pins {
+		for i in 0..num_pins
+		{
 			let pin_num = decoder.get_pin(i).unwrap();
 			if pin_num == -1 {continue;}
 

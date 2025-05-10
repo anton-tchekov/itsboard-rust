@@ -18,7 +18,8 @@ const OFFSET_CLEAR: u32 = 16;
 
 pub const TICKS_PER_US: u32 = 90;
 
-pub struct HW {
+pub struct HW
+{
 	pub spi: Spi<SPI1>,
 	pub tx: Tx<USART3>
 }
@@ -33,7 +34,8 @@ const SPI_SR_RXNE     : u32 = 1 << 0;
 const SPI_SR_TXE      : u32 = 1 << 1;
 const SPI_SR_BSY      : u32 = 1 << 7;
 
-pub fn hw_init() -> HW {
+pub fn hw_init() -> HW
+{
 	let dp = Peripherals::take().unwrap();
 	let clocks = dp.RCC.constrain().cfgr
 		.use_hse(8.MHz())
@@ -43,7 +45,8 @@ pub fn hw_init() -> HW {
 		.pclk2(90.MHz())
 		.freeze();
 
-	unsafe {
+	unsafe
+	{
 		(*RCC::ptr()).ahb1enr().modify(|_, w|
 			w.gpioaen().enabled()
 			.gpioden().enabled()
@@ -55,7 +58,8 @@ pub fn hw_init() -> HW {
 
 	let gpiod = dp.GPIOD.split();
 
-	unsafe {
+	unsafe
+	{
 		/* DC: F13, RST: F12, SDCS: E11 */
 		(*GPIOD::ptr()).moder().write(|w| w.bits(0x50005555));
 		(*GPIOE::ptr()).moder().write(|w| w.bits(0x00405555));
@@ -78,7 +82,8 @@ pub fn hw_init() -> HW {
 		(*GPIOG::ptr()).ospeedr().write(|w| w.bits(0xFFFF));
 	}
 
-	unsafe {
+	unsafe
+	{
 		/* Enable Timer Clock */
 		(*RCC::ptr()).apb1enr().modify(|_, w| w.tim2en().enabled());
 
@@ -100,7 +105,8 @@ pub fn hw_init() -> HW {
 	}
 
 	let gpioa = dp.GPIOA.split();
-	unsafe {
+	unsafe
+	{
 		(*GPIOA::ptr()).ospeedr().write(|w| w.bits(0xFFFF));
 	}
 
@@ -110,7 +116,8 @@ pub fn hw_init() -> HW {
 
 	let spi = dp.SPI1.spi(
 		(sclk, miso, mosi),
-		Mode {
+		Mode
+		{
 			polarity: Polarity::IdleLow,
 			phase: Phase::CaptureOnFirstTransition,
 		},
@@ -134,16 +141,20 @@ pub fn hw_init() -> HW {
 	HW { spi, tx }
 }
 
-pub fn timer_get() -> u32 {
+pub fn timer_get() -> u32
+{
 	unsafe { (*TIM2::ptr()).cnt().read().bits() }
 }
 
-pub fn timer_set(v: u32) {
+pub fn timer_set(v: u32)
+{
 	unsafe { (*TIM2::ptr()).cnt().write(|w| w.bits(v)); }
 }
 
-pub fn spi_xchg(val: u8) -> u8 {
-	unsafe {
+pub fn spi_xchg(val: u8) -> u8
+{
+	unsafe
+	{
 		delay_us(1);
 		while (read_volatile(SPI1_SR as *mut u32) & SPI_SR_TXE) == 0 {}
 		write_volatile(SPI1_DR as *mut u32, val.into());
@@ -155,70 +166,87 @@ pub fn spi_xchg(val: u8) -> u8 {
 	}
 }
 
-pub fn buttons_read() -> u8 {
+pub fn buttons_read() -> u8
+{
 	(unsafe { (*GPIOF::ptr()).idr().read().bits() } & 0xFF) as u8
 }
 
-pub fn blueread() -> u8 {
+pub fn blueread() -> u8
+{
 	(unsafe { (*GPIOD::ptr()).idr().read().bits() & 0xFF }) as u8
 }
 
-pub fn yellowread() -> u8 {
+pub fn yellowread() -> u8
+{
 	(unsafe { (*GPIOE::ptr()).idr().read().bits() & 0xFF }) as u8
 }
 
-pub fn blueinput() {
+pub fn blueinput()
+{
 	unsafe { (*GPIOD::ptr()).moder().modify(|r, w| w.bits(r.bits() & !0xFFFF)); }
 }
 
-pub fn yellowinput() {
+pub fn yellowinput()
+{
 	unsafe { (*GPIOE::ptr()).moder().modify(|r, w| w.bits(r.bits() & !0xFFFF)); }
 }
 
-pub fn blueset(val: u8) {
+pub fn blueset(val: u8)
+{
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(val as u32)); }
 }
 
-pub fn blueclear(val: u8) {
+pub fn blueclear(val: u8)
+{
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits((val as u32) << OFFSET_CLEAR)); }
 }
 
-pub fn yellowset(val: u8) {
+pub fn yellowset(val: u8)
+{
 	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(val as u32)); }
 }
 
-pub fn yellowclear(val: u8) {
+pub fn yellowclear(val: u8)
+{
 	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits((val as u32) << OFFSET_CLEAR)); }
 }
 
-pub fn lcd_rst_0() {
+pub fn lcd_rst_0()
+{
 	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (LCD_RST + OFFSET_CLEAR))); }
 }
 
-pub fn lcd_rst_1() {
+pub fn lcd_rst_1()
+{
 	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << LCD_RST)); }
 }
 
-pub fn lcd_dc_0() {
+pub fn lcd_dc_0()
+{
 	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (LCD_DC + OFFSET_CLEAR))); }
 }
 
-pub fn lcd_dc_1() {
+pub fn lcd_dc_1()
+{
 	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << LCD_DC)); }
 }
 
-pub fn lcd_cs_0() {
+pub fn lcd_cs_0()
+{
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << (LCD_CS + OFFSET_CLEAR))); }
 }
 
-pub fn lcd_cs_1() {
+pub fn lcd_cs_1()
+{
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
 }
 
-pub fn sd_cs_0() {
+pub fn sd_cs_0()
+{
 	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(1 << (LCD_CS + OFFSET_CLEAR))); }
 }
 
-pub fn sd_cs_1() {
+pub fn sd_cs_1()
+{
 	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
 }

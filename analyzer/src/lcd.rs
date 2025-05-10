@@ -13,7 +13,8 @@ pub const LCD_CYAN    : u16 = 0x07FF;
 pub const LCD_BLUE    : u16 = 0x001F;
 pub const LCD_MAGENTA : u16 = 0xF81F;
 
-const LCD_INIT_CMDS: [u8; 103] = [
+const LCD_INIT_CMDS: [u8; 103] =
+[
 	0xF9,
 	2,
 	0x00,
@@ -119,35 +120,41 @@ const LCD_INIT_CMDS: [u8; 103] = [
 	0x55
 ];
 
-fn lcd_param0() {
+fn lcd_param0()
+{
 	lcd_dc_1();
 	lcd_cs_0();
 	spi_xchg(0);
 }
 
-fn lcd_param1(param: u8) {
+fn lcd_param1(param: u8)
+{
 	spi_xchg(param);
 	lcd_cs_1();
 }
 
-fn lcd_param(param: u8) {
+fn lcd_param(param: u8)
+{
 	lcd_param0();
 	lcd_param1(param);
 }
 
-fn lcd_cmd(cmd: u8) {
+fn lcd_cmd(cmd: u8)
+{
 	lcd_dc_0();
 	lcd_cs_0();
 	spi_xchg(cmd);
 	lcd_cs_1();
 }
 
-pub fn lcd_emit(color: u16) {
+pub fn lcd_emit(color: u16)
+{
 	spi_xchg((color >> 8) as u8);
 	spi_xchg((color & 0xFF) as u8);
 }
 
-fn lcd_reset() {
+fn lcd_reset()
+{
 	lcd_rst_1();
 	delay_ms(500);
 	lcd_rst_0();
@@ -156,7 +163,8 @@ fn lcd_reset() {
 	delay_ms(500);
 }
 
-pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32) {
+pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32)
+{
 	let ex = x + w - 1;
 	let ey = y + h - 1;
 
@@ -177,17 +185,20 @@ pub fn lcd_window_start(x: u32, y: u32, w: u32, h: u32) {
 	lcd_cs_0();
 }
 
-pub fn lcd_window_end() {
+pub fn lcd_window_end()
+{
 	lcd_cs_1();
 }
 
-pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16) {
+pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
+{
 	let mut count = w * h;
 	let color_hi = (color >> 8) as u8;
 	let color_lo = (color & 0xFF) as u8;
 
 	lcd_window_start(x, y, w, h);
-	while count > 0 {
+	while count > 0
+	{
 		count -= 1;
 		spi_xchg(color_hi);
 		spi_xchg(color_lo);
@@ -196,13 +207,15 @@ pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16) {
 	lcd_window_end();
 }
 
-pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32,
-	callback: &dyn Fn(u32, u32) -> u16) {
+pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32, callback: &dyn Fn(u32, u32) -> u16)
+{
 	lcd_window_start(x, y, w, h);
 	let mut y0 = 0;
-	while y0 < h {
+	while y0 < h
+	{
 		let mut x0 = 0;
-		while x0 < w {
+		while x0 < w
+		{
 			lcd_emit(callback(x0, y0));
 			x0 += 1;
 		}
@@ -213,15 +226,18 @@ pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32,
 	lcd_window_end();
 }
 
-pub fn lcd_clear(color: u16) {
+pub fn lcd_clear(color: u16)
+{
 	lcd_rect(0, 0, LCD_WIDTH, LCD_HEIGHT, color);
 }
 
-pub fn lcd_init(color: u16) {
+pub fn lcd_init(color: u16)
+{
 	lcd_reset();
 
 	let mut i = 0;
-	while i < LCD_INIT_CMDS.len() {
+	while i < LCD_INIT_CMDS.len()
+	{
 		lcd_cmd(LCD_INIT_CMDS[i]);
 		i += 1;
 		let mut num = LCD_INIT_CMDS[i];
@@ -247,16 +263,19 @@ pub fn lcd_init(color: u16) {
 	lcd_clear(color);
 }
 
-pub const fn lcd_color(r: u8, g: u8, b: u8) -> u16 {
+pub const fn lcd_color(r: u8, g: u8, b: u8) -> u16
+{
 	((r as u16 & 0xF8) << 8) |
 		((g as u16 & 0xFC) << 3) |
 		(b as u16 >> 3)
 }
 
-pub fn lcd_vline(x: u32, y: u32, h: u32, color: u16) {
+pub fn lcd_vline(x: u32, y: u32, h: u32, color: u16)
+{
 	lcd_rect(x, y, 1, h, color);
 }
 
-pub fn lcd_hline(x: u32, y: u32, w: u32, color: u16) {
+pub fn lcd_hline(x: u32, y: u32, w: u32, color: u16)
+{
 	lcd_rect(x, y, w, 1, color);
 }

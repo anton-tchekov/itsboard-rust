@@ -25,7 +25,8 @@ use crate::gui::*;
 use panic_halt as _;
 
 #[cortex_m_rt::entry]
-fn start() -> ! {
+fn start() -> !
+{
 	let hw = hw_init();
 	lcd_init(lcd_color(0, 0, 0));
 	let mut gui = Gui::init(hw);
@@ -34,21 +35,28 @@ fn start() -> ! {
 
 	let mut ticks: [u32; 8] = [0; 8];
 	let mut last_check = 0;
-	loop {
+	loop
+	{
 		let t = timer_get();
-		if (t - last_check) >= TICKS_PER_US * 1000 {
+		if (t - last_check) >= TICKS_PER_US * 1000
+		{
 			last_check = t;
 			let btns = buttons_read();
-			for i in 0..8 {
-				if btns & (1 << i) != 0 {
+			for i in 0..8
+			{
+				if btns & (1 << i) != 0
+				{
 					// Released
-					if ticks[i] > 0 {
+					if ticks[i] > 0
+					{
 						ticks[i] -= 1;
 					}
 				}
-				else {
+				else
+				{
 					// Pressed
-					if ticks[i] == 0 {
+					if ticks[i] == 0
+					{
 						gui.key(i as i32);
 					}
 

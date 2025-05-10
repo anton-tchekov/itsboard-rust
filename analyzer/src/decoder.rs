@@ -6,7 +6,8 @@ pub const SECBUF_SIZE: usize = 100;
 
 // GUI is responsible for choosing representation, colors, etc.
 #[derive(Copy, Clone, Default)]
-pub enum SectionContent {
+pub enum SectionContent
+{
 	// Add more when needed
 	#[default]
 	Empty,
@@ -18,7 +19,8 @@ pub enum SectionContent {
 }
 
 #[derive(Copy, Clone, Default)]
-pub struct Section {
+pub struct Section
+{
 	// Which time the section starts on
 	pub start: u32,
 
@@ -29,14 +31,18 @@ pub struct Section {
 	pub content: SectionContent
 }
 
-pub struct SectionBuffer {
+pub struct SectionBuffer
+{
 	pub sections: [Section; SECBUF_SIZE],
 	pub len: usize
 }
 
-impl SectionBuffer {
-	pub fn push(&mut self, section: Section) -> Result<(), ()> {
-		if self.len >= self.sections.len() {
+impl SectionBuffer
+{
+	pub fn push(&mut self, section: Section) -> Result<(), ()>
+	{
+		if self.len >= self.sections.len()
+		{
 			return Err(());
 		}
 
@@ -47,7 +53,8 @@ impl SectionBuffer {
 }
 
 // Decoder Interface
-pub trait Decoder {
+pub trait Decoder
+{
 	// Decode a SampleBuffer
 	// output is a SectionBuffer
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()>;
