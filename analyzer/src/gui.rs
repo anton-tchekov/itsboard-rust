@@ -59,6 +59,8 @@ const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
 
+const WAVEFORMS_ON_SCREEN: u32 = 8;
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action {
 	None,
@@ -369,14 +371,20 @@ fn cycle_bwd(idx: u32, count: u32) -> u32
 	if idx == 0 { count - 1 } else { idx - 1 }
 }
 
-fn inc_limit(idx: usize, count: usize) -> usize
-{
-	if idx == count - 1 { idx } else { idx + 1 }
+macro_rules! limit_inc {
+	($value:expr, $n:expr) => {
+		if $value < $n {
+			$value += 1;
+		}
+	};
 }
 
-fn dec_limit(idx: usize) -> usize
-{
-	if idx == 0 { idx } else { idx - 1 }
+macro_rules! limit_dec {
+	($value:expr, $n:expr) => {
+		if $value > $n {
+			$value -= 1;
+		}
+	};
 }
 
 const ACTIONS_INFO: [Action; 8] = [
@@ -465,7 +473,8 @@ pub struct Gui {
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
-	zoom: usize
+	zoom: usize,
+	waveform_offset: u32
 }
 
 impl Gui {
@@ -501,7 +510,7 @@ impl Gui {
 
 		let mut gui = Gui {
 			actions: &ACTIONS_MAIN,
-			visible_channels: 0xAA55,
+			visible_channels: 0x0F,
 			cur_title: "",
 			mode: Mode::Main,
 			ma_selected: 0,
@@ -518,9 +527,10 @@ impl Gui {
 				len: 0
 			},
 			t_start: 0,
-			t_end: 1 * (90_000_000 / 1),
+			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
-			zoom: 0
+			zoom: 0,
+			waveform_offset: 0
 		};
 
 		gui.icon_box();
@@ -880,12 +890,12 @@ impl Gui {
 	}
 
 	/* === MAIN (MA) MODE === */
-	fn zoomlevel_render(&self)
+	fn zoomlevel_draw(&self)
 	{
-		let l = &ZOOM_LEVELS[self.zoom];
 		let mut a: [u8; 16] = [0; 16];
 		let mut buf = ByteMutWriter::new(&mut a);
-		write!(&mut buf, "{:>3} {}", l.value,
+		let l = &ZOOM_LEVELS[self.zoom];
+		write!(buf, "{:>3} {}", l.value,
 			match l.unit
 			{
 				TimeUnit::Second => "s ",
@@ -895,6 +905,12 @@ impl Gui {
 
 		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, buf.as_str(),
 			LCD_WHITE, LCD_BLACK, &TERMINUS16);
+	}
+
+	fn zoomlevel_undraw(&self)
+	{
+		lcd_rect(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1,
+			TERMINUS16.width * 6, TERMINUS16.height, LCD_BLACK);
 	}
 
 	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64
@@ -919,7 +935,7 @@ impl Gui {
 		let w = x1 - x0 + 1;
 		let y0 = y + (if p0 { 0 } else { h });
 		lcd_hline(x0, y0, w, color);
-		if p0 != p1 && t0 >= self.t_start && t1 <= self.t_end {
+		if p0 != p1 && t1 <= self.t_end {
 			lcd_vline(x1, y, h, color);
 		}
 	}
@@ -944,8 +960,25 @@ impl Gui {
 
 	fn waveforms_render(&mut self, color: u16)
 	{
-		self.waveform_render(50, 0, color);
-		//for
+		let mut cnt = 0;
+		let mut idx = 0;
+		for i in 0..16
+		{
+			if self.visible_channels & (1 << i) != 0
+			{
+				if idx >= self.waveform_offset
+				{
+					self.waveform_render(50 + i * 30, idx, color);
+					cnt += 1;
+					if cnt >= WAVEFORMS_ON_SCREEN
+					{
+						break;
+					}
+				}
+
+				idx += 1;
+			}
+		}
 	}
 
 	fn ma_render(&mut self, i: u32, sel: bool)
@@ -976,12 +1009,15 @@ impl Gui {
 		self.title_set("Logic Analyzer");
 		self.actions_set(&ACTIONS_MAIN);
 		self.da_selected = 0;
+		self.waveform_offset = 0;
 		self.ma_top_box();
 		self.waveforms_render(LCD_WHITE);
+		self.zoomlevel_draw();
 	}
 
 	fn ma_close(&mut self)
 	{
+		self.zoomlevel_undraw();
 		self.waveforms_render(LCD_BLACK);
 		for i in 0..MA_ICONS {
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
@@ -1013,7 +1049,7 @@ impl Gui {
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
-		self.zoomlevel_render();
+		self.zoomlevel_draw();
 		self.waveforms_render(LCD_WHITE);
 		self.write_buf_as_csv();
 	}
@@ -1055,29 +1091,67 @@ impl Gui {
 
 	fn zoomlevel_update(&mut self)
 	{
-		self.zoomlevel_render();
+		self.zoomlevel_draw();
 		self.waveforms_render(LCD_BLACK);
 		self.t_end = self.t_start + self.zoomlevel_to_ticks();
 		self.waveforms_render(LCD_WHITE);
+	}
+
+	fn last_ts(&self) -> u32
+	{
+		if self.buf.len == 0 { 0 } else { self.buf.timestamps[self.buf.len - 1] }
+	}
+
+	fn max_vertical_scroll(&self) -> u32
+	{
+		let channels = self.visible_channels.count_ones();
+		if channels >= WAVEFORMS_ON_SCREEN { channels - WAVEFORMS_ON_SCREEN } else { 0 }
+	}
+
+	fn max_horizontal_scroll(&self) -> u32
+	{
+		let last = self.last_ts();
+		if last < self.t_end { 0 } else { last - self.t_end }
+	}
+
+	fn horizontal_scroll_amount(&self) -> u32
+	{
+		(self.t_end - self.t_start) / 4
 	}
 
 	fn ma_action(&mut self, action: Action)
 	{
 		match action {
 			Action::Up => {
+				self.waveforms_render(LCD_BLACK);
+				limit_dec!(self.waveform_offset, 0);
+				self.waveforms_render(LCD_WHITE);
 			}
 			Action::Down => {
+				self.waveforms_render(LCD_BLACK);
+				limit_inc!(self.waveform_offset, self.max_vertical_scroll());
+				self.waveforms_render(LCD_WHITE);
 			}
 			Action::Left => {
+				self.waveforms_render(LCD_BLACK);
+				let amount = u32::min(self.horizontal_scroll_amount(), self.t_start);
+				self.t_start -= amount;
+				self.t_end -= amount;
+				self.waveforms_render(LCD_WHITE);
 			}
 			Action::Right => {
+				self.waveforms_render(LCD_BLACK);
+				let amount = u32::min(self.horizontal_scroll_amount(), self.max_horizontal_scroll());
+				self.t_start += amount;
+				self.t_end += amount;
+				self.waveforms_render(LCD_WHITE);
 			},
 			Action::ZoomIn => {
-				self.zoom = inc_limit(self.zoom, ZOOM_LEVELS.len());
+				limit_inc!(self.zoom, ZOOM_LEVELS.len() - 1);
 				self.zoomlevel_update();
 			},
 			Action::ZoomOut => {
-				self.zoom = dec_limit(self.zoom);
+				limit_dec!(self.zoom, 0);
 				self.zoomlevel_update();
 			},
 			Action::Cycle => {
