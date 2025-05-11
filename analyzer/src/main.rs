@@ -16,6 +16,7 @@ mod decoder_spi;
 mod decoder_i2c;
 mod decoder_onewire;
 mod decoder_uart;
+mod tinyfont;
 
 use crate::hw::*;
 use crate::lcd::*;

@@ -7,6 +7,7 @@ use crate::lcd::*;
 use crate::font::*;
 use crate::terminus16_bold::*;
 use crate::terminus16::*;
+use crate::tinyfont::*;
 use crate::decoder_uart::*;
 use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
@@ -65,6 +66,7 @@ const TERM_Y: u32 = 40;
 
 const WAVEFORMS_ON_SCREEN: u32 = 8;
 const CHANNEL_LABEL_WIDTH: u32 = 33;
+const WAVEFORM_WIDTH: u32 = LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action
@@ -530,6 +532,35 @@ pub enum DecoderStorage
 	SPI(DecoderSPI),
 	I2C(DecoderI2C),
 	OneWire(DecoderOneWire),
+}
+
+struct WaveformBuffer
+{
+	data: [u16; WAVEFORM_WIDTH as usize]
+}
+
+impl WaveformBuffer
+{
+	pub fn new() -> Self
+	{
+		WaveformBuffer { data: [0; WAVEFORM_WIDTH as usize] }
+	}
+
+	pub fn line(&mut self, ch: u32, x0: u32, x1: u32, level: bool)
+	{
+		let bit = ch + if level == false { 1 } else { 0 };
+		let mask = 1 << bit;
+		for x in x0..=x1
+		{
+			self.data[x as usize] |= mask;
+		}
+	}
+
+	//pub fn blit(&self, ch: u32, )
+
+	pub fn update(&self, prev: &WaveformBuffer)
+	{
+	}
 }
 
 pub struct Gui
@@ -1193,7 +1224,7 @@ impl Gui
 		{
 			if pin_num == -1 { continue; }
 			let y = 62 + pin_num * 30;
-			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
 			i += 1;
 		}
 	}

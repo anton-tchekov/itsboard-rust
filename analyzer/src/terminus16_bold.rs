@@ -1637,6 +1637,7 @@ const TERMINUS16_BITMAP: [u8; 1536] =
 
 pub const TERMINUS16_BOLD: Font = Font
 {
+	horizontal: true,
 	width: 8,
 	height: 16,
 	bitmap: &TERMINUS16_BITMAP

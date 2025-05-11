@@ -1,8 +1,12 @@
 use crate::lcd::*;
 use crate::terminus16::*;
 
+pub const CHAR_MISSING: u32 = 127;
+pub const CHAR_MICRO: u32 = 128;
+
 pub struct Font
 {
+	pub horizontal: bool,
 	pub width: u32,
 	pub height: u32,
 	pub bitmap: &'static [u8]
@@ -16,7 +20,7 @@ impl Font
 	}
 }
 
-pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font)
+pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font) -> u32
 {
 	lcd_window_start(x, y, font.width, font.height);
 	let stride = (font.width + 7) >> 3;
@@ -40,17 +44,42 @@ pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font)
 	}
 
 	lcd_window_end();
+	font.width
 }
 
-pub fn lcd_char(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font)
+fn lcd_font_v(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font) -> u32
 {
-	let mut o = c;
-	if o < 32
+	let offset = font.width * (c - 32);
+	lcd_window_start(x, y, font.width, font.height);
+	for h in 0..font.height
 	{
-		o = 127;
+		for w in 0..font.width
+		{
+			let byte = font.bitmap[(offset + w) as usize];
+			lcd_emit(if ((byte >> h) & 1) != 0 { fg } else { bg });
+		}
 	}
 
-	lcd_font(x, y, o, fg, bg, font);
+	lcd_window_end();
+	font.width + 1
+}
+
+pub fn lcd_char(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font) -> u32
+{
+	let o = match c {
+		..32 => CHAR_MISSING,
+		0xB5 => CHAR_MICRO,
+		_ => c as u32
+	};
+
+	if font.horizontal
+	{
+		lcd_font(x, y, o, fg, bg, font)
+	}
+	else
+	{
+		lcd_font_v(x, y, o, fg, bg, font)
+	}
 }
 
 pub fn lcd_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font)
@@ -58,14 +87,7 @@ pub fn lcd_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font)
 	let mut x0 = x;
 	for c in s.chars()
 	{
-		let mc = match c as u32
-		{
-			0xB5 => CHAR_MICRO,
-			_ => c as u32
-		};
-
-		lcd_char(x0, y, mc, fg, bg, font);
-		x0 += font.width;
+		x0 += lcd_char(x0, y, c as u32, fg, bg, font);
 	}
 }
 
