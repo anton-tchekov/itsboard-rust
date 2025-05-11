@@ -1161,9 +1161,12 @@ impl Gui
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
-			if pin_num == -1 { continue; }
-			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
-			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
+			if pin_num != -1
+			{
+				let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
+				lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
+			}
+
 			i += 1;
 		}
 	}
