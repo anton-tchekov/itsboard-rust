@@ -12,14 +12,22 @@ mod decoder_i2c;
 mod decoder_onewire;
 mod bytewriter;
 mod sampler;
+mod tinyfont;
+mod waveform;
+mod positionindicator;
+mod decoder_framebuffer;
+mod delay;
+mod hw;
 
+use crate::hw::HW;
 use crate::graphics::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use gui::*;
 
 fn main() -> Result<(), String> {
-	let mut gui = Gui::init();
+	let mut hw = HW::new();
+	let mut gui = Gui::init(hw);
 
 	let mut gfx = Graphics::init()?;
 	'running: loop {

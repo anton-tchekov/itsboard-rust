@@ -1,5 +1,3 @@
-use stm32f4xx_hal::hal_02::blocking::serial::write;
-
 use crate::decoder;
 use crate::decoder_framebuffer::DecoderFrameBuffer;
 use crate::delay::delay_ms;
@@ -66,8 +64,6 @@ const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
-
-const WAVEFORM_W_USIZE: usize = WAVEFORM_W as usize;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action
@@ -556,6 +552,7 @@ pub struct Gui
 	hw: HW,
 	zoom: usize,
 	pi: PositionIndicator,
+	wf: WaveformBuffer
 }
 
 impl Gui
@@ -626,7 +623,8 @@ impl Gui
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
 			zoom: 0,
-			pi: PositionIndicator::new()
+			pi: PositionIndicator::new(),
+			wf: WaveformBuffer::new()
 		};
 
 		/* For Debug Reasons */
@@ -1092,23 +1090,9 @@ impl Gui
 
 	fn t_to_x(&self, t: u32) -> u32
 	{
-		let max = (LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH) as f64;
+		let max = (WAVEFORM_W - 1) as f64;
 		let x = Self::map(t.into(), self.t_start.into(), self.t_end.into(), 0.0, max);
-		f64::min(f64::max(x, 0.0), max) as u32 + CHANNEL_LABEL_WIDTH
-	}
-
-	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16)
-	{
-		let x0 = self.t_to_x(t0);
-		let x1 = self.t_to_x(t1);
-
-		let w = x1 - x0 + 1;
-		let y0 = y + (if p0 { 0 } else { WAVEFORM_H });
-		lcd_hline(x0, y0, w, color);
-		if p0 != p1 && t1 <= self.t_end
-		{
-			lcd_vline(x1, y, WAVEFORM_H, color);
-		}
+		f64::min(f64::max(x, 0.0), max) as u32
 	}
 
 	fn decoder_clear(&mut self)
@@ -1219,36 +1203,36 @@ impl Gui
 			LCD_HEIGHT - ((ICON_BOX + 1) * 2), LCD_WHITE);
 	}
 
-	fn waveform_render(&mut self, s: usize, e: usize, y: u32, ch: u32, color: u16)
+	fn waveform_render(&mut self, s: usize, e: usize, ch: u32)
 	{
 		let mut prev = self.buf.get(s, ch);
 		for i in s..=e
 		{
 			let cur = self.buf.get(i, ch);
-			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, color);
+			let x0 = self.t_to_x(prev.1);
+			let x1 = self.t_to_x(cur.1);
+			self.wf.line(ch, x0, x1, prev.0);
 			prev = cur;
 		}
 	}
 
-	fn waveforms_render(&mut self, color: u16)
+	fn waveforms_render(&mut self)
 	{
-		if color != LCD_BLACK
-		{
-			self.decoder_render();
-			self.sidebar_render();
-		}
-
 		if self.buf.len < 1
 		{
 			return;
 		}
 
+		self.decoder_render();
+
 		let s = self.buf.find_start(self.t_start);
 		let e = self.buf.find_end(self.t_end);
-		for i in 0..8
+		for ch in 0..8
 		{
-			self.waveform_render(s, e, WAVEFORMS_Y + i * WAVEFORM_SPACING, i, color);
+			self.waveform_render(s, e, ch);
 		}
+
+		self.wf.update();
 	}
 
 	fn ma_render(&mut self, i: u32, sel: bool)
@@ -1286,7 +1270,8 @@ impl Gui
 		self.actions_set(&ACTIONS_MAIN);
 		self.da_selected = 0;
 		self.ma_top_box();
-		self.waveforms_render(LCD_WHITE);
+		self.sidebar_render();
+		self.waveforms_render();
 		self.zoomlevel_draw();
 		self.update_indicator();
 	}
@@ -1296,7 +1281,7 @@ impl Gui
 		self.decoder_clear();
 		self.sidebar_clear();
 		self.zoomlevel_undraw();
-		self.waveforms_render(LCD_BLACK);
+		self.wf.undraw();
 		self.pi.hide();
 		for i in 0..MA_ICONS
 		{
@@ -1323,14 +1308,13 @@ impl Gui
 
 	fn ma_run(&mut self)
 	{
-		self.waveforms_render(LCD_BLACK);
 		self.ma_running();
 		self.actions_set(&ACTIONS_SAMPLING);
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
 		self.zoomlevel_draw();
-		self.waveforms_render(LCD_WHITE);
+		self.waveforms_render();
 		self.update_indicator();
 		self.write_buf_as_csv();
 	}
@@ -1372,9 +1356,8 @@ impl Gui
 	fn zoomlevel_update(&mut self)
 	{
 		self.zoomlevel_draw();
-		self.waveforms_render(LCD_BLACK);
 		self.t_end = self.t_start + self.zoomlevel_to_ticks();
-		self.waveforms_render(LCD_WHITE);
+		self.waveforms_render();
 	}
 
 	fn last_ts(&self) -> u32
@@ -1405,20 +1388,18 @@ impl Gui
 			}
 			Action::Left =>
 			{
-				self.waveforms_render(LCD_BLACK);
 				let amount = u32::min(self.horizontal_scroll_amount(), self.t_start);
 				self.t_start -= amount;
 				self.t_end -= amount;
-				self.waveforms_render(LCD_WHITE);
+				self.waveforms_render();
 				self.update_indicator();
 			}
 			Action::Right =>
 			{
-				self.waveforms_render(LCD_BLACK);
 				let amount = u32::min(self.horizontal_scroll_amount(), self.max_horizontal_scroll());
 				self.t_start += amount;
 				self.t_end += amount;
-				self.waveforms_render(LCD_WHITE);
+				self.waveforms_render();
 				self.update_indicator();
 			},
 			Action::ZoomIn =>
