@@ -1195,11 +1195,11 @@ impl Gui
 
 			if w < (buf.as_str().len() as u32 * TERMINUS16_BOLD.width)
 			{
-				lcd_rect(x0, ICON_BOX+2, x1, TERMINUS16_BOLD.height, LCD_GREEN);
+				lcd_rect(x0, ICON_BOX+2, w, TERMINUS16_BOLD.height, LCD_GREEN);
 			}
 			else
 			{
-				lcd_rect(x0, ICON_BOX+2, x1, TERMINUS16_BOLD.height, LCD_GREEN);
+				lcd_rect(x0, ICON_BOX+2, w, TERMINUS16_BOLD.height, LCD_GREEN);
 				lcd_str(x0+1, ICON_BOX+2, buf.as_str(), LCD_BLACK, LCD_GREEN, &TERMINUS16_BOLD);
 			}
 		}
