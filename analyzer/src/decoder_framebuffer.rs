@@ -1,16 +1,16 @@
 /* Specifically made to be at most 16 Pixels tall */
 
-use crate::{font::Font, lcd::{lcd_rect, LCD_BLACK, LCD_GREEN}, terminus16::TERMINUS16, tinyfont::TINYFONT};
+use crate::{font::Font, lcd::{lcd_emit, lcd_rect, lcd_window_end, lcd_window_start, LCD_BLACK, LCD_GREEN}, terminus16::TERMINUS16, tinyfont::TINYFONT};
 
 pub struct DecoderFrameBuffer<const LEN: usize>
 {
-	font: Font,
-	fg_color: u16,
-	bg_color: u16,
-	height: usize,
+	pub font: Font,
+	pub fg_color: u16,
+	pub bg_color: u16,
+	pub height: usize,
 
-	cur_vline: [u16; 16],
-	buf: [u16; LEN],
+	pub last_drawn_buf: [u16; LEN],
+	pub buf: [u16; LEN],
 }
 
 impl<const LEN: usize> DecoderFrameBuffer<LEN>
@@ -24,7 +24,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			bg_color: LCD_GREEN,
 			height: 16,
 
-			cur_vline: [0; 16],
+			last_drawn_buf: [0; LEN],
 			buf: [0; LEN],
 		}
 	}
@@ -38,7 +38,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			bg_color: bg_color,
 			height: height,
 
-			cur_vline: [0; 16],
+			last_drawn_buf: [0; LEN],
 			buf: [0; LEN],
 		}
 	}
@@ -78,67 +78,81 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		result
 	}
 
+	pub fn clear(&mut self)
+	{
+		for i in 0..LEN
+		{
+			self.buf[i] = 0;
+		}
+	}
+
 	pub fn add_rect(&mut self, x: u32, y: u32, w: u32, h: u32)
 	{
 		let height_mask = Self::height_bitmask(y, h);
 
 		for i in x..x+w
 		{
-			self.buf[i as usize] = 0xFF & height_mask;
+			if i >= LEN as u32
+			{
+				return;
+			}
+
+			self.buf[i as usize] = 0xFFFF & height_mask;
+		}
+	}
+
+	pub fn add_char(&mut self, x: u32, y: u32, c: char)
+	{
+		if x >= LEN as u32 - self.font.width
+		{
+			return;
+		}
+
+		const CHAR_OFFSET: usize = 32;
+		let height_mask = Self::height_bitmask(y, self.font.height);
+		let char_index = (c as usize - CHAR_OFFSET) * self.font.width as usize;
+		
+		for j in 0..self.font.width as usize
+		{
+			let byte = self.font.bitmap[char_index + j];
+
+			self.buf[x as usize + j] |= height_mask;
+			self.buf[x as usize + j] &= !((byte as u16) << y);
 		}
 	}
 
 	pub fn add_text(&mut self, x: u32, y: u32, s: &str)
 	{
-		const CHAR_OFFSET: usize = 42;
-
-		if !self.font.horizontal
+		for (i, c) in s.chars().enumerate()
 		{
-			/* Iterate over the String */
-			for (i, c) in s.chars().enumerate()
-			{
-				let char_index = (c as usize - CHAR_OFFSET) * 5;
-				let byte = self.font.bitmap[char_index];
-				
-				/* Tinyfont uses 5 Bytes per Character vertically */
-				for j in 0..5
-				{
-					self.buf[(x as usize + j) * i] = (byte as u16) << y;
-				}
-			}
+			self.add_char(x + ((self.font.width+1)*i as u32), y, c);
 		}
-	}
-
-	/* Gives back a Single vline as an array of colors, which can be drawn by the lcd */
-	pub fn get_vline(&mut self, idx: usize) -> &[u16; 16]
-	{
-		let line = self.buf[idx];
-
-		for i in 0..self.height
-		{
-			if line & (1 << i) > 0
-			{
-				self.cur_vline[i] = self.bg_color;
-			}
-			else
-			{
-				self.cur_vline[i] = self.fg_color;
-			}
-		}
-
-		return &self.cur_vline;
 	}
 
 	pub fn draw_vline(&mut self, idx: usize, x: u32, y: u32)
 	{
 		let height = self.height;
-		let vline = self.get_vline(idx);
-		
+		let vline = self.buf[idx];
+		let last_vline = self.last_drawn_buf[idx];
+
+		//if vline == 0 || vline == last_vline
+		//{
+		//	return;
+		//}
+
+		lcd_window_start(x, y, 1, height as u32);
 		for i in 0..height
 		{
-			/* One pixel at a time */
-			lcd_rect(x, y + i as u32 , 1, 1, vline[i]);
+			if vline & (1 << i) > 0
+			{
+				lcd_emit(self.fg_color);
+			}
+			else
+			{
+				lcd_emit(self.bg_color);
+			}
 		}
+		lcd_window_end();
 	}
 
 	pub fn draw_buffer(&mut self, x: u32, y: u32)
@@ -147,5 +161,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		{
 			self.draw_vline(i, x + i as u32, y);
 		}
+
+		self.last_drawn_buf = self.buf;
 	}
 }

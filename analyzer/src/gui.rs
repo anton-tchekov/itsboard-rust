@@ -1,6 +1,7 @@
 use stm32f4xx_hal::hal_02::blocking::serial::write;
 
 use crate::decoder;
+use crate::decoder_framebuffer::DecoderFrameBuffer;
 use crate::delay::delay_ms;
 use crate::hw::HW;
 use crate::lcd::*;
@@ -67,6 +68,7 @@ const TERM_Y: u32 = 40;
 
 const CHANNEL_LABEL_WIDTH: u32 = 25;
 const WAVEFORM_W: u32 = LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH;
+const WAVEFORM_W_USIZE: usize = (LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH) as usize;
 const WAVEFORM_H: u32 = 18;
 const WAVEFORM_SPACING: u32 = 26;
 const WAVEFORMS_Y: u32 = 81;
@@ -582,11 +584,12 @@ pub struct Gui
 	buf: SampleBuffer,
 	sec_buf: SectionBuffer,
 	cur_decoder: DecoderStorage,
+	decoder_framebuf: DecoderFrameBuffer<WAVEFORM_W_USIZE>,
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
 	zoom: usize,
-	pi: PositionIndicator
+	pi: PositionIndicator,
 }
 
 impl Gui
@@ -652,6 +655,7 @@ impl Gui
 				len: 0
 			},
 			cur_decoder: DecoderStorage::None,
+			decoder_framebuf: DecoderFrameBuffer::new(TINYFONT, lcd_color(255, 150, 79), LCD_BLACK, 10),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
@@ -1141,16 +1145,13 @@ impl Gui
 		}
 	}
 
-	fn decoder_clear(&self)
+	fn decoder_clear(&mut self)
 	{
-		lcd_rect(1, ICON_BOX+2, LCD_WIDTH, TERMINUS16.height, LCD_BLACK);
-		// TODO: Mit Buffer nur neues malen um Flicker zu vermeiden
+		self.decoder_framebuf.clear();
 	}
 
-	fn decoder_render(&self)
+	fn decoder_render(&mut self)
 	{
-		let zoom = self.zoom;
-
 		/* Clear previous Sections */
 		self.decoder_clear();
 
@@ -1193,16 +1194,21 @@ impl Gui
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 			};
 
-			if w < (buf.as_str().len() as u32 * TERMINUS16_BOLD.width)
+			let font_width = self.decoder_framebuf.font.width;
+			let font_height = self.decoder_framebuf.font.height;
+
+			if w < (buf.as_str().len() as u32 * font_width)
 			{
-				lcd_rect(x0, ICON_BOX+2, w, TERMINUS16_BOLD.height, LCD_GREEN);
+				self.decoder_framebuf.add_rect(x0, 1, w, font_height);
 			}
 			else
 			{
-				lcd_rect(x0, ICON_BOX+2, w, TERMINUS16_BOLD.height, LCD_GREEN);
-				lcd_str(x0+1, ICON_BOX+2, buf.as_str(), LCD_BLACK, LCD_GREEN, &TERMINUS16_BOLD);
+				self.decoder_framebuf.add_rect(x0, 1, w, font_height);
+				self.decoder_framebuf.add_text(x0+1, 1, buf.as_str());
 			}
 		}
+
+		self.decoder_framebuf.draw_buffer(CHANNEL_LABEL_WIDTH, ICON_BOX+2);
 	}
 
 	fn sidebar_clear(&self)
