@@ -29,7 +29,8 @@ impl SampleBuffer
 		self.len = 0;
 	}
 
-	pub fn push(&mut self, port: Sample, ts: u32) {
+	pub fn push(&mut self, port: Sample, ts: u32)
+	{
 		self.samples[self.len] = port;
 		self.timestamps[self.len] = ts;
 		self.len += 1;

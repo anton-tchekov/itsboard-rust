@@ -21,6 +21,7 @@ use core::fmt::Write;
 use crate::bytewriter::ByteMutWriter;
 use crate::hw;
 use crate::positionindicator::PositionIndicator;
+use crate::waveform::*;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -64,13 +65,6 @@ const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
-
-const CHANNEL_LABEL_WIDTH: u32 = 25;
-const WAVEFORM_W: u32 = LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH;
-const WAVEFORM_H: u32 = 18;
-const WAVEFORM_SPACING: u32 = 26;
-const WAVEFORMS_Y: u32 = 81;
-const WAVEFORM_PIN_Y: u32 = 15;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action
@@ -535,35 +529,6 @@ pub enum DecoderStorage
 	SPI(DecoderSPI),
 	I2C(DecoderI2C),
 	OneWire(DecoderOneWire),
-}
-
-struct WaveformBuffer
-{
-	data: [u16; WAVEFORM_W as usize]
-}
-
-impl WaveformBuffer
-{
-	pub fn new() -> Self
-	{
-		WaveformBuffer { data: [0; WAVEFORM_W as usize] }
-	}
-
-	pub fn line(&mut self, ch: u32, x0: u32, x1: u32, level: bool)
-	{
-		let bit = ch + if level == false { 1 } else { 0 };
-		let mask = 1 << bit;
-		for x in x0..=x1
-		{
-			self.data[x as usize] |= mask;
-		}
-	}
-
-	//pub fn blit(&self, ch: u32, )
-
-	pub fn update(&self, prev: &WaveformBuffer)
-	{
-	}
 }
 
 pub struct Gui
@@ -1149,14 +1114,12 @@ impl Gui
 
 	fn decoder_render(&self)
 	{
-		let zoom = self.zoom;
-
 		/* Clear previous Sections */
 		self.decoder_clear();
 
 		/* Get all Sections which are in our current view */
 		let sec_default = Section::default();
-  		let mut view_buf = [&sec_default; SECBUF_SIZE];
+		let mut view_buf = [&sec_default; SECBUF_SIZE];
 		let mut view_buf_size = 0;
 
 		for i in 0..self.sec_buf.len
@@ -1247,16 +1210,8 @@ impl Gui
 			LCD_HEIGHT - ((ICON_BOX + 1) * 2), LCD_WHITE);
 	}
 
-	fn waveform_render(&mut self, y: u32, ch: u32, color: u16)
+	fn waveform_render(&mut self, s: usize, e: usize, y: u32, ch: u32, color: u16)
 	{
-		if self.buf.len < 1
-		{
-			return;
-		}
-
-		let s = self.buf.find_start(self.t_start);
-		let e = self.buf.find_end(self.t_end);
-
 		let mut prev = self.buf.get(s, ch);
 		for i in s..=e
 		{
@@ -1274,9 +1229,16 @@ impl Gui
 			self.sidebar_render();
 		}
 
+		if self.buf.len < 1
+		{
+			return;
+		}
+
+		let s = self.buf.find_start(self.t_start);
+		let e = self.buf.find_end(self.t_end);
 		for i in 0..8
 		{
-			self.waveform_render(WAVEFORMS_Y + i * WAVEFORM_SPACING, i, color);
+			self.waveform_render(s, e, WAVEFORMS_Y + i * WAVEFORM_SPACING, i, color);
 		}
 	}
 
