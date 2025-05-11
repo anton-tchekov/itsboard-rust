@@ -14,6 +14,16 @@ pub struct SampleBuffer
 
 impl SampleBuffer
 {
+	pub fn new() -> Self
+	{
+		SampleBuffer
+		{
+			samples: [0; BUF_SIZE],
+			timestamps: [0; BUF_SIZE],
+			len: 0
+		}
+	}
+
 	pub fn clear(&mut self)
 	{
 		self.len = 0;

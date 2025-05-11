@@ -21,18 +21,19 @@ ASM Dump:
 ## TODO
 
 ### Praktikum 3
+- Render Protocol Decoder Outputs
+- Waveform flickering
 - UART Decoding und Tests
 
 ### Praktikum 4
-- Render Protocol Decoder Outputs
 - I2C
+- Measure Time with cursors
 
 ### Praktikum 5
 - SPI
 - OneWire
 
 ### Praktikum 6
-- Measure Time with cursors
 - Dokumentation
 - Code aufräumen
 - Puffer

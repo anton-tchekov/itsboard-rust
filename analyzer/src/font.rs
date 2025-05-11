@@ -91,6 +91,19 @@ pub fn lcd_str(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font)
 	}
 }
 
+pub fn lcd_str_undraw(x: u32, y: u32, len: usize, font: &Font)
+{
+	let w = font.width;
+	let h = font.height;
+	let stride = if font.horizontal { w } else { w + 1 };
+	let mut x0 = x;
+	for _i in 0..len
+	{
+		lcd_rect(x0, y, w, h, LCD_BLACK);
+		x0 += stride;
+	}
+}
+
 pub fn lcd_str_center(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font)
 {
 	lcd_str(x - font.width(s) / 2,

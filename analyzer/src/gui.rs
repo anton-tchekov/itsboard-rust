@@ -20,6 +20,7 @@ use core::str;
 use core::fmt::Write;
 use crate::bytewriter::ByteMutWriter;
 use crate::hw;
+use crate::positionindicator::PositionIndicator;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -582,7 +583,8 @@ pub struct Gui
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
-	zoom: usize
+	zoom: usize,
+	pi: PositionIndicator
 }
 
 impl Gui
@@ -651,7 +653,8 @@ impl Gui
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
-			zoom: 0
+			zoom: 0,
+			pi: PositionIndicator::new()
 		};
 
 		/* For Debug Reasons */
@@ -1301,6 +1304,11 @@ impl Gui
 		self.ma_render(self.ma_selected, true);
 	}
 
+	fn update_indicator(&mut self)
+	{
+		self.pi.show(self.t_start, self.t_end, self.last_ts());
+	}
+
 	fn ma_open(&mut self)
 	{
 		self.title_set("Logic Analyzer");
@@ -1309,6 +1317,7 @@ impl Gui
 		self.ma_top_box();
 		self.waveforms_render(LCD_WHITE);
 		self.zoomlevel_draw();
+		self.update_indicator();
 	}
 
 	fn ma_close(&mut self)
@@ -1317,6 +1326,7 @@ impl Gui
 		self.sidebar_clear();
 		self.zoomlevel_undraw();
 		self.waveforms_render(LCD_BLACK);
+		self.pi.hide();
 		for i in 0..MA_ICONS
 		{
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
@@ -1350,6 +1360,7 @@ impl Gui
 		self.ma_running_undraw();
 		self.zoomlevel_draw();
 		self.waveforms_render(LCD_WHITE);
+		self.update_indicator();
 		self.write_buf_as_csv();
 	}
 
@@ -1428,6 +1439,7 @@ impl Gui
 				self.t_start -= amount;
 				self.t_end -= amount;
 				self.waveforms_render(LCD_WHITE);
+				self.update_indicator();
 			}
 			Action::Right =>
 			{
@@ -1436,16 +1448,19 @@ impl Gui
 				self.t_start += amount;
 				self.t_end += amount;
 				self.waveforms_render(LCD_WHITE);
+				self.update_indicator();
 			},
 			Action::ZoomIn =>
 			{
 				limit_inc!(self.zoom, ZOOM_LEVELS.len() - 1);
 				self.zoomlevel_update();
+				self.update_indicator();
 			},
 			Action::ZoomOut =>
 			{
 				limit_dec!(self.zoom, 0);
 				self.zoomlevel_update();
+				self.update_indicator();
 			},
 			Action::Cycle =>
 			{

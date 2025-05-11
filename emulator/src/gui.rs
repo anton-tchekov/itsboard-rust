@@ -511,11 +511,7 @@ impl Gui {
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
-			buf: SampleBuffer {
-				samples: [0; sample::BUF_SIZE],
-				timestamps: [0; sample::BUF_SIZE],
-				len: 0
-			},
+			buf: SampleBuffer::new(),
 			t_start: 0,
 			t_end: 1 * (90_000_000 / 1),
 			hw: hw,
