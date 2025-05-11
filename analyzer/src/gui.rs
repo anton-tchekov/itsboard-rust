@@ -65,9 +65,12 @@ const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
 
-const WAVEFORMS_ON_SCREEN: u32 = 8;
-const CHANNEL_LABEL_WIDTH: u32 = 33;
-const WAVEFORM_WIDTH: u32 = LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH;
+const CHANNEL_LABEL_WIDTH: u32 = 25;
+const WAVEFORM_W: u32 = LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH;
+const WAVEFORM_H: u32 = 18;
+const WAVEFORM_SPACING: u32 = 26;
+const WAVEFORMS_Y: u32 = 81;
+const WAVEFORM_PIN_Y: u32 = 15;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action
@@ -185,10 +188,9 @@ pub struct Input
 	label: &'static str
 }
 
-const SELECT_PIN_LIST: [&str; 17] =
+const SELECT_PIN_LIST: [&str; 9] =
 [
-	"/", "0", "1", "2", "3", "4", "5", "6", "7",
-	"8", "9", "10", "11", "12", "13", "14", "15"
+	"/", "0", "1", "2", "3", "4", "5", "6", "7"
 ];
 
 const SELECT_PARITY_LIST: [&str; 3] =
@@ -537,14 +539,14 @@ pub enum DecoderStorage
 
 struct WaveformBuffer
 {
-	data: [u16; WAVEFORM_WIDTH as usize]
+	data: [u16; WAVEFORM_W as usize]
 }
 
 impl WaveformBuffer
 {
 	pub fn new() -> Self
 	{
-		WaveformBuffer { data: [0; WAVEFORM_WIDTH as usize] }
+		WaveformBuffer { data: [0; WAVEFORM_W as usize] }
 	}
 
 	pub fn line(&mut self, ch: u32, x0: u32, x1: u32, level: bool)
@@ -1127,17 +1129,15 @@ impl Gui
 
 	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16)
 	{
-		let h = 20;
-
 		let x0 = self.t_to_x(t0);
 		let x1 = self.t_to_x(t1);
 
 		let w = x1 - x0 + 1;
-		let y0 = y + (if p0 { 0 } else { h });
+		let y0 = y + (if p0 { 0 } else { WAVEFORM_H });
 		lcd_hline(x0, y0, w, color);
 		if p0 != p1 && t1 <= self.t_end
 		{
-			lcd_vline(x1, y, h, color);
+			lcd_vline(x1, y, WAVEFORM_H, color);
 		}
 	}
 
@@ -1219,14 +1219,14 @@ impl Gui
 			DecoderStorage::Uart(dcd) => dcd,
 			DecoderStorage::SPI(dcd) => dcd,
 			DecoderStorage::I2C(dcd) => dcd,
-			DecoderStorage::OneWire(dcd) => dcd,
+			DecoderStorage::OneWire(dcd) => dcd
 		};
 
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
 			if pin_num == -1 { continue; }
-			let y = 62 + pin_num * 30;
+			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
 			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
 			i += 1;
 		}
@@ -1236,7 +1236,7 @@ impl Gui
 	{
 		for i in 0..8
 		{
-			let y = 50 + i * 30;
+			let y = WAVEFORMS_Y + i * WAVEFORM_SPACING;
 			lcd_char(CHANNEL_LABEL_WIDTH / 2, y, '0' as u32 + i, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 			lcd_hline(0, y, CHANNEL_LABEL_WIDTH, LCD_WHITE);
 		}
@@ -1276,7 +1276,7 @@ impl Gui
 
 		for i in 0..8
 		{
-			self.waveform_render(50 + i * 30, i, color);
+			self.waveform_render(WAVEFORMS_Y + i * WAVEFORM_SPACING, i, color);
 		}
 	}
 

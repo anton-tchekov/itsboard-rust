@@ -80,7 +80,12 @@ impl PositionIndicator
 
 		lcd_str_undraw(PI_D_X, PI_D_Y, NUM_DIGITS + 3, &TINYFONT);
 
+		/* Undraw timeline */
 		lcd_hline(PI_T_X, PI_T_Y, PI_T_W, LCD_BLACK);
+		Self::tline(self.x0, LCD_BLACK);
+		if self.x1 != self.x0 { Self::tline(self.x1, LCD_BLACK); }
+		self.x0 = u32::MAX;
+		self.x1 = u32::MAX;
 	}
 
 	pub fn show(&mut self, start: u32, end: u32, max: u32)
