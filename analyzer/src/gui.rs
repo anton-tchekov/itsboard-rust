@@ -67,7 +67,8 @@ const WAVEFORMS_ON_SCREEN: u32 = 8;
 const CHANNEL_LABEL_WIDTH: u32 = 33;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub enum Action {
+pub enum Action
+{
 	None,
 	Up,
 	Down,
@@ -82,7 +83,8 @@ pub enum Action {
 	Stop
 }
 
-enum Mode {
+enum Mode
+{
 	Main,
 	Info,
 	DecoderAdd,
@@ -92,28 +94,34 @@ enum Mode {
 	DecoderI2C
 }
 
-fn boxsel(x: u32, y: u32, w: u32, h: u32) {
+fn boxsel(x: u32, y: u32, w: u32, h: u32)
+{
 	lcd_rect_border(x, y, w, h, BORDER_SEL, COLOR_SEL);
 }
 
-fn boxdesel(x: u32, y: u32, w: u32, h: u32) {
+fn boxdesel(x: u32, y: u32, w: u32, h: u32)
+{
 	lcd_rect_border(x, y, w, h, BORDER_DEFAULT, LCD_BLACK);
 	lcd_rect_border(x + 1, y + 1, w - 2, h - 2, BORDER_DEFAULT, LCD_WHITE);
 }
 
-fn boxundraw(x: u32, y: u32, w: u32, h: u32) {
+fn boxundraw(x: u32, y: u32, w: u32, h: u32)
+{
 	lcd_rect_border(x, y, w, h, BORDER_SEL, LCD_BLACK);
 }
 
-pub struct Button {
+pub struct Button
+{
 	x: u32,
 	y: u32,
 	w: u32,
 	text: &'static str
 }
 
-impl Button {
-	fn render(&self, sel: bool) {
+impl Button
+{
+	fn render(&self, sel: bool)
+	{
 		let text_x = self.x + self.w / 2;
 		let text_y = self.y + BUTTON_HEIGHT / 2;
 		lcd_str_center(text_x, text_y, self.text,
@@ -122,7 +130,8 @@ impl Button {
 		if sel { self.select(); } else { self.deselect(); }
 	}
 
-	fn undraw(&self) {
+	fn undraw(&self)
+	{
 		let text_w = BUTTON_FONT.width(self.text);
 		let text_h = BUTTON_FONT.height;
 		let text_x = self.x + self.w / 2 - text_w / 2;
@@ -131,59 +140,71 @@ impl Button {
 		boxundraw(self.x, self.y, self.w, BUTTON_HEIGHT);
 	}
 
-	fn select(&self) {
+	fn select(&self)
+	{
 		boxsel(self.x, self.y, self.w, BUTTON_HEIGHT);
 	}
 
-	fn deselect(&self) {
+	fn deselect(&self)
+	{
 		boxdesel(self.x, self.y, self.w, BUTTON_HEIGHT);
 	}
 }
 
-fn input_select(y: u32) {
+fn input_select(y: u32)
+{
 	boxsel(DA_PADDING, INPUT_BOX_Y + y * INPUT_Y_SKIP,
 		INPUT_WIDTH, INPUT_HEIGHT);
 }
 
-fn input_deselect(y: u32) {
+fn input_deselect(y: u32)
+{
 	boxdesel(DA_PADDING, INPUT_BOX_Y + y * INPUT_Y_SKIP,
 		INPUT_WIDTH, INPUT_HEIGHT);
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
-enum Align {
+enum Align
+{
 	Left,
 	Right
 }
 
-pub struct Select {
+pub struct Select
+{
 	align: Align,
 	options: &'static [&'static str]
 }
 
-pub struct Input {
+pub struct Input
+{
 	select: &'static Select,
 	label: &'static str
 }
 
-const SELECT_PIN_LIST: [&str; 17] = [
+const SELECT_PIN_LIST: [&str; 17] =
+[
 	"/", "0", "1", "2", "3", "4", "5", "6", "7",
 	"8", "9", "10", "11", "12", "13", "14", "15"
 ];
 
-const SELECT_PARITY_LIST: [&str; 3] = [
+const SELECT_PARITY_LIST: [&str; 3] =
+[
 	"None", "Even", "Odd"
 ];
 
-const SELECT_STOP_BITS_LIST: [&str; 3] = [
+const SELECT_STOP_BITS_LIST: [&str; 3] =
+[
 	"1", "1.5", "2"
 ];
 
-const SELECT_DATA_BITS_LIST: [&str; 5] = [
+const SELECT_DATA_BITS_LIST: [&str; 5] =
+[
 	"8", "9", "5", "6", "7"
 ];
 
-const SELECT_BAUDRATE_LIST: [&str; 11] = [
+const SELECT_BAUDRATE_LIST: [&str; 11] =
+[
 	"9600",
 	"19200",
 	"38400",
@@ -197,7 +218,8 @@ const SELECT_BAUDRATE_LIST: [&str; 11] = [
 	"2400",
 ];
 
-static BAUDRATES: [u32; 11] = [
+static BAUDRATES: [u32; 11] =
+[
 	9600,
 	19200,
 	38400,
@@ -211,63 +233,75 @@ static BAUDRATES: [u32; 11] = [
 	4800
 ];
 
-const SELECT_PIN: Select = Select {
+const SELECT_PIN: Select = Select
+{
 	align: Align::Right,
 	options: &SELECT_PIN_LIST
 };
 
-const SELECT_BAUDRATE: Select = Select {
+const SELECT_BAUDRATE: Select = Select
+{
 	align: Align::Right,
 	options: &SELECT_BAUDRATE_LIST
 };
 
-const SELECT_DATA_BITS: Select = Select {
+const SELECT_DATA_BITS: Select = Select
+{
 	align: Align::Right,
 	options: &SELECT_DATA_BITS_LIST
 };
 
-const SELECT_PARITY: Select = Select {
+const SELECT_PARITY: Select = Select
+{
 	align: Align::Left,
 	options: &SELECT_PARITY_LIST
 };
 
-const SELECT_STOP_BITS: Select = Select {
+const SELECT_STOP_BITS: Select = Select
+{
 	align: Align::Right,
 	options: &SELECT_STOP_BITS_LIST
 };
 
 /* UART */
-const UART_RX: Input = Input {
+const UART_RX: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "RX Pin"
 };
 
-const UART_TX: Input = Input {
+const UART_TX: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "TX Pin"
 };
 
-const UART_BAUDRATE: Input = Input {
+const UART_BAUDRATE: Input = Input
+{
 	select: &SELECT_BAUDRATE,
 	label: "Baudrate"
 };
 
-const UART_DATABITS: Input = Input {
+const UART_DATABITS: Input = Input
+{
 	select: &SELECT_DATA_BITS,
 	label: "Data Bits"
 };
 
-const UART_PARITY: Input = Input {
+const UART_PARITY: Input = Input
+{
 	select: &SELECT_PARITY,
 	label: "Parity"
 };
 
-const UART_STOPBITS: Input = Input {
+const UART_STOPBITS: Input = Input
+{
 	select: &SELECT_STOP_BITS,
 	label: "Stop Bits"
 };
 
-const UART_INPUTS: [&Input; 6] = [
+const UART_INPUTS: [&Input; 6] =
+[
 	&UART_RX,
 	&UART_TX,
 	&UART_BAUDRATE,
@@ -277,27 +311,32 @@ const UART_INPUTS: [&Input; 6] = [
 ];
 
 /* SPI */
-const SPI_MISO: Input = Input {
+const SPI_MISO: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "MISO Pin"
 };
 
-const SPI_MOSI: Input = Input {
+const SPI_MOSI: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "MOSI Pin"
 };
 
-const SPI_SCK: Input = Input {
+const SPI_SCK: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "SCK Pin"
 };
 
-const SPI_CS: Input = Input {
+const SPI_CS: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "CS Pin"
 };
 
-const SPI_INPUTS: [&Input; 4] = [
+const SPI_INPUTS: [&Input; 4] =
+[
 	&SPI_MOSI,
 	&SPI_MISO,
 	&SPI_SCK,
@@ -305,42 +344,51 @@ const SPI_INPUTS: [&Input; 4] = [
 ];
 
 /* I2C */
-const I2C_SDA: Input = Input {
+const I2C_SDA: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "SDA Pin"
 };
 
-const I2C_SCL: Input = Input {
+const I2C_SCL: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "SCL Pin"
 };
 
-const I2C_INPUTS: [&Input; 2] = [
+const I2C_INPUTS: [&Input; 2] =
+[
 	&I2C_SDA,
 	&I2C_SCL
 ];
 
 /* OneWire */
-const ONEWIRE_PIN: Input = Input {
+const ONEWIRE_PIN: Input = Input
+{
 	select: &SELECT_PIN,
 	label: "OneWire Pin"
 };
 
-const ONEWIRE_INPUTS: [&Input; 1] = [
+const ONEWIRE_INPUTS: [&Input; 1] =
+[
 	&ONEWIRE_PIN
 ];
 
 /* Get value */
-fn item_to_baudrate(idx: usize) -> u32 {
+fn item_to_baudrate(idx: usize) -> u32
+{
 	BAUDRATES[idx]
 }
 
-fn item_to_pin(idx: usize) -> DecoderPin {
+fn item_to_pin(idx: usize) -> DecoderPin
+{
 	(idx as i32) - 1
 }
 
-fn item_to_databits(idx: usize) -> DataBits {
-	match idx {
+fn item_to_databits(idx: usize) -> DataBits
+{
+	match idx
+	{
 		2 => DataBits::Five,
 		3 => DataBits::Six,
 		4 => DataBits::Seven,
@@ -349,16 +397,20 @@ fn item_to_databits(idx: usize) -> DataBits {
 	}
 }
 
-fn item_to_parity(idx: usize) -> Parity {
-	match idx {
+fn item_to_parity(idx: usize) -> Parity
+{
+	match idx
+	{
 		1 => Parity::Even,
 		2 => Parity::Odd,
 		_ => Parity::None
 	}
 }
 
-fn item_to_stopbits(idx: usize) -> StopBits {
-	match idx {
+fn item_to_stopbits(idx: usize) -> StopBits
+{
+	match idx
+	{
 		1 => StopBits::OneAndHalf,
 		2 => StopBits::Two,
 		_ => StopBits::One
@@ -375,43 +427,54 @@ fn cycle_bwd(idx: u32, count: u32) -> u32
 	if idx == 0 { count - 1 } else { idx - 1 }
 }
 
-macro_rules! limit_inc {
-	($value:expr, $n:expr) => {
-		if $value < $n {
+macro_rules! limit_inc
+{
+	($value:expr, $n:expr) =>
+	{
+		if $value < $n
+		{
 			$value += 1;
 		}
 	};
 }
 
-macro_rules! limit_dec {
-	($value:expr, $n:expr) => {
-		if $value > $n {
+macro_rules! limit_dec
+{
+	($value:expr, $n:expr) =>
+	{
+		if $value > $n
+		{
 			$value -= 1;
 		}
 	};
 }
 
-const ACTIONS_INFO: [Action; 8] = [
+const ACTIONS_INFO: [Action; 8] =
+[
 	Action::None, Action::None, Action::None, Action::None,
 	Action::None, Action::None, Action::None, Action::Enter
 ];
 
-const ACTIONS_SAMPLING: [Action; 8] = [
+const ACTIONS_SAMPLING: [Action; 8] =
+[
 	Action::Stop, Action::None, Action::None, Action::None,
 	Action::None, Action::None, Action::None, Action::None
 ];
 
-const ACTIONS_MAIN: [Action; 8] = [
+const ACTIONS_MAIN: [Action; 8] =
+[
 	Action::Up, Action::Down, Action::Left, Action::Right,
 	Action::ZoomIn, Action::ZoomOut, Action::Cycle, Action::Enter
 ];
 
-const ACTIONS_DA: [Action; 8] = [
+const ACTIONS_DA: [Action; 8] =
+[
 	Action::Up, Action::Down, Action::None, Action::None,
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
 
-const ACTIONS_CH: [Action; 8] = [
+const ACTIONS_CH: [Action; 8] =
+[
 	Action::Up, Action::Down, Action::Left, Action::Right,
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
@@ -469,7 +532,8 @@ pub enum DecoderStorage
 	OneWire(DecoderOneWire),
 }
 
-pub struct Gui {
+pub struct Gui
+{
 	actions: &'static [Action],
 	cur_title: &'static str,
 	mode: Mode,
@@ -490,16 +554,20 @@ pub struct Gui {
 	zoom: usize
 }
 
-impl Gui {
-	fn top_divider() {
+impl Gui
+{
+	fn top_divider()
+	{
 		lcd_hline(0, ICON_BOX, LCD_WIDTH, LCD_WHITE);
 	}
 
-	fn bottom_divider() {
+	fn bottom_divider()
+	{
 		lcd_hline(0, LCD_HEIGHT - ICON_BOX - 1, LCD_WIDTH, LCD_WHITE);
 	}
 
-	pub fn term_print(&mut self, s: &str) {
+	pub fn term_print(&mut self, s: &str)
+	{
 		lcd_str(TITLE_X, TERM_Y + self.term_rows * TERMINUS16.height,
 			s, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 
@@ -507,8 +575,10 @@ impl Gui {
 		self.term_rows += 1;
 	}
 
-	pub fn term_undraw(&mut self) {
-		for i in 0..self.term_rows {
+	pub fn term_undraw(&mut self)
+	{
+		for i in 0..self.term_rows
+		{
 			lcd_rect(TITLE_X, TERM_Y + i * TERMINUS16.height,
 				self.term_lens[i as usize] as u32 * TERMINUS16.width,
 				TERMINUS16.height, LCD_BLACK);
@@ -517,11 +587,13 @@ impl Gui {
 		self.term_rows = 0;
 	}
 
-	pub fn init(hw: HW) -> Self {
+	pub fn init(hw: HW) -> Self
+	{
 		Self::top_divider();
 		Self::bottom_divider();
 
-		let mut gui = Gui {
+		let mut gui = Gui
+		{
 			actions: &ACTIONS_MAIN,
 			cur_title: "",
 			mode: Mode::Main,
@@ -533,12 +605,14 @@ impl Gui {
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
-			buf: SampleBuffer {
+			buf: SampleBuffer
+			{
 				samples: [0; sample::BUF_SIZE],
 				timestamps: [0; sample::BUF_SIZE],
 				len: 0
 			},
-			sec_buf: SectionBuffer {
+			sec_buf: SectionBuffer
+			{
 				sections: [Section::default(); decoder::SECBUF_SIZE],
 				len: 0
 			},
@@ -562,12 +636,14 @@ impl Gui {
 		gui
 	}
 
-	fn title_set(&mut self, new_title: &'static str) {
+	fn title_set(&mut self, new_title: &'static str)
+	{
 		lcd_str(TITLE_X, TITLE_Y, new_title,
 			LCD_WHITE, LCD_BLACK, TITLE_FONT);
 
 		let len_diff = self.cur_title.len() as i32 - new_title.len() as i32;
-		if len_diff > 0 {
+		if len_diff > 0
+		{
 			let x = TITLE_FONT.width(new_title);
 			let w = len_diff as u32 * TITLE_FONT.width;
 			lcd_rect(TITLE_X + x, TITLE_Y, w, TITLE_FONT.height, LCD_BLACK);
@@ -576,16 +652,20 @@ impl Gui {
 		self.cur_title = new_title;
 	}
 
-	fn icon_box(&self) {
+	fn icon_box(&self)
+	{
 		lcd_rect(0, LCD_HEIGHT - ICON_BOX, LCD_WIDTH, ICON_BOX, LCD_BLACK);
-		for i in 0..BUTTON_COUNT {
+		for i in 0..BUTTON_COUNT
+		{
 			lcd_vline(LCD_WIDTH - (i as u32 + 1) * (ICON_BOX + 1),
 				LCD_HEIGHT - ICON_BOX, ICON_BOX, LCD_WHITE);
 		}
 	}
 
-	fn action_icon_render(x: u32, y: u32, action: Action) {
-		match action {
+	fn action_icon_render(x: u32, y: u32, action: Action)
+	{
+		match action
+		{
 			Action::Left => lcd_icon_bw(x, y, ICON_LEFT),
 			Action::Right => lcd_icon_bw(x, y, ICON_RIGHT),
 			Action::Up => lcd_icon_bw(x, y, ICON_UP),
@@ -601,10 +681,13 @@ impl Gui {
 		}
 	}
 
-	fn actions_set(&mut self, a: &'static [Action]) {
+	fn actions_set(&mut self, a: &'static [Action])
+	{
 		let mut x = ACTION_ICONS_X;
-		for i in 0..BUTTON_COUNT {
-			if a[i] != self.actions[i] {
+		for i in 0..BUTTON_COUNT
+		{
+			if a[i] != self.actions[i]
+			{
 				Self::action_icon_render(x, ACTION_ICONS_Y, a[i]);
 			}
 
@@ -614,10 +697,13 @@ impl Gui {
 		self.actions = a;
 	}
 
-	fn actions_render(&self) {
+	fn actions_render(&self)
+	{
 		let mut x = ACTION_ICONS_X;
-		for i in 0..BUTTON_COUNT {
-			if self.actions[i] != Action::None {
+		for i in 0..BUTTON_COUNT
+		{
+			if self.actions[i] != Action::None
+			{
 				Self::action_icon_render(x, ACTION_ICONS_Y, self.actions[i]);
 			}
 
@@ -625,12 +711,15 @@ impl Gui {
 		}
 	}
 
-	fn button_to_action(&self, key: i32) -> Action {
+	fn button_to_action(&self, key: i32) -> Action
+	{
 		self.actions[(BUTTON_COUNT - 1) - key as usize]
 	}
 
-	pub fn action(&mut self, action: Action) {
-		match self.mode {
+	pub fn action(&mut self, action: Action)
+	{
+		match self.mode
+		{
 			Mode::Info => { self.info_action(action); }
 			Mode::Main => { self.ma_action(action); }
 			Mode::DecoderAdd => { self.da_action(action); }
@@ -641,12 +730,15 @@ impl Gui {
 		};
 	}
 
-	pub fn key(&mut self, key: i32) {
+	pub fn key(&mut self, key: i32)
+	{
 		self.action(self.button_to_action(key));
 	}
 
-	fn mode_switch(&mut self, new_mode: Mode) {
-		match self.mode {
+	fn mode_switch(&mut self, new_mode: Mode)
+	{
+		match self.mode
+		{
 			Mode::Main => self.ma_close(),
 			Mode::DecoderAdd => self.da_close(),
 			Mode::DecoderUart => self.cd_undraw(),
@@ -657,7 +749,8 @@ impl Gui {
 		};
 
 		self.mode = new_mode;
-		match self.mode {
+		match self.mode
+		{
 			Mode::Main => self.ma_open(),
 			Mode::DecoderAdd => self.da_open(),
 			Mode::DecoderUart => self.u_open(),
@@ -669,17 +762,21 @@ impl Gui {
 	}
 
 	/* === INFO === */
-	fn info_action(&mut self, action: Action) {
-		if action == Action::Enter {
+	fn info_action(&mut self, action: Action)
+	{
+		if action == Action::Enter
+		{
 			self.mode_switch(Mode::Main);
 		}
 	}
 
-	fn info_close(&mut self) {
+	fn info_close(&mut self)
+	{
 		self.term_undraw();
 	}
 
-	fn info_open(&mut self) {
+	fn info_open(&mut self)
+	{
 		self.actions_set(&ACTIONS_INFO);
 		self.title_set("About");
 		self.term_print("ITS-Board Logic Analyzer V0.1");
@@ -689,37 +786,43 @@ impl Gui {
 	}
 
 	/* === CD COMMON === */
-	fn cd_up(&mut self) {
+	fn cd_up(&mut self)
+	{
 		let prev = self.cd_selected;
 		self.cd_selected = cycle_bwd(self.cd_selected, self.inputs.len() as u32);
 		self.cd_update(prev);
 	}
 
-	fn cd_down(&mut self) {
+	fn cd_down(&mut self)
+	{
 		let prev = self.cd_selected;
 		self.cd_selected = cycle_fwd(self.cd_selected, self.inputs.len() as u32);
 		self.cd_update(prev);
 	}
 
-	fn cur_num_options(&self) -> u32 {
+	fn cur_num_options(&self) -> u32
+	{
 		self.inputs[self.cd_selected as usize].select.options.len() as u32
 	}
 
-	fn cd_left(&mut self) {
+	fn cd_left(&mut self)
+	{
 		let idx = self.cd_selected as usize;
 		let prev = self.sels[idx];
 		self.sels[idx] = cycle_bwd(self.sels[idx].into(), self.cur_num_options()) as u8;
 		self.cd_sel_update(prev);
 	}
 
-	fn cd_right(&mut self) {
+	fn cd_right(&mut self)
+	{
 		let idx = self.cd_selected as usize;
 		let prev = self.sels[idx];
 		self.sels[idx] = cycle_fwd(self.sels[idx].into(), self.cur_num_options()) as u8;
 		self.cd_sel_update(prev);
 	}
 
-	fn cd_sel_update(&mut self, prev_idx: u8) {
+	fn cd_sel_update(&mut self, prev_idx: u8)
+	{
 		let y = self.cd_selected;
 		let input = self.inputs[y as usize];
 		let select = input.select;
@@ -733,7 +836,8 @@ impl Gui {
 		let ry = INPUT_TEXT_Y + y * INPUT_Y_SKIP;
 
 		let wdiff = TERMINUS16.width(prev_text) as i32 - w as i32;
-		if wdiff > 0 {
+		if wdiff > 0
+		{
 			let udiff = wdiff as u32;
 			let rx = if align == Align::Right { x - udiff } else { x + w };
 			lcd_rect(rx, ry, udiff, TERMINUS16.height, LCD_BLACK);
@@ -742,16 +846,19 @@ impl Gui {
 		lcd_str(x, ry, text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 	}
 
-	fn cd_update(&mut self, prev: u32) {
+	fn cd_update(&mut self, prev: u32)
+	{
 		input_deselect(prev);
 		input_select(self.cd_selected);
 	}
 
-	fn input_text_x(align: Align, w: u32) -> u32 {
+	fn input_text_x(align: Align, w: u32) -> u32
+	{
 		DA_PADDING + if align == Align::Right { INPUT_WIDTH - 2 - w } else { 2 }
 	}
 
-	fn input_undraw(&mut self, input: &Input, y: u32) {
+	fn input_undraw(&mut self, input: &Input, y: u32)
+	{
 		// Undraw Label
 		lcd_rect(DA_PADDING, Y_BEGIN + DA_PADDING + y * INPUT_Y_SKIP,
 			TERMINUS16.width(input.label), TERMINUS16.height, LCD_BLACK);
@@ -768,14 +875,17 @@ impl Gui {
 		lcd_rect(x, y, w, TERMINUS16.height, LCD_BLACK);
 	}
 
-	fn input_render(&mut self, input: &Input, y: u32) {
+	fn input_render(&mut self, input: &Input, y: u32)
+	{
 		lcd_str(DA_PADDING, INPUT_LABEL_Y + y * INPUT_Y_SKIP,
 			input.label, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 
-		if y == self.cd_selected {
+		if y == self.cd_selected
+		{
 			input_select(y);
 		}
-		else {
+		else
+		{
 			input_deselect(y);
 		}
 
@@ -785,28 +895,32 @@ impl Gui {
 			text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 	}
 
-	fn cd_undraw(&mut self) {
+	fn cd_undraw(&mut self)
+	{
 		let mut y = 0;
-		for input in self.inputs {
+		for input in self.inputs
+		{
 			self.input_undraw(input, y);
 			y += 1;
 		}
 	}
 
-	fn cd_render(&mut self, inputs: &'static [&Input]) {
+	fn cd_render(&mut self, inputs: &'static [&Input])
+	{
 		self.cd_selected = 0;
 		self.inputs = inputs;
 		self.actions_set(&ACTIONS_CD);
-		let mut y = 0;
-		for input in inputs {
+		for (y, input) in inputs.iter().enumerate()
+		{
 			self.sels[y] = 0;
 			self.input_render(input, y as u32);
-			y += 1;
 		}
 	}
 
-	fn cd_action(&mut self, action: Action) {
-		match action {
+	fn cd_action(&mut self, action: Action)
+	{
+		match action
+		{
 			Action::Up => self.cd_up(),
 			Action::Down => self.cd_down(),
 			Action::Left => self.cd_left(),
@@ -837,20 +951,25 @@ impl Gui {
 	}
 
 	/* === UART (U) MODE === */
-	fn u_open(&mut self) {
+	fn u_open(&mut self)
+	{
 		self.title_set("UART Decoder");
 		self.cd_render(&UART_INPUTS);
 	}
 
-	fn u_action(&mut self, action: Action) {
-		match action {
+	fn u_action(&mut self, action: Action)
+	{
+		match action
+		{
 			Action::Check => self.u_save(),
 			_ => self.cd_action(action)
 		};
 	}
 
-	fn u_save(&mut self) {
-		self.decoder_done(DecoderStorage::Uart(DecoderUart {
+	fn u_save(&mut self)
+	{
+		self.decoder_done(DecoderStorage::Uart(DecoderUart
+		{
 			rx_pin: item_to_pin(self.sels[0].into()),
 			tx_pin: item_to_pin(self.sels[1].into()),
 			databits: item_to_databits(self.sels[2].into()),
@@ -861,20 +980,25 @@ impl Gui {
 	}
 
 	/* === SPI (S) MODE === */
-	fn s_open(&mut self) {
+	fn s_open(&mut self)
+	{
 		self.title_set("SPI Decoder");
 		self.cd_render(&SPI_INPUTS);
 	}
 
-	fn s_action(&mut self, action: Action) {
-		match action {
+	fn s_action(&mut self, action: Action)
+	{
+		match action
+		{
 			Action::Check => self.s_save(),
 			_ => self.cd_action(action)
 		};
 	}
 
-	fn s_save(&mut self) {
-		self.decoder_done(DecoderStorage::SPI(DecoderSPI {
+	fn s_save(&mut self)
+	{
+		self.decoder_done(DecoderStorage::SPI(DecoderSPI
+		{
 			miso_pin: item_to_pin(self.sels[0].into()),
 			mosi_pin: item_to_pin(self.sels[1].into()),
 			sck_pin: item_to_pin(self.sels[2].into()),
@@ -883,40 +1007,50 @@ impl Gui {
 	}
 
 	/* === I2C (I) MODE === */
-	fn i_open(&mut self) {
+	fn i_open(&mut self)
+	{
 		self.title_set("I2C Decoder");
 		self.cd_render(&I2C_INPUTS);
 	}
 
-	fn i_action(&mut self, action: Action) {
-		match action {
+	fn i_action(&mut self, action: Action)
+	{
+		match action
+		{
 			Action::Check => self.i_save(),
 			_ => self.cd_action(action)
 		};
 	}
 
-	fn i_save(&mut self) {
-		self.decoder_done(DecoderStorage::I2C(DecoderI2C {
+	fn i_save(&mut self)
+	{
+		self.decoder_done(DecoderStorage::I2C(DecoderI2C
+		{
 			sda_pin: item_to_pin(self.sels[0].into()),
 			scl_pin: item_to_pin(self.sels[1].into())
 		}));
 	}
 
 	/* === ONEWIRE (O) MODE === */
-	fn o_open(&mut self) {
+	fn o_open(&mut self)
+	{
 		self.title_set("OneWire Decoder");
 		self.cd_render(&ONEWIRE_INPUTS);
 	}
 
-	fn o_action(&mut self, action: Action) {
-		match action {
+	fn o_action(&mut self, action: Action)
+	{
+		match action
+		{
 			Action::Check => self.o_save(),
 			_ => self.cd_action(action)
 		};
 	}
 
-	fn o_save(&mut self) {
-		self.decoder_done(DecoderStorage::OneWire(DecoderOneWire {
+	fn o_save(&mut self)
+	{
+		self.decoder_done(DecoderStorage::OneWire(DecoderOneWire
+		{
 			onewire_pin: item_to_pin(self.sels[0].into())
 		}));
 	}
@@ -967,7 +1101,8 @@ impl Gui {
 		let w = x1 - x0 + 1;
 		let y0 = y + (if p0 { 0 } else { h });
 		lcd_hline(x0, y0, w, color);
-		if p0 != p1 && t1 <= self.t_end {
+		if p0 != p1 && t1 <= self.t_end
+		{
 			lcd_vline(x1, y, h, color);
 		}
 	}
@@ -1044,17 +1179,14 @@ impl Gui {
 
 	fn sidebar_render_decoder_pins(&self)
 	{
-		/* Incase theres a Decoder, Render its Pin information */
-		let decoder: &dyn Decoder;
-
-		match &self.cur_decoder
+		let decoder: &dyn Decoder = match &self.cur_decoder
 		{
 			DecoderStorage::None => return,
-			DecoderStorage::Uart(dcd) => decoder = dcd,
-			DecoderStorage::SPI(dcd) => decoder = dcd,
-			DecoderStorage::I2C(dcd) => decoder = dcd,
-			DecoderStorage::OneWire(dcd) => decoder = dcd,
-		}
+			DecoderStorage::Uart(dcd) => dcd,
+			DecoderStorage::SPI(dcd) => dcd,
+			DecoderStorage::I2C(dcd) => dcd,
+			DecoderStorage::OneWire(dcd) => dcd,
+		};
 
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
@@ -1068,7 +1200,6 @@ impl Gui {
 
 	fn sidebar_render(&self)
 	{
-		/* Render Lines */
 		for i in 0..8
 		{
 			let y = 50 + i * 30;
@@ -1093,7 +1224,8 @@ impl Gui {
 		let e = self.buf.find_end(self.t_end);
 
 		let mut prev = self.buf.get(s, ch);
-		for i in s..=e {
+		for i in s..=e
+		{
 			let cur = self.buf.get(i, ch);
 			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, color);
 			prev = cur;
@@ -1250,39 +1382,48 @@ impl Gui {
 
 	fn ma_action(&mut self, action: Action)
 	{
-		match action {
-			Action::Up => {
+		match action
+		{
+			Action::Up =>
+			{
 			}
-			Action::Down => {
+			Action::Down =>
+			{
 			}
-			Action::Left => {
+			Action::Left =>
+			{
 				self.waveforms_render(LCD_BLACK);
 				let amount = u32::min(self.horizontal_scroll_amount(), self.t_start);
 				self.t_start -= amount;
 				self.t_end -= amount;
 				self.waveforms_render(LCD_WHITE);
 			}
-			Action::Right => {
+			Action::Right =>
+			{
 				self.waveforms_render(LCD_BLACK);
 				let amount = u32::min(self.horizontal_scroll_amount(), self.max_horizontal_scroll());
 				self.t_start += amount;
 				self.t_end += amount;
 				self.waveforms_render(LCD_WHITE);
 			},
-			Action::ZoomIn => {
+			Action::ZoomIn =>
+			{
 				limit_inc!(self.zoom, ZOOM_LEVELS.len() - 1);
 				self.zoomlevel_update();
 			},
-			Action::ZoomOut => {
+			Action::ZoomOut =>
+			{
 				limit_dec!(self.zoom, 0);
 				self.zoomlevel_update();
 			},
-			Action::Cycle => {
+			Action::Cycle =>
+			{
 				let prev = self.ma_selected;
 				self.ma_selected = cycle_fwd(self.ma_selected, MA_ICONS);
 				self.ma_update(prev);
 			}
-			Action::Enter => {
+			Action::Enter =>
+			{
 				self.ma_enter();
 			}
 			_ => {}
@@ -1290,8 +1431,10 @@ impl Gui {
 	}
 
 	/* === DECODER ADD (DA) MODE === */
-	fn da_enter(&mut self) {
-		match self.da_selected {
+	fn da_enter(&mut self)
+	{
+		match self.da_selected
+		{
 			0 => { self.mode_switch(Mode::DecoderUart); },
 			1 => { self.mode_switch(Mode::DecoderSpi); },
 			2 => { self.mode_switch(Mode::DecoderI2C); },
@@ -1301,9 +1444,11 @@ impl Gui {
 		}
 	}
 
-	fn da_button(&self, idx: u32) -> Button {
+	fn da_button(&self, idx: u32) -> Button
+	{
 		const LABELS: [&str; DECODER_COUNT as usize] = [ "UART", "SPI", "I2C", "OneWire", "None" ];
-		Button {
+		Button
+		{
 			x: DA_PADDING,
 			y: idx * (BUTTON_HEIGHT + DA_PADDING) + ICON_BOX + 1 + DA_PADDING,
 			w: DA_BTN_WIDTH,
@@ -1311,41 +1456,52 @@ impl Gui {
 		}
 	}
 
-	fn da_open(&mut self) {
+	fn da_open(&mut self)
+	{
 		self.title_set("Select Protocol Decoder");
 		self.actions_set(&ACTIONS_DA);
-		for i in 0..DECODER_COUNT {
+		for i in 0..DECODER_COUNT
+		{
 			self.da_button(i).render(i == self.da_selected);
 		}
 	}
 
-	fn da_close(&mut self) {
-		for i in 0..DECODER_COUNT {
+	fn da_close(&mut self)
+	{
+		for i in 0..DECODER_COUNT
+		{
 			self.da_button(i).undraw();
 		}
 	}
 
-	fn da_switch(&mut self, prev: u32) {
+	fn da_switch(&mut self, prev: u32)
+	{
 		self.da_button(prev).deselect();
 		self.da_button(self.da_selected).select();
 	}
 
-	fn da_action(&mut self, action: Action) {
-		match action {
-			Action::Up => {
+	fn da_action(&mut self, action: Action)
+	{
+		match action
+		{
+			Action::Up =>
+			{
 				let prev = self.da_selected;
 				self.da_selected = cycle_bwd(self.da_selected, DECODER_COUNT);
 				self.da_switch(prev);
 			},
-			Action::Down => {
+			Action::Down =>
+			{
 				let prev = self.da_selected;
 				self.da_selected = cycle_fwd(self.da_selected, DECODER_COUNT);
 				self.da_switch(prev);
 			},
-			Action::Enter => {
+			Action::Enter =>
+			{
 				self.da_enter();
 			},
-			Action::Escape => {
+			Action::Escape =>
+			{
 				self.mode_switch(Mode::Main);
 			},
 			_ => {}
