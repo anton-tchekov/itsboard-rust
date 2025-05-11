@@ -12,7 +12,6 @@ use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
 use crate::decoder_onewire::*;
 use crate::decoder::*;
-use crate::sample;
 use crate::sampler;
 use crate::sample::SampleBuffer;
 use core::str;
@@ -37,16 +36,10 @@ const MA_BOTTOM_TEXT_X: u32 = 26;
 
 const TITLE_Y: u32 = ICON_BOX / 2 - TITLE_FONT.width;
 const TITLE_X: u32 = TITLE_Y;
-const CH_Y_BEGIN: u32 = 48;
 
 const DA_PADDING: u32 = 10;
 const Y_BEGIN: u32 = ICON_BOX + 1;
 const DA_BTN_WIDTH: u32 = 100;
-
-const CH_ROWS: u32 = 2;
-const CH_COLS: u32 = 8;
-const CH_LABEL_X: u32 = 21;
-const CH_LABEL_Y: u32 = 1;
 
 const MA_ICONS: u32 = 3;
 const ICON_PADDING: u32 = 7;
@@ -471,12 +464,6 @@ const ACTIONS_DA: [Action; 8] =
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
 
-const ACTIONS_CH: [Action; 8] =
-[
-	Action::Up, Action::Down, Action::Left, Action::Right,
-	Action::None, Action::None, Action::Escape, Action::Enter
-];
-
 const ACTIONS_CD: [Action; 8] =
 [
 	Action::Up, Action::Down, Action::Left, Action::Right,
@@ -536,7 +523,6 @@ pub struct Gui
 	cur_title: &'static str,
 	mode: Mode,
 	ma_selected: u32,
-	ch_selected: u32,
 	da_selected: u32,
 	cd_selected: u32,
 	sels: [u8; 8],
@@ -600,18 +586,12 @@ impl Gui
 			mode: Mode::Main,
 			ma_selected: 0,
 			da_selected: 0,
-			ch_selected: 0,
 			cd_selected: 0,
 			sels: [0; 8],
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
-			buf: SampleBuffer
-			{
-				samples: [0; sample::BUF_SIZE],
-				timestamps: [0; sample::BUF_SIZE],
-				len: 0
-			},
+			buf: SampleBuffer::new(),
 			sec_buf: SectionBuffer
 			{
 				sections: [Section::default(); decoder::SECBUF_SIZE],

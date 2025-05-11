@@ -9,7 +9,6 @@ use core::ptr::{read_volatile, write_volatile};
 
 use crate::delay_us;
 
-const SD_CS: u32 = 11;
 const LCD_RST: u32 = 12;
 const LCD_DC: u32 = 13;
 const LCD_CS: u32 = 14;
@@ -239,14 +238,4 @@ pub fn lcd_cs_0()
 pub fn lcd_cs_1()
 {
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
-}
-
-pub fn sd_cs_0()
-{
-	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(1 << (LCD_CS + OFFSET_CLEAR))); }
-}
-
-pub fn sd_cs_1()
-{
-	unsafe { (*GPIOE::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
 }

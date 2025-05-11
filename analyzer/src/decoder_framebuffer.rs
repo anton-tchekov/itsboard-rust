@@ -1,6 +1,6 @@
 /* Specifically made to be at most 16 Pixels tall */
 
-use crate::{font::Font, lcd::{lcd_emit, lcd_rect, lcd_window_end, lcd_window_start, LCD_BLACK, LCD_GREEN}, terminus16::TERMINUS16, tinyfont::TINYFONT};
+use crate::{font::Font, lcd::{lcd_emit, lcd_window_end, lcd_window_start, LCD_BLACK, LCD_GREEN}, tinyfont::TINYFONT};
 
 pub struct DecoderFrameBuffer<const LEN: usize>
 {
@@ -58,7 +58,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		self.font = font;
 	}
 
-	fn height_bitmask(y: u32, h: u32) -> u16 
+	fn height_bitmask(y: u32, h: u32) -> u16
 	{
 		let mut result: u16 = 0;
 
@@ -111,7 +111,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		const CHAR_OFFSET: usize = 32;
 		let height_mask = Self::height_bitmask(y, self.font.height);
 		let char_index = (c as usize - CHAR_OFFSET) * self.font.width as usize;
-		
+
 		for j in 0..self.font.width as usize
 		{
 			let byte = self.font.bitmap[char_index + j];
