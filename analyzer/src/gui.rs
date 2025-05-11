@@ -67,6 +67,8 @@ const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
 
+const WAVEFORM_W_USIZE: usize = WAVEFORM_W as usize;
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action
 {
