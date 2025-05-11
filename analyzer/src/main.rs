@@ -18,6 +18,7 @@ mod decoder_onewire;
 mod decoder_uart;
 mod tinyfont;
 mod positionindicator;
+mod decoder_framebuffer;
 
 use crate::hw::*;
 use crate::lcd::*;
