@@ -135,10 +135,10 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		let vline = self.buf[idx];
 		let last_vline = self.last_drawn_buf[idx];
 
-		//if vline == 0 || vline == last_vline
-		//{
-		//	return;
-		//}
+		if vline == last_vline
+		{
+			return;
+		}
 
 		lcd_window_start(x, y, 1, height as u32);
 		for i in 0..height
@@ -162,6 +162,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			self.draw_vline(i, x + i as u32, y);
 		}
 
-		self.last_drawn_buf = self.buf;
+		self.last_drawn_buf = self.buf.clone();
 	}
 }
