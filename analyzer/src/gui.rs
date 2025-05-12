@@ -1296,8 +1296,9 @@ impl Gui
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
-		self.zoomlevel_draw();
-		self.waveforms_render();
+		self.zoom = 0;
+		self.t_start = 0;
+		self.zoomlevel_update();
 		self.update_indicator();
 		self.write_buf_as_csv();
 	}
