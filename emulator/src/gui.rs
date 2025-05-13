@@ -1085,27 +1085,12 @@ impl Gui
 		/* Clear previous Sections */
 		self.decoder_clear();
 
-		/* Get all Sections which are in our current view */
-		let sec_default = Section::default();
-		let mut view_buf = [&sec_default; SECBUF_SIZE];
-		let mut view_buf_size = 0;
-
-		for i in 0..self.sec_buf.len
-		{
-			let cur_sec = self.sec_buf.sections[i];
-
-			if cur_sec.start >= self.t_start || cur_sec.end <= self.t_end ||
-				(cur_sec.start <= self.t_start && cur_sec.end >= self.t_end)
-			{
-				view_buf[view_buf_size] = &self.sec_buf.sections[i];
-				view_buf_size += 1;
-			}
-		}
+		let (start, end) = self.sec_buf.find_view(self.t_start, self.t_end);
 
 		/* Draw all Sections which are in our current view */
-		for i in 0..view_buf_size
+		for i in start..end
 		{
-			let cur = view_buf[i];
+			let cur = self.sec_buf.sections[i];
 
 			let x0 = self.t_to_x(cur.start);
 			let x1 = self.t_to_x(cur.end);

@@ -50,6 +50,29 @@ impl SectionBuffer
 		self.len += 1;
 		Ok(())
 	}
+
+	// start: Timstamp of window start
+	// Returns sample index
+	pub fn find_view(&self, start: u32, end: u32) -> (usize, usize)
+	{
+		let mut first = None;
+		let mut last = 0;
+		for (i, cur_sec) in self.sections.iter().take(self.len).enumerate()
+		{
+			if cur_sec.start >= start || cur_sec.end <= end ||
+				(cur_sec.start <= start && cur_sec.end >= end)
+			{
+				if first.is_none()
+				{
+					first = Some(i);
+				}
+
+				last = i + 1;
+			}
+		}
+
+		(first.unwrap_or(0), last)
+	}
 }
 
 // Decoder Interface
