@@ -204,10 +204,15 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		}
 	}
 
-	pub fn clear(&mut self)
+	fn clear_intenal(&mut self)
 	{
 		self.lines[0].clear();
 		self.lines[1].clear();
+	}
+
+	pub fn clear(&mut self)
+	{
+		self.clear_intenal();
 		self.draw();
 	}
 
@@ -219,7 +224,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 	pub fn render(&mut self, sec_buf: &SectionBuffer, t_start: u32, t_end: u32)
 	{
-		self.clear();
+		self.clear_intenal();
 
 		/* Draw all Sections which are in our current view */
 		let (start, end) = sec_buf.find_view(t_start, t_end);

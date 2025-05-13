@@ -41,6 +41,11 @@ pub struct SectionBuffer
 
 impl SectionBuffer
 {
+	pub fn clear(&mut self)
+	{
+		self.len = 0;
+	}
+
 	pub fn push(&mut self, section: Section) -> Result<(), ()>
 	{
 		if self.len >= self.sections.len()

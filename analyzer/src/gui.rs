@@ -1274,6 +1274,7 @@ impl Gui
 			DecoderStorage::OneWire(dcd) => dcd
 		};
 
+		self.sec_buf.clear();
 		let _ = decoder.decode(&self.buf, &mut self.sec_buf);
 	}
 

@@ -97,8 +97,6 @@ impl Decoder for DecoderSPI
 			bitcount = 0;
 		}
 
-		println!("Decoder SPI done!");
-
 		Ok(())
 	}
 

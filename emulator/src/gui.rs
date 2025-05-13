@@ -1180,8 +1180,6 @@ impl Gui
 			return;
 		}
 
-
-		println!("{}", self.sec_buf.len);
 		self.decoder_framebuf.render(&self.sec_buf, self.t_start, self.t_end);
 
 		let s = self.buf.find_start(self.t_start);
@@ -1276,6 +1274,7 @@ impl Gui
 			DecoderStorage::OneWire(dcd) => dcd
 		};
 
+		self.sec_buf.clear();
 		let _ = decoder.decode(&self.buf, &mut self.sec_buf);
 	}
 
