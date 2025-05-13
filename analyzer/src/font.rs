@@ -18,6 +18,11 @@ impl Font
 	{
 		self.width * s.len() as u32
 	}
+
+	pub fn stride(&self) -> u32
+	{
+		self.width + if self.horizontal { 1 } else { 0 }
+	}
 }
 
 pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font) -> u32
@@ -64,21 +69,25 @@ fn lcd_font_v(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font) -> u32
 	font.width + 1
 }
 
-pub fn lcd_char(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font) -> u32
+pub fn remap_char(c: u32) -> u32
 {
-	let o = match c {
+	match c {
 		..32 => CHAR_MISSING,
 		0xB5 => CHAR_MICRO,
 		_ => c as u32
-	};
+	}
+}
 
+pub fn lcd_char(x: u32, y: u32, c: u32, fg: u16, bg: u16, font: &Font) -> u32
+{
+	let c = remap_char(c);
 	if font.horizontal
 	{
-		lcd_font(x, y, o, fg, bg, font)
+		lcd_font(x, y, c, fg, bg, font)
 	}
 	else
 	{
-		lcd_font_v(x, y, o, fg, bg, font)
+		lcd_font_v(x, y, c, fg, bg, font)
 	}
 }
 

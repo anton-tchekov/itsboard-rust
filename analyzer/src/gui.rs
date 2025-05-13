@@ -598,7 +598,7 @@ impl Gui
 				len: 0
 			},
 			cur_decoder: DecoderStorage::None,
-			decoder_framebuf: DecoderFrameBuffer::new(lcd_color(255, 150, 79), LCD_BLACK, 10),
+			decoder_framebuf: DecoderFrameBuffer::new(lcd_color(255, 150, 79), LCD_BLACK, 32),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
@@ -1124,17 +1124,19 @@ impl Gui
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 			};
 
-			let font_width = TINYFONT.width + 1;
-			let font_height = TINYFONT.height;
+			let font = &TERMINUS16;
+			let font_width = font.width + 1;
+			let font_height = font.height;
+			println!("{font_height}");
 
 			if w < (buf.as_str().len() as u32 * font_width)
 			{
-				self.decoder_framebuf.add_rect(x0, 1, w, font_height);
+				self.decoder_framebuf.add_rect(x0, 0, w, font_height);
 			}
 			else
 			{
-				self.decoder_framebuf.add_rect(x0, 1, w, font_height);
-				self.decoder_framebuf.add_text(x0+1, 1, buf.as_str(), &TINYFONT);
+				self.decoder_framebuf.add_rect(x0, 0, w, font_height);
+				self.decoder_framebuf.add_text(x0, 0, buf.as_str(), font);
 			}
 		}
 
