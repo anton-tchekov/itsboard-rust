@@ -208,6 +208,13 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 	{
 		self.lines[0].clear();
 		self.lines[1].clear();
+		self.draw();
+	}
+
+	pub fn draw(&mut self)
+	{
+		self.lines[0].draw_buffer(CHANNEL_LABEL_WIDTH, 33);
+		self.lines[1].draw_buffer(CHANNEL_LABEL_WIDTH, 50);
 	}
 
 	pub fn render(&mut self, sec_buf: &SectionBuffer, t_start: u32, t_end: u32)
@@ -263,7 +270,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			}
 		}
 
-		self.lines[0].draw_buffer(CHANNEL_LABEL_WIDTH, 33);
-		self.lines[1].draw_buffer(CHANNEL_LABEL_WIDTH, 50);
+		self.draw();
 	}
 }

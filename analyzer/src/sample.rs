@@ -89,3 +89,40 @@ impl SampleBuffer
 		closest_index
 	}
 }
+
+impl<'a> IntoIterator for &'a SampleBuffer
+{
+	type Item = (u32, Sample);
+	type IntoIter = SampleBufferIterator<'a>;
+
+	fn into_iter(self) -> Self::IntoIter
+	{
+		SampleBufferIterator
+		{
+			buf: self,
+			idx: 0
+		}
+	}
+}
+
+pub struct SampleBufferIterator<'a>
+{
+	buf: &'a SampleBuffer,
+	idx: usize
+}
+
+impl<'a> Iterator for SampleBufferIterator<'a>
+{
+	type Item = (u32, Sample);
+	fn next(&mut self) -> Option<(u32, Sample)>
+	{
+		if self.idx >= self.buf.len
+		{
+			return None;
+		}
+
+		let result = (self.buf.timestamps[self.idx], self.buf.samples[self.idx]);
+		self.idx += 1;
+		Some(result)
+	}
+}

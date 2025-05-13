@@ -49,7 +49,7 @@ const ACTION_ICONS_X: u32 = LCD_WIDTH - 8 * (ICON_BOX + 1) + ICON_PADDING;
 const ACTION_ICONS_Y: u32 = LCD_HEIGHT - ICON_BOX + ICON_PADDING;
 
 const INPUT_Y_SKIP: u32 = 40;
-const INPUT_WIDTH: u32 = 100;
+const INPUT_WIDTH: u32 = 120;
 const INPUT_HEIGHT: u32 = 20;
 
 const INPUT_LABEL_Y: u32 = Y_BEGIN + DA_PADDING;
@@ -326,12 +326,38 @@ const SPI_CS: Input = Input
 	label: "CS Pin"
 };
 
-const SPI_INPUTS: [&Input; 4] =
+const SELECT_MODE: Select = Select
+{
+	align: Align::Left,
+	options: &["CPOL=0,CPHA=0", "CPOL=0,CPHA=1", "CPOL=1,CPHA=0", "CPOL=1,CPHA=1"]
+};
+
+const SPI_MODE: Input = Input
+{
+	select: &SELECT_MODE,
+	label: "Mode"
+};
+
+const SELECT_BITORDER: Select = Select
+{
+	align: Align::Left,
+	options: &["MSB First", "LSB First"]
+};
+
+const SPI_BITORDER: Input = Input
+{
+	select: &SELECT_BITORDER,
+	label: "Bit Order"
+};
+
+const SPI_INPUTS: [&Input; 6] =
 [
 	&SPI_MOSI,
 	&SPI_MISO,
 	&SPI_SCK,
-	&SPI_CS
+	&SPI_CS,
+	&SPI_MODE,
+	&SPI_BITORDER
 ];
 
 /* I2C */
@@ -374,6 +400,16 @@ fn item_to_baudrate(idx: usize) -> u32
 fn item_to_pin(idx: usize) -> DecoderPin
 {
 	(idx as i32) - 1
+}
+
+fn item_to_bitorder(idx: usize) -> BitOrder
+{
+	if idx == 0 { BitOrder::MsbFirst } else { BitOrder::LsbFirst }
+}
+
+fn item_to_spimode(idx: usize) -> u8
+{
+	idx as u8
 }
 
 fn item_to_databits(idx: usize) -> DataBits
@@ -1000,7 +1036,9 @@ impl Gui
 			miso_pin: item_to_pin(self.sels[0].into()),
 			mosi_pin: item_to_pin(self.sels[1].into()),
 			sck_pin: item_to_pin(self.sels[2].into()),
-			cs_pin: item_to_pin(self.sels[3].into())
+			cs_pin: item_to_pin(self.sels[3].into()),
+			mode: item_to_spimode(self.sels[3].into()),
+			bitorder: item_to_bitorder(self.sels[3].into()),
 		}));
 	}
 
@@ -1225,6 +1263,20 @@ impl Gui
 			16 + 6 + TERMINUS16_BOLD.width("RUNNING"), 16, LCD_BLACK);
 	}
 
+	fn run_decoder(&mut self)
+	{
+		let decoder: &dyn Decoder = match &self.cur_decoder
+		{
+			DecoderStorage::None => return,
+			DecoderStorage::Uart(dcd) => dcd,
+			DecoderStorage::SPI(dcd) => dcd,
+			DecoderStorage::I2C(dcd) => dcd,
+			DecoderStorage::OneWire(dcd) => dcd
+		};
+
+		let _ = decoder.decode(&self.buf, &mut self.sec_buf);
+	}
+
 	fn ma_run(&mut self)
 	{
 		self.ma_running();
@@ -1232,6 +1284,7 @@ impl Gui
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
+		self.run_decoder();
 		self.zoom = 0;
 		self.t_start = 0;
 		self.zoomlevel_update();
