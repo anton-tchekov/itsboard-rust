@@ -4,6 +4,14 @@ use crate::{font::{Font, remap_char},
 	lcd::{lcd_emit, lcd_window_end, lcd_window_start,
 		LCD_BLACK, LCD_WHITE, LCD_GREEN, LCD_RED, LCD_BLUE, LCD_YELLOW}};
 
+use crate::decoder::{SectionBuffer, SectionContent};
+use crate::terminus16_bold::TERMINUS16_BOLD;
+use crate::bytewriter::ByteMutWriter;
+use crate::waveform::CHANNEL_LABEL_WIDTH;
+use core::fmt::Write;
+use crate::t_to_x;
+
+
 const COLOR_TABLE: [u16; 16] =
 [
 	LCD_BLACK,
@@ -188,5 +196,51 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		}
 
 		self.last_drawn_buf = self.buf;
+	}
+
+	pub fn render(&mut self, sec_buf: &SectionBuffer, t_start: u32, t_end: u32)
+	{
+		self.clear();
+		let (start, end) = sec_buf.find_view(t_start, t_end);
+
+		/* Draw all Sections which are in our current view */
+		for i in start..end
+		{
+			let cur = sec_buf.sections[i];
+
+			let x0 = t_to_x(cur.start, t_start, t_end);
+			let x1 = t_to_x(cur.end, t_start, t_end);
+			let w = x1 - x0;
+
+			let mut text: [u8; 64] = [0; 64];
+			let mut buf = ByteMutWriter::new(&mut text);
+
+			/* TODO: In decoder.rs auslagern */
+			match cur.content
+			{
+				SectionContent::Empty    => write!(buf, " Empty").unwrap(),
+				SectionContent::Byte(v)  => write!(buf, " 0x{:X}", v).unwrap(),
+				SectionContent::Bit(v)   => write!(buf, " {}", v).unwrap(),
+				SectionContent::StartBit => write!(buf, " Start").unwrap(),
+				SectionContent::StopBit  => write!(buf, " Stop").unwrap(),
+				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
+			};
+
+			let font = &TERMINUS16_BOLD;
+			let font_width = font.width + 1;
+			let font_height = font.height;
+
+			if w < (buf.as_str().len() as u32 * font_width)
+			{
+				self.add_rect(x0, 0, w, font_height);
+			}
+			else
+			{
+				self.add_rect(x0, 0, w, font_height);
+				self.add_text(x0, 0, buf.as_str(), font);
+			}
+		}
+
+		self.draw_buffer(CHANNEL_LABEL_WIDTH, 32);
 	}
 }

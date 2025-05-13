@@ -508,6 +508,18 @@ const ZOOM_LEVELS: [ZoomLevel; 21] =
 	ZoomLevel { value:   1, unit: TimeUnit::Microsecond }
 ];
 
+fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64
+{
+	(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+}
+
+pub fn t_to_x(t: u32, start: u32, end: u32) -> u32
+{
+	let max = (WAVEFORM_W - 1) as f64;
+	let x = map(t.into(), start.into(), end.into(), 0.0, max);
+	f64::min(f64::max(x, 0.0), max) as u32
+}
+
 pub enum DecoderStorage
 {
 	None,
@@ -1063,71 +1075,6 @@ impl Gui
 			TERMINUS16.width * 6, TERMINUS16.height, LCD_BLACK);
 	}
 
-	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64
-	{
-		(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-	}
-
-	fn t_to_x(&self, t: u32) -> u32
-	{
-		let max = (WAVEFORM_W - 1) as f64;
-		let x = Self::map(t.into(), self.t_start.into(), self.t_end.into(), 0.0, max);
-		f64::min(f64::max(x, 0.0), max) as u32
-	}
-
-	fn decoder_clear(&mut self)
-	{
-		self.decoder_framebuf.clear();
-	}
-
-	fn decoder_render(&mut self)
-	{
-		/* Clear previous Sections */
-		self.decoder_clear();
-
-		let (start, end) = self.sec_buf.find_view(self.t_start, self.t_end);
-
-		/* Draw all Sections which are in our current view */
-		for i in start..end
-		{
-			let cur = self.sec_buf.sections[i];
-
-			let x0 = self.t_to_x(cur.start);
-			let x1 = self.t_to_x(cur.end);
-			let w = x1 - x0;
-
-			let mut text: [u8; 64] = [0; 64];
-			let mut buf = ByteMutWriter::new(&mut text);
-
-			/* TODO: In decoder.rs auslagern */
-			match cur.content
-			{
-				SectionContent::Empty    => write!(buf, " Empty").unwrap(),
-				SectionContent::Byte(v)  => write!(buf, " 0x{:X}", v).unwrap(),
-				SectionContent::Bit(v)   => write!(buf, " {}", v).unwrap(),
-				SectionContent::StartBit => write!(buf, " Start").unwrap(),
-				SectionContent::StopBit  => write!(buf, " Stop").unwrap(),
-				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
-			};
-
-			let font = &TERMINUS16_BOLD;
-			let font_width = font.width + 1;
-			let font_height = font.height;
-
-			if w < (buf.as_str().len() as u32 * font_width)
-			{
-				self.decoder_framebuf.add_rect(x0, 0, w, font_height);
-			}
-			else
-			{
-				self.decoder_framebuf.add_rect(x0, 0, w, font_height);
-				self.decoder_framebuf.add_text(x0, 0, buf.as_str(), font);
-			}
-		}
-
-		self.decoder_framebuf.draw_buffer(CHANNEL_LABEL_WIDTH, ICON_BOX+2);
-	}
-
 	fn sidebar_clear(&self)
 	{
 		lcd_rect(0, ICON_BOX + 1, CHANNEL_LABEL_WIDTH,
@@ -1179,8 +1126,8 @@ impl Gui
 		for i in s..=e
 		{
 			let cur = self.buf.get(i, ch);
-			let x0 = self.t_to_x(prev.1);
-			let x1 = self.t_to_x(cur.1);
+			let x0 = t_to_x(prev.1, self.t_start, self.t_end);
+			let x1 = t_to_x(cur.1, self.t_start, self.t_end);
 			self.wf.line(ch, x0, x1, prev.0);
 			prev = cur;
 		}
@@ -1193,7 +1140,7 @@ impl Gui
 			return;
 		}
 
-		self.decoder_render();
+		self.decoder_framebuf.render(&self.sec_buf, self.t_start, self.t_end);
 
 		let s = self.buf.find_start(self.t_start);
 		let e = self.buf.find_end(self.t_end);
@@ -1248,7 +1195,7 @@ impl Gui
 
 	fn ma_close(&mut self)
 	{
-		self.decoder_clear();
+		self.decoder_framebuf.clear();
 		self.sidebar_clear();
 		self.zoomlevel_undraw();
 		self.wf.undraw();
