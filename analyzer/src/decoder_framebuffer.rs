@@ -1,6 +1,27 @@
-/* Specifically made to be at most 16 Pixels tall */
+/* Specifically made to be at most 32 Pixels tall */
 
-use crate::{font::Font, lcd::{lcd_emit, lcd_window_end, lcd_window_start, LCD_BLACK, LCD_GREEN}, tinyfont::TINYFONT};
+use crate::{font::Font, lcd::{lcd_emit, lcd_window_end, lcd_window_start,
+	LCD_BLACK, LCD_WHITE, LCD_GREEN, LCD_RED, LCD_BLUE, LCD_YELLOW}, tinyfont::TINYFONT};
+
+const COLOR_TABLE: [u16; 16] =
+[
+	LCD_BLACK,
+	LCD_WHITE,
+	LCD_RED,
+	LCD_BLUE,
+	LCD_YELLOW,
+	LCD_GREEN,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0
+];
 
 pub struct DecoderFrameBuffer<const LEN: usize>
 {
@@ -8,9 +29,10 @@ pub struct DecoderFrameBuffer<const LEN: usize>
 	pub fg_color: u16,
 	pub bg_color: u16,
 	pub height: usize,
-
-	pub last_drawn_buf: [u16; LEN],
-	pub buf: [u16; LEN],
+	pub last_colors: [u16; LEN],
+	pub colors: [u16; LEN],
+	pub last_drawn_buf: [u32; LEN],
+	pub buf: [u32; LEN]
 }
 
 impl<const LEN: usize> DecoderFrameBuffer<LEN>
@@ -23,9 +45,10 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			fg_color: LCD_BLACK,
 			bg_color: LCD_GREEN,
 			height: 16,
-
+			last_colors: [0; LEN],
+			colors: [0; LEN],
 			last_drawn_buf: [0; LEN],
-			buf: [0; LEN],
+			buf: [0; LEN]
 		}
 	}
 
@@ -37,9 +60,10 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			fg_color: fg_color,
 			bg_color: bg_color,
 			height: height,
-
+			last_colors: [0; LEN],
+			colors: [0; LEN],
 			last_drawn_buf: [0; LEN],
-			buf: [0; LEN],
+			buf: [0; LEN]
 		}
 	}
 
@@ -58,24 +82,9 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		self.font = font;
 	}
 
-	fn height_bitmask(y: u32, h: u32) -> u16
+	fn height_bitmask(y: u32, h: u32) -> u32
 	{
-		let mut result: u16 = 0;
-
-		for i in 0..y+h
-		{
-			if i > y && i < (y+h)
-			{
-				result |= 1 << i;
-			}
-
-			if i >= 15
-			{
-				break;
-			}
-		}
-
-		result
+		((1 << h) - 1) << y
 	}
 
 	pub fn clear(&mut self)
@@ -88,16 +97,15 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 	pub fn add_rect(&mut self, x: u32, y: u32, w: u32, h: u32)
 	{
-		let height_mask = Self::height_bitmask(y, h);
+		if x + w > LEN as u32
+		{
+			return;
+		}
 
+		let height_mask = Self::height_bitmask(y, h);
 		for i in x..x+w
 		{
-			if i >= LEN as u32
-			{
-				return;
-			}
-
-			self.buf[i as usize] = 0xFFFF & height_mask;
+			self.buf[i as usize] |= height_mask;
 		}
 	}
 
@@ -117,7 +125,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			let byte = self.font.bitmap[char_index + j];
 
 			self.buf[x as usize + j] |= height_mask;
-			self.buf[x as usize + j] &= !((byte as u16) << y);
+			self.buf[x as usize + j] &= !((byte as u32) << y);
 		}
 	}
 
@@ -125,7 +133,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 	{
 		for (i, c) in s.chars().enumerate()
 		{
-			self.add_char(x + ((self.font.width+1)*i as u32), y, c);
+			self.add_char(x + ((self.font.width + 1) * i as u32), y, c);
 		}
 	}
 
@@ -134,7 +142,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		let height = self.height;
 		let vline = self.buf[idx];
 		let last_vline = self.last_drawn_buf[idx];
-
 		if vline == last_vline
 		{
 			return;
@@ -143,15 +150,10 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		lcd_window_start(x, y, 1, height as u32);
 		for i in 0..height
 		{
-			if vline & (1 << i) > 0
-			{
-				lcd_emit(self.fg_color);
-			}
-			else
-			{
-				lcd_emit(self.bg_color);
-			}
+			lcd_emit(if vline & (1 << i) != 0
+				{ self.fg_color } else { self.bg_color });
 		}
+
 		lcd_window_end();
 	}
 
@@ -162,6 +164,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			self.draw_vline(i, x + i as u32, y);
 		}
 
-		self.last_drawn_buf = self.buf.clone();
+		self.last_drawn_buf = self.buf;
 	}
 }
