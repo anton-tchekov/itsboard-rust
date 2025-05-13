@@ -1094,7 +1094,8 @@ impl Gui
 		{
 			let cur_sec = self.sec_buf.sections[i];
 
-			if cur_sec.start >= self.t_start || cur_sec.end <= self.t_end
+			if cur_sec.start >= self.t_start || cur_sec.end <= self.t_end ||
+				(cur_sec.start <= self.t_start && cur_sec.end >= self.t_end)
 			{
 				view_buf[view_buf_size] = &self.sec_buf.sections[i];
 				view_buf_size += 1;
