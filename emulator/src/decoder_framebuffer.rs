@@ -25,7 +25,6 @@ const COLOR_TABLE: [u16; 16] =
 
 pub struct DecoderFrameBuffer<const LEN: usize>
 {
-	pub font: Font,
 	pub fg_color: u16,
 	pub bg_color: u16,
 	pub height: usize,
@@ -39,24 +38,13 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 {
 	pub fn default() -> Self
 	{
-		DecoderFrameBuffer
-		{
-			font: TINYFONT,
-			fg_color: LCD_BLACK,
-			bg_color: LCD_GREEN,
-			height: 16,
-			last_colors: [0; LEN],
-			colors: [0; LEN],
-			last_drawn_buf: [0; LEN],
-			buf: [0; LEN]
-		}
+		DecoderFrameBuffer::new(LCD_GREEN, LCD_BLACK, 32)
 	}
 
-	pub fn new(font: Font, fg_color: u16, bg_color: u16, height: usize) -> Self
+	pub fn new(fg_color: u16, bg_color: u16, height: usize) -> Self
 	{
 		DecoderFrameBuffer
 		{
-			font: font,
 			fg_color: fg_color,
 			bg_color: bg_color,
 			height: height,
@@ -75,11 +63,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 	pub fn set_bg_color(&mut self, color: u16)
 	{
 		self.bg_color = color;
-	}
-
-	pub fn set_font(&mut self, font: Font)
-	{
-		self.font = font;
 	}
 
 	fn height_bitmask(y: u32, h: u32) -> u32
@@ -109,31 +92,31 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		}
 	}
 
-	pub fn add_char(&mut self, x: u32, y: u32, c: char)
+	pub fn add_char(&mut self, x: u32, y: u32, c: char, font: &Font)
 	{
-		if x >= LEN as u32 - self.font.width
+		if x >= LEN as u32 - font.width
 		{
 			return;
 		}
 
 		const CHAR_OFFSET: usize = 32;
-		let height_mask = Self::height_bitmask(y, self.font.height);
-		let char_index = (c as usize - CHAR_OFFSET) * self.font.width as usize;
+		let height_mask = Self::height_bitmask(y, font.height);
+		let char_index = (c as usize - CHAR_OFFSET) * font.width as usize;
 
-		for j in 0..self.font.width as usize
+		for j in 0..font.width as usize
 		{
-			let byte = self.font.bitmap[char_index + j];
+			let byte = font.bitmap[char_index + j];
 
 			self.buf[x as usize + j] |= height_mask;
 			self.buf[x as usize + j] &= !((byte as u32) << y);
 		}
 	}
 
-	pub fn add_text(&mut self, x: u32, y: u32, s: &str)
+	pub fn add_text(&mut self, x: u32, y: u32, s: &str, font: &Font)
 	{
 		for (i, c) in s.chars().enumerate()
 		{
-			self.add_char(x + ((self.font.width + 1) * i as u32), y, c);
+			self.add_char(x + ((font.width + 1) * i as u32), y, c, font);
 		}
 	}
 
