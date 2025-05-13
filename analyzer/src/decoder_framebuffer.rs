@@ -81,13 +81,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 	pub fn add_rect(&mut self, x: u32, y: u32, w: u32, h: u32)
 	{
-		if x + w > LEN as u32
-		{
-			return;
-		}
-
 		let height_mask = Self::height_bitmask(y, h);
-		println!("{:04X}", height_mask);
 		for i in x..x+w
 		{
 			self.buf[i as usize] |= height_mask;
@@ -96,11 +90,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 	fn add_char_v(&mut self, x: u32, y: u32, c: u32, font: &Font) -> u32
 	{
-		if x >= LEN as u32 - (font.width + 1)
-		{
-			return 0;
-		}
-
 		const CHAR_OFFSET: usize = 32;
 		let height_mask = Self::height_bitmask(y, font.height);
 		let char_index = (c as usize - CHAR_OFFSET) * font.width as usize;

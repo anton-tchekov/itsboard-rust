@@ -1124,10 +1124,9 @@ impl Gui
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 			};
 
-			let font = &TERMINUS16;
+			let font = &TERMINUS16_BOLD;
 			let font_width = font.width + 1;
 			let font_height = font.height;
-			println!("{font_height}");
 
 			if w < (buf.as_str().len() as u32 * font_width)
 			{
