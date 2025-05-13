@@ -33,19 +33,19 @@ const COLOR_TABLE: [u16; 16] =
 	0
 ];
 
-pub struct DecoderFrameBuffer<const LEN: usize>
+pub struct DecoderLine<const LEN: usize>
 {
 	pub last_colors: [u8; LEN],
 	pub colors: [u8; LEN],
-	pub last_drawn_buf: [u32; LEN],
-	pub buf: [u32; LEN]
+	pub last_drawn_buf: [u16; LEN],
+	pub buf: [u16; LEN]
 }
 
-impl<const LEN: usize> DecoderFrameBuffer<LEN>
+impl<const LEN: usize> DecoderLine<LEN>
 {
 	pub fn new() -> Self
 	{
-		DecoderFrameBuffer
+		DecoderLine
 		{
 			last_colors: [0; LEN],
 			colors: [0; LEN],
@@ -54,9 +54,9 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		}
 	}
 
-	fn height_bitmask(y: u32, h: u32) -> u32
+	fn height_bitmask(y: u32, h: u32) -> u16
 	{
-		((1 << h) - 1) << y
+		(((1 << h) - 1) << y) as u16
 	}
 
 	pub fn clear(&mut self)
@@ -96,7 +96,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			let byte = font.bitmap[char_index + j];
 
 			self.buf[x as usize + j] |= height_mask;
-			self.buf[x as usize + j] &= !((byte as u32) << y);
+			self.buf[x as usize + j] &= !((byte as u16) << y);
 		}
 
 		font.width + 1
@@ -155,7 +155,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		}
 	}
 
-	pub fn draw_vline(&mut self, idx: usize, x: u32, y: u32)
+	fn draw_vline(&mut self, idx: usize, x: u32, y: u32)
 	{
 		let vline = self.buf[idx];
 		let last_vline = self.last_drawn_buf[idx];
@@ -187,6 +187,28 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 		self.last_drawn_buf = self.buf;
 		self.last_colors = self.colors;
 	}
+}
+
+pub struct DecoderFrameBuffer<const LEN: usize>
+{
+	lines: [DecoderLine<LEN>; 2]
+}
+
+impl<const LEN: usize> DecoderFrameBuffer<LEN>
+{
+	pub fn new() -> Self
+	{
+		DecoderFrameBuffer
+		{
+			lines: [DecoderLine::new(), DecoderLine::new()]
+		}
+	}
+
+	pub fn clear(&mut self)
+	{
+		self.lines[0].clear();
+		self.lines[1].clear();
+	}
 
 	pub fn render(&mut self, sec_buf: &SectionBuffer, t_start: u32, t_end: u32)
 	{
@@ -205,15 +227,24 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			let mut text: [u8; 64] = [0; 64];
 			let mut buf = ByteMutWriter::new(&mut text);
 
-			let mut color = 2;
+			let mut bg = 2;
+			let mut fg = 0;
+			let mut line = &mut self.lines[0];
 
 			match cur.content
 			{
-				SectionContent::Empty    => write!(buf, " Empty").unwrap(),
-				SectionContent::Byte(v)  => { if v == 0x42 {color = 3;} write!(buf, " 0x{:X}", v).unwrap() },
-				SectionContent::Bit(v)   => write!(buf, " {}", v).unwrap(),
-				SectionContent::StartBit => write!(buf, " Start").unwrap(),
-				SectionContent::StopBit  => write!(buf, " Stop").unwrap(),
+				SectionContent::TxByte(v) => {
+					fg = 1;
+					bg = 3;
+					line = &mut self.lines[1];
+					write!(buf, " 0x{:X}", v).unwrap();
+				},
+				SectionContent::RxByte(v) => { write!(buf, " 0x{:X}", v).unwrap() },
+				SectionContent::Byte(v) => { write!(buf, " 0x{:X}", v).unwrap() },
+				SectionContent::Empty     => write!(buf, " Empty").unwrap(),
+				SectionContent::Bit(v)    => write!(buf, " {}", v).unwrap(),
+				SectionContent::StartBit  => write!(buf, " Start").unwrap(),
+				SectionContent::StopBit   => write!(buf, " Stop").unwrap(),
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 			};
 
@@ -223,15 +254,16 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 			if w < (buf.as_str().len() as u32 * font_width)
 			{
-				self.add_rect(x0, 0, w, font_height, color);
+				line.add_rect(x0, 0, w, font_height, bg);
 			}
 			else
 			{
-				self.add_rect(x0, 0, w, font_height, color);
-				self.add_text(x0, 0, buf.as_str(), 0, font);
+				line.add_rect(x0, 0, w, font_height, bg);
+				line.add_text(x0, 0, buf.as_str(), fg, font);
 			}
 		}
 
-		self.draw_buffer(CHANNEL_LABEL_WIDTH, 32);
+		self.lines[0].draw_buffer(CHANNEL_LABEL_WIDTH, 33);
+		self.lines[1].draw_buffer(CHANNEL_LABEL_WIDTH, 50);
 	}
 }

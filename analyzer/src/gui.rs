@@ -622,9 +622,11 @@ impl Gui
 		/* For Debug Reasons */
 		let debug_section1: Section = Section{start: 0, end: 1_000_000, content: SectionContent::Byte(0xAA)};
 		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0x42)};
+		let debug_section3: Section = Section{start: 500_000, end: 2_000_000, content: SectionContent::TxByte(0x72)};
 
 		let _ = gui.sec_buf.push(debug_section1);
 		let _ = gui.sec_buf.push(debug_section2);
+		let _ = gui.sec_buf.push(debug_section3);
 
 		gui.icon_box();
 		gui.actions_render();

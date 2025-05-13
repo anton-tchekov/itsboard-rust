@@ -12,6 +12,8 @@ pub enum SectionContent
 	#[default]
 	Empty,
 	Byte(u8),
+	TxByte(u8),
+	RxByte(u8),
 	Bit(bool),
 	StartBit,
 	StopBit,
