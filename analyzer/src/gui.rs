@@ -610,7 +610,7 @@ impl Gui
 				len: 0
 			},
 			cur_decoder: DecoderStorage::None,
-			decoder_framebuf: DecoderFrameBuffer::new(lcd_color(255, 150, 79), LCD_BLACK, 32),
+			decoder_framebuf: DecoderFrameBuffer::new(),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
@@ -621,7 +621,7 @@ impl Gui
 
 		/* For Debug Reasons */
 		let debug_section1: Section = Section{start: 0, end: 1_000_000, content: SectionContent::Byte(0xAA)};
-		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0xAA)};
+		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0x42)};
 
 		let _ = gui.sec_buf.push(debug_section1);
 		let _ = gui.sec_buf.push(debug_section2);
