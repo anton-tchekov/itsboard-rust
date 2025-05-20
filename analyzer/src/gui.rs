@@ -1,6 +1,5 @@
-use stm32f4xx_hal::hal_02::blocking::serial::write;
-
 use crate::decoder;
+use crate::decoder_framebuffer::DecoderFrameBuffer;
 use crate::delay::delay_ms;
 use crate::hw::HW;
 use crate::lcd::*;
@@ -13,13 +12,14 @@ use crate::decoder_spi::*;
 use crate::decoder_i2c::*;
 use crate::decoder_onewire::*;
 use crate::decoder::*;
-use crate::sample;
 use crate::sampler;
 use crate::sample::SampleBuffer;
 use core::str;
 use core::fmt::Write;
 use crate::bytewriter::ByteMutWriter;
 use crate::hw;
+use crate::positionindicator::PositionIndicator;
+use crate::waveform::*;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -36,16 +36,10 @@ const MA_BOTTOM_TEXT_X: u32 = 26;
 
 const TITLE_Y: u32 = ICON_BOX / 2 - TITLE_FONT.width;
 const TITLE_X: u32 = TITLE_Y;
-const CH_Y_BEGIN: u32 = 48;
 
 const DA_PADDING: u32 = 10;
 const Y_BEGIN: u32 = ICON_BOX + 1;
 const DA_BTN_WIDTH: u32 = 100;
-
-const CH_ROWS: u32 = 2;
-const CH_COLS: u32 = 8;
-const CH_LABEL_X: u32 = 21;
-const CH_LABEL_Y: u32 = 1;
 
 const MA_ICONS: u32 = 3;
 const ICON_PADDING: u32 = 7;
@@ -55,7 +49,7 @@ const ACTION_ICONS_X: u32 = LCD_WIDTH - 8 * (ICON_BOX + 1) + ICON_PADDING;
 const ACTION_ICONS_Y: u32 = LCD_HEIGHT - ICON_BOX + ICON_PADDING;
 
 const INPUT_Y_SKIP: u32 = 40;
-const INPUT_WIDTH: u32 = 100;
+const INPUT_WIDTH: u32 = 120;
 const INPUT_HEIGHT: u32 = 20;
 
 const INPUT_LABEL_Y: u32 = Y_BEGIN + DA_PADDING;
@@ -63,10 +57,6 @@ const INPUT_BOX_Y: u32 = Y_BEGIN + DA_PADDING + 16;
 
 const INPUT_TEXT_Y: u32 = Y_BEGIN + DA_PADDING + 18;
 const TERM_Y: u32 = 40;
-
-const WAVEFORMS_ON_SCREEN: u32 = 8;
-const CHANNEL_LABEL_WIDTH: u32 = 33;
-const WAVEFORM_WIDTH: u32 = LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Action
@@ -184,10 +174,9 @@ pub struct Input
 	label: &'static str
 }
 
-const SELECT_PIN_LIST: [&str; 17] =
+const SELECT_PIN_LIST: [&str; 9] =
 [
-	"/", "0", "1", "2", "3", "4", "5", "6", "7",
-	"8", "9", "10", "11", "12", "13", "14", "15"
+	"/", "0", "1", "2", "3", "4", "5", "6", "7"
 ];
 
 const SELECT_PARITY_LIST: [&str; 3] =
@@ -337,12 +326,38 @@ const SPI_CS: Input = Input
 	label: "CS Pin"
 };
 
-const SPI_INPUTS: [&Input; 4] =
+const SELECT_MODE: Select = Select
+{
+	align: Align::Left,
+	options: &["CPOL=0,CPHA=0", "CPOL=0,CPHA=1", "CPOL=1,CPHA=0", "CPOL=1,CPHA=1"]
+};
+
+const SPI_MODE: Input = Input
+{
+	select: &SELECT_MODE,
+	label: "Mode"
+};
+
+const SELECT_BITORDER: Select = Select
+{
+	align: Align::Left,
+	options: &["MSB First", "LSB First"]
+};
+
+const SPI_BITORDER: Input = Input
+{
+	select: &SELECT_BITORDER,
+	label: "Bit Order"
+};
+
+const SPI_INPUTS: [&Input; 6] =
 [
 	&SPI_MOSI,
 	&SPI_MISO,
 	&SPI_SCK,
-	&SPI_CS
+	&SPI_CS,
+	&SPI_MODE,
+	&SPI_BITORDER
 ];
 
 /* I2C */
@@ -385,6 +400,16 @@ fn item_to_baudrate(idx: usize) -> u32
 fn item_to_pin(idx: usize) -> DecoderPin
 {
 	(idx as i32) - 1
+}
+
+fn item_to_bitorder(idx: usize) -> BitOrder
+{
+	if idx == 0 { BitOrder::MsbFirst } else { BitOrder::LsbFirst }
+}
+
+fn item_to_spimode(idx: usize) -> u8
+{
+	idx as u8
 }
 
 fn item_to_databits(idx: usize) -> DataBits
@@ -475,12 +500,6 @@ const ACTIONS_DA: [Action; 8] =
 	Action::None, Action::None, Action::Escape, Action::Enter
 ];
 
-const ACTIONS_CH: [Action; 8] =
-[
-	Action::Up, Action::Down, Action::Left, Action::Right,
-	Action::None, Action::None, Action::Escape, Action::Enter
-];
-
 const ACTIONS_CD: [Action; 8] =
 [
 	Action::Up, Action::Down, Action::Left, Action::Right,
@@ -525,6 +544,18 @@ const ZOOM_LEVELS: [ZoomLevel; 21] =
 	ZoomLevel { value:   1, unit: TimeUnit::Microsecond }
 ];
 
+fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64
+{
+	(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+}
+
+pub fn t_to_x(t: u32, start: u32, end: u32) -> u32
+{
+	let max = (WAVEFORM_W - 1) as f64;
+	let x = map(t.into(), start.into(), end.into(), 0.0, max);
+	f64::min(f64::max(x, 0.0), max) as u32
+}
+
 pub enum DecoderStorage
 {
 	None,
@@ -534,42 +565,12 @@ pub enum DecoderStorage
 	OneWire(DecoderOneWire),
 }
 
-struct WaveformBuffer
-{
-	data: [u16; WAVEFORM_WIDTH as usize]
-}
-
-impl WaveformBuffer
-{
-	pub fn new() -> Self
-	{
-		WaveformBuffer { data: [0; WAVEFORM_WIDTH as usize] }
-	}
-
-	pub fn line(&mut self, ch: u32, x0: u32, x1: u32, level: bool)
-	{
-		let bit = ch + if level == false { 1 } else { 0 };
-		let mask = 1 << bit;
-		for x in x0..=x1
-		{
-			self.data[x as usize] |= mask;
-		}
-	}
-
-	//pub fn blit(&self, ch: u32, )
-
-	pub fn update(&self, prev: &WaveformBuffer)
-	{
-	}
-}
-
 pub struct Gui
 {
 	actions: &'static [Action],
 	cur_title: &'static str,
 	mode: Mode,
 	ma_selected: u32,
-	ch_selected: u32,
 	da_selected: u32,
 	cd_selected: u32,
 	sels: [u8; 8],
@@ -579,10 +580,13 @@ pub struct Gui
 	buf: SampleBuffer,
 	sec_buf: SectionBuffer,
 	cur_decoder: DecoderStorage,
+	decoder_framebuf: DecoderFrameBuffer<WAVEFORM_W_USIZE>,
 	t_start: u32,
 	t_end: u32,
 	hw: HW,
-	zoom: usize
+	zoom: usize,
+	pi: PositionIndicator,
+	wf: WaveformBuffer
 }
 
 impl Gui
@@ -630,36 +634,35 @@ impl Gui
 			mode: Mode::Main,
 			ma_selected: 0,
 			da_selected: 0,
-			ch_selected: 0,
 			cd_selected: 0,
 			sels: [0; 8],
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
-			buf: SampleBuffer
-			{
-				samples: [0; sample::BUF_SIZE],
-				timestamps: [0; sample::BUF_SIZE],
-				len: 0
-			},
+			buf: SampleBuffer::new(),
 			sec_buf: SectionBuffer
 			{
 				sections: [Section::default(); decoder::SECBUF_SIZE],
 				len: 0
 			},
 			cur_decoder: DecoderStorage::None,
+			decoder_framebuf: DecoderFrameBuffer::new(),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
 			hw: hw,
-			zoom: 0
+			zoom: 0,
+			pi: PositionIndicator::new(),
+			wf: WaveformBuffer::new()
 		};
 
 		/* For Debug Reasons */
 		let debug_section1: Section = Section{start: 0, end: 1_000_000, content: SectionContent::Byte(0xAA)};
-		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0xAA)};
+		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0x42)};
+		let debug_section3: Section = Section{start: 500_000, end: 2_000_000, content: SectionContent::TxByte(0x72)};
 
 		let _ = gui.sec_buf.push(debug_section1);
 		let _ = gui.sec_buf.push(debug_section2);
+		let _ = gui.sec_buf.push(debug_section3);
 
 		gui.icon_box();
 		gui.actions_render();
@@ -1033,7 +1036,9 @@ impl Gui
 			miso_pin: item_to_pin(self.sels[0].into()),
 			mosi_pin: item_to_pin(self.sels[1].into()),
 			sck_pin: item_to_pin(self.sels[2].into()),
-			cs_pin: item_to_pin(self.sels[3].into())
+			cs_pin: item_to_pin(self.sels[3].into()),
+			mode: item_to_spimode(self.sels[4].into()),
+			bitorder: item_to_bitorder(self.sels[5].into()),
 		}));
 	}
 
@@ -1110,98 +1115,6 @@ impl Gui
 			TERMINUS16.width * 6, TERMINUS16.height, LCD_BLACK);
 	}
 
-	fn map(x: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64
-	{
-		(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-	}
-
-	fn t_to_x(&self, t: u32) -> u32
-	{
-		let max = (LCD_WIDTH - 1 - CHANNEL_LABEL_WIDTH) as f64;
-		let x = Self::map(t.into(), self.t_start.into(), self.t_end.into(), 0.0, max);
-		f64::min(f64::max(x, 0.0), max) as u32 + CHANNEL_LABEL_WIDTH
-	}
-
-	fn waveform_section(&mut self, y: u32, p0: bool, t0: u32, p1: bool, t1: u32, color: u16)
-	{
-		let h = 20;
-
-		let x0 = self.t_to_x(t0);
-		let x1 = self.t_to_x(t1);
-
-		let w = x1 - x0 + 1;
-		let y0 = y + (if p0 { 0 } else { h });
-		lcd_hline(x0, y0, w, color);
-		if p0 != p1 && t1 <= self.t_end
-		{
-			lcd_vline(x1, y, h, color);
-		}
-	}
-
-	fn decoder_clear(&self)
-	{
-		lcd_rect(1, ICON_BOX+2, LCD_WIDTH, TERMINUS16.height, LCD_BLACK);
-		// TODO: Mit Buffer nur neues malen um Flicker zu vermeiden
-	}
-
-	fn decoder_render(&self)
-	{
-		let zoom = self.zoom;
-
-		/* Clear previous Sections */
-		self.decoder_clear();
-
-		/* Get all Sections which are in our current view */
-		let sec_default = Section::default();
-  		let mut view_buf = [&sec_default; SECBUF_SIZE];
-		let mut view_buf_size = 0;
-
-		for i in 0..self.sec_buf.len
-		{
-			let cur_sec = self.sec_buf.sections[i];
-
-			if cur_sec.start >= self.t_start || cur_sec.end <= self.t_end
-			{
-				view_buf[view_buf_size] = &self.sec_buf.sections[i];
-				view_buf_size += 1;
-			}
-		}
-
-		/* Draw all Sections which are in our current view */
-		for i in 0..view_buf_size
-		{
-			let cur = view_buf[i];
-
-			let x0 = self.t_to_x(cur.start);
-			let x1 = self.t_to_x(cur.end);
-			let w = x1 - x0;
-
-			let mut text: [u8; 64] = [0; 64];
-			let mut buf = ByteMutWriter::new(&mut text);
-
-			/* TODO: In decoder.rs auslagern */
-			match cur.content
-			{
-				SectionContent::Empty    => write!(buf, " Empty").unwrap(),
-				SectionContent::Byte(v)  => write!(buf, " 0x{:X}", v).unwrap(),
-				SectionContent::Bit(v)   => write!(buf, " {}", v).unwrap(),
-				SectionContent::StartBit => write!(buf, " Start").unwrap(),
-				SectionContent::StopBit  => write!(buf, " Stop").unwrap(),
-				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
-			};
-
-			if w < (buf.as_str().len() as u32 * TERMINUS16_BOLD.width)
-			{
-				lcd_rect(x0, ICON_BOX+2, x1, TERMINUS16_BOLD.height, LCD_GREEN);
-			}
-			else
-			{
-				lcd_rect(x0, ICON_BOX+2, x1, TERMINUS16_BOLD.height, LCD_GREEN);
-				lcd_str(x0+1, ICON_BOX+2, buf.as_str(), LCD_BLACK, LCD_GREEN, &TERMINUS16_BOLD);
-			}
-		}
-	}
-
 	fn sidebar_clear(&self)
 	{
 		lcd_rect(0, ICON_BOX + 1, CHANNEL_LABEL_WIDTH,
@@ -1216,15 +1129,18 @@ impl Gui
 			DecoderStorage::Uart(dcd) => dcd,
 			DecoderStorage::SPI(dcd) => dcd,
 			DecoderStorage::I2C(dcd) => dcd,
-			DecoderStorage::OneWire(dcd) => dcd,
+			DecoderStorage::OneWire(dcd) => dcd
 		};
 
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
-			if pin_num == -1 { continue; }
-			let y = 62 + pin_num * 30;
-			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
+			if pin_num != -1
+			{
+				let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
+				lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
+			}
+
 			i += 1;
 		}
 	}
@@ -1233,7 +1149,7 @@ impl Gui
 	{
 		for i in 0..8
 		{
-			let y = 50 + i * 30;
+			let y = WAVEFORMS_Y + i * WAVEFORM_SPACING;
 			lcd_char(CHANNEL_LABEL_WIDTH / 2, y, '0' as u32 + i, LCD_WHITE, LCD_BLACK, &TERMINUS16);
 			lcd_hline(0, y, CHANNEL_LABEL_WIDTH, LCD_WHITE);
 		}
@@ -1244,37 +1160,36 @@ impl Gui
 			LCD_HEIGHT - ((ICON_BOX + 1) * 2), LCD_WHITE);
 	}
 
-	fn waveform_render(&mut self, y: u32, ch: u32, color: u16)
+	fn waveform_render(&mut self, s: usize, e: usize, ch: u32)
+	{
+		let mut prev = self.buf.get(s, ch);
+		for i in s..=e
+		{
+			let cur = self.buf.get(i, ch);
+			let x0 = t_to_x(prev.1, self.t_start, self.t_end);
+			let x1 = t_to_x(cur.1, self.t_start, self.t_end);
+			self.wf.line(ch, x0, x1, prev.0);
+			prev = cur;
+		}
+	}
+
+	fn waveforms_render(&mut self)
 	{
 		if self.buf.len < 1
 		{
 			return;
 		}
 
+		self.decoder_framebuf.render(&self.sec_buf, self.t_start, self.t_end);
+
 		let s = self.buf.find_start(self.t_start);
 		let e = self.buf.find_end(self.t_end);
-
-		let mut prev = self.buf.get(s, ch);
-		for i in s..=e
+		for ch in 0..8
 		{
-			let cur = self.buf.get(i, ch);
-			self.waveform_section(y, prev.0, prev.1, cur.0, cur.1, color);
-			prev = cur;
-		}
-	}
-
-	fn waveforms_render(&mut self, color: u16)
-	{
-		if color != LCD_BLACK
-		{
-			self.decoder_render();
-			self.sidebar_render();
+			self.waveform_render(s, e, ch);
 		}
 
-		for i in 0..8
-		{
-			self.waveform_render(50 + i * 30, i, color);
-		}
+		self.wf.update();
 	}
 
 	fn ma_render(&mut self, i: u32, sel: bool)
@@ -1301,22 +1216,30 @@ impl Gui
 		self.ma_render(self.ma_selected, true);
 	}
 
+	fn update_indicator(&mut self)
+	{
+		self.pi.show(self.t_start, self.t_end, self.last_ts());
+	}
+
 	fn ma_open(&mut self)
 	{
 		self.title_set("Logic Analyzer");
 		self.actions_set(&ACTIONS_MAIN);
 		self.da_selected = 0;
 		self.ma_top_box();
-		self.waveforms_render(LCD_WHITE);
+		self.sidebar_render();
+		self.waveforms_render();
 		self.zoomlevel_draw();
+		self.update_indicator();
 	}
 
 	fn ma_close(&mut self)
 	{
-		self.decoder_clear();
+		self.decoder_framebuf.clear();
 		self.sidebar_clear();
 		self.zoomlevel_undraw();
-		self.waveforms_render(LCD_BLACK);
+		self.wf.undraw();
+		self.pi.hide();
 		for i in 0..MA_ICONS
 		{
 			lcd_vline(LCD_WIDTH - (i + 1) * (ICON_BOX + 1),
@@ -1340,16 +1263,33 @@ impl Gui
 			16 + 6 + TERMINUS16_BOLD.width("RUNNING"), 16, LCD_BLACK);
 	}
 
+	fn run_decoder(&mut self)
+	{
+		let decoder: &dyn Decoder = match &self.cur_decoder
+		{
+			DecoderStorage::None => return,
+			DecoderStorage::Uart(dcd) => dcd,
+			DecoderStorage::SPI(dcd) => dcd,
+			DecoderStorage::I2C(dcd) => dcd,
+			DecoderStorage::OneWire(dcd) => dcd
+		};
+
+		self.sec_buf.clear();
+		let _ = decoder.decode(&self.buf, &mut self.sec_buf);
+	}
+
 	fn ma_run(&mut self)
 	{
-		self.waveforms_render(LCD_BLACK);
 		self.ma_running();
 		self.actions_set(&ACTIONS_SAMPLING);
 		sampler::sample_blocking(&mut self.buf);
 		self.actions_set(&ACTIONS_MAIN);
 		self.ma_running_undraw();
-		self.zoomlevel_draw();
-		self.waveforms_render(LCD_WHITE);
+		self.run_decoder();
+		self.zoom = 0;
+		self.t_start = 0;
+		self.zoomlevel_update();
+		self.update_indicator();
 		self.write_buf_as_csv();
 	}
 
@@ -1390,9 +1330,8 @@ impl Gui
 	fn zoomlevel_update(&mut self)
 	{
 		self.zoomlevel_draw();
-		self.waveforms_render(LCD_BLACK);
 		self.t_end = self.t_start + self.zoomlevel_to_ticks();
-		self.waveforms_render(LCD_WHITE);
+		self.waveforms_render();
 	}
 
 	fn last_ts(&self) -> u32
@@ -1423,29 +1362,31 @@ impl Gui
 			}
 			Action::Left =>
 			{
-				self.waveforms_render(LCD_BLACK);
 				let amount = u32::min(self.horizontal_scroll_amount(), self.t_start);
 				self.t_start -= amount;
 				self.t_end -= amount;
-				self.waveforms_render(LCD_WHITE);
+				self.waveforms_render();
+				self.update_indicator();
 			}
 			Action::Right =>
 			{
-				self.waveforms_render(LCD_BLACK);
 				let amount = u32::min(self.horizontal_scroll_amount(), self.max_horizontal_scroll());
 				self.t_start += amount;
 				self.t_end += amount;
-				self.waveforms_render(LCD_WHITE);
+				self.waveforms_render();
+				self.update_indicator();
 			},
 			Action::ZoomIn =>
 			{
 				limit_inc!(self.zoom, ZOOM_LEVELS.len() - 1);
 				self.zoomlevel_update();
+				self.update_indicator();
 			},
 			Action::ZoomOut =>
 			{
 				limit_dec!(self.zoom, 0);
 				self.zoomlevel_update();
+				self.update_indicator();
 			},
 			Action::Cycle =>
 			{

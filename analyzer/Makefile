@@ -9,6 +9,10 @@ emu:
 	cp src/font.rs ../emulator/src/font.rs
 	cp src/terminus16_bold.rs ../emulator/src/terminus16_bold.rs
 	cp src/terminus16.rs ../emulator/src/terminus16.rs
+	cp src/tinyfont.rs ../emulator/src/tinyfont.rs
+	cp src/decoder_framebuffer.rs ../emulator/src/decoder_framebuffer.rs
+	cp src/positionindicator.rs ../emulator/src/positionindicator.rs
+	cp src/waveform.rs ../emulator/src/waveform.rs
 	cp src/sample.rs ../emulator/src/sample.rs
 	cp src/decoder.rs ../emulator/src/decoder.rs
 	cp src/decoder_uart.rs ../emulator/src/decoder_uart.rs

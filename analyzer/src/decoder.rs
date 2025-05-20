@@ -1,4 +1,4 @@
-use crate::{bytewriter::ByteMutWriter, sample::*};
+use crate::sample::*;
 
 pub type DecoderPin = i32;
 
@@ -12,6 +12,8 @@ pub enum SectionContent
 	#[default]
 	Empty,
 	Byte(u8),
+	TxByte(u8),
+	RxByte(u8),
 	Bit(bool),
 	StartBit,
 	StopBit,
@@ -39,6 +41,11 @@ pub struct SectionBuffer
 
 impl SectionBuffer
 {
+	pub fn clear(&mut self)
+	{
+		self.len = 0;
+	}
+
 	pub fn push(&mut self, section: Section) -> Result<(), ()>
 	{
 		if self.len >= self.sections.len()
@@ -49,6 +56,29 @@ impl SectionBuffer
 		self.sections[self.len] = section;
 		self.len += 1;
 		Ok(())
+	}
+
+	// start: Timstamp of window start
+	// Returns sample index
+	pub fn find_view(&self, start: u32, end: u32) -> (usize, usize)
+	{
+		let mut first = None;
+		let mut last = 0;
+		for (i, cur_sec) in self.sections.iter().take(self.len).enumerate()
+		{
+			if cur_sec.start >= start || cur_sec.end <= end ||
+				(cur_sec.start <= start && cur_sec.end >= end)
+			{
+				if first.is_none()
+				{
+					first = Some(i);
+				}
+
+				last = i + 1;
+			}
+		}
+
+		(first.unwrap_or(0), last)
 	}
 }
 

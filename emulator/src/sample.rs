@@ -1,43 +1,63 @@
 // Type used to store one sample containing multiple channels in
-pub type Sample = u16;
+pub type Sample = u8;
 
 pub const BUF_SIZE: usize = 10_000;
 
 // Buffer containing samples
-pub struct SampleBuffer {
+pub struct SampleBuffer
+{
 	// SoA to avoid padding while maintaining speed
 	pub samples: [Sample; BUF_SIZE],
 	pub timestamps: [u32; BUF_SIZE],
 	pub len: usize
 }
 
-impl SampleBuffer {
-	pub fn clear(&mut self) {
+impl SampleBuffer
+{
+	pub fn new() -> Self
+	{
+		SampleBuffer
+		{
+			samples: [0; BUF_SIZE],
+			timestamps: [0; BUF_SIZE],
+			len: 0
+		}
+	}
+
+	pub fn clear(&mut self)
+	{
 		self.len = 0;
 	}
 
-	pub fn push(&mut self, port: Sample, ts: u32) {
+	pub fn push(&mut self, port: Sample, ts: u32)
+	{
 		self.samples[self.len] = port;
 		self.timestamps[self.len] = ts;
 		self.len += 1;
 	}
 
-	pub fn get(&self, idx: usize, ch: u32) -> (bool, u32) {
+	pub fn get(&self, idx: usize, ch: u32) -> (bool, u32)
+	{
 		(self.samples[idx] & (1 << ch) != 0, self.timestamps[idx])
 	}
 
 	// start: Timstamp of window start
 	// Returns sample index
-	pub fn find_start(&self, start: u32) -> usize {
+	pub fn find_start(&self, start: u32) -> usize
+	{
 		let mut left = 0;
 		let mut right = self.len as isize - 1;
 		let mut closest_index: usize = 0;
-		while left <= right {
+		while left <= right
+		{
 			let mid = (left + right) / 2;
-			if self.timestamps[mid as usize] <= start {
+			if self.timestamps[mid as usize] <= start
+			{
 				closest_index = mid as usize;
 				left = mid + 1;
-			} else {
+			}
+			else
+			{
 				right = mid - 1;
 			}
 		}
@@ -47,20 +67,62 @@ impl SampleBuffer {
 
 	// start: Timstamp of window end
 	// Returns sample index
-	pub fn find_end(&self, end: u32) -> usize {
+	pub fn find_end(&self, end: u32) -> usize
+	{
 		let mut left = 0;
 		let mut right = self.len as isize - 1;
 		let mut closest_index: usize = self.len - 1;
-		while left <= right {
+		while left <= right
+		{
 			let mid = (left + right) / 2;
-			if self.timestamps[mid as usize] >= end {
+			if self.timestamps[mid as usize] >= end
+			{
 				closest_index = mid as usize;
 				right = mid - 1;
-			} else {
+			}
+			else
+			{
 				left = mid + 1;
 			}
 		}
 
 		closest_index
+	}
+}
+
+impl<'a> IntoIterator for &'a SampleBuffer
+{
+	type Item = (u32, Sample);
+	type IntoIter = SampleBufferIterator<'a>;
+
+	fn into_iter(self) -> Self::IntoIter
+	{
+		SampleBufferIterator
+		{
+			buf: self,
+			idx: 0
+		}
+	}
+}
+
+pub struct SampleBufferIterator<'a>
+{
+	buf: &'a SampleBuffer,
+	idx: usize
+}
+
+impl<'a> Iterator for SampleBufferIterator<'a>
+{
+	type Item = (u32, Sample);
+	fn next(&mut self) -> Option<(u32, Sample)>
+	{
+		if self.idx >= self.buf.len
+		{
+			return None;
+		}
+
+		let result = (self.buf.timestamps[self.idx], self.buf.samples[self.idx]);
+		self.idx += 1;
+		Some(result)
 	}
 }

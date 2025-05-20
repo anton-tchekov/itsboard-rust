@@ -14,12 +14,23 @@ pub struct SampleBuffer
 
 impl SampleBuffer
 {
+	pub fn new() -> Self
+	{
+		SampleBuffer
+		{
+			samples: [0; BUF_SIZE],
+			timestamps: [0; BUF_SIZE],
+			len: 0
+		}
+	}
+
 	pub fn clear(&mut self)
 	{
 		self.len = 0;
 	}
 
-	pub fn push(&mut self, port: Sample, ts: u32) {
+	pub fn push(&mut self, port: Sample, ts: u32)
+	{
 		self.samples[self.len] = port;
 		self.timestamps[self.len] = ts;
 		self.len += 1;
@@ -76,5 +87,42 @@ impl SampleBuffer
 		}
 
 		closest_index
+	}
+}
+
+impl<'a> IntoIterator for &'a SampleBuffer
+{
+	type Item = (u32, Sample);
+	type IntoIter = SampleBufferIterator<'a>;
+
+	fn into_iter(self) -> Self::IntoIter
+	{
+		SampleBufferIterator
+		{
+			buf: self,
+			idx: 0
+		}
+	}
+}
+
+pub struct SampleBufferIterator<'a>
+{
+	buf: &'a SampleBuffer,
+	idx: usize
+}
+
+impl<'a> Iterator for SampleBufferIterator<'a>
+{
+	type Item = (u32, Sample);
+	fn next(&mut self) -> Option<(u32, Sample)>
+	{
+		if self.idx >= self.buf.len
+		{
+			return None;
+		}
+
+		let result = (self.buf.timestamps[self.idx], self.buf.samples[self.idx]);
+		self.idx += 1;
+		Some(result)
 	}
 }
