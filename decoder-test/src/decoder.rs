@@ -1,7 +1,6 @@
 use crate::sample::*;
 
-// TOOD: ask if this has to be i32
-pub type DecoderPin = u32;
+pub type DecoderPin = i32;
 
 pub const SECBUF_SIZE: usize = 100;
 pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
