@@ -1,14 +1,12 @@
 mod decoder;
 mod decoder_uart;
 mod sample;
-
-use std::fs::read_to_string;
-
-use csv::*;
+mod test_utils;
 
 use crate::sample::SampleBuffer;
 use crate::decoder::{Decoder, Section, SectionBuffer};
 use crate::decoder_uart::{Parity, DataBits, StopBits, DecoderUart};
+use crate::test_utils::load_buf_from_csv;
 
 fn main() {
 	let n = 9375;
@@ -47,22 +45,4 @@ fn main() {
 	};
 
 	let count = uart.decode(&buf, &mut out_sections);
-}
-
-/* Diese Funktion kannst du gerne irgendwoanders hinpacken aber damit kannst du die CSVs die ich dir gebe laden */
-fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
-{
-	let mut rdr = ReaderBuilder::new().has_headers(true).from_path(filename)?;
-
-	for result in rdr.records()
-	{
-		let record = result?;
-
-		let timestamp = &record[0].parse::<u32>().unwrap();
-		let data = &record[1].parse::<u16>().unwrap();
-
-		buf.push(*data, *timestamp);
-	}
-
-	Ok(())
 }
