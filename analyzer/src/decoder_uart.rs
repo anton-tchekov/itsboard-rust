@@ -168,7 +168,7 @@ impl Decoder for DecoderUart {
 
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
 		let bit_time = TIMER_CLOCK_RATE as f32 / self.baudrate as f32;
-		let mut bits = samples.bitwise_iter(self.rx_pin, bit_time);
+		let mut bits = samples.bitwise_iter(self.rx_pin as u32, bit_time);
 
 		let mut section: Option<Section> = None;
 		let mut state = DecoderUartState::Idle(IdleState);
@@ -196,24 +196,11 @@ impl Decoder for DecoderUart {
 		Ok(())
 	}
 	
-	fn num_pins(&self) -> usize {
-		2
-	}
-	
-	fn get_pin(&self, idx: usize) -> Option<DecoderPin> {
+	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)> {
 		match idx
 		{
-			0 => Some(self.rx_pin),
-			1 => Some(self.tx_pin),
-			_ => None,
-		}
-	}
-	
-	fn get_pin_name(&self, idx: usize) -> Option<&'static str> {
-		match idx
-		{
-			0 => Some("RX"),
-			1 => Some("TX"),
+			0 => Some(("RX" , self.rx_pin)),
+			1 => Some(("TX", self.tx_pin)),
 			_ => None,
 		}
 	}

@@ -19,7 +19,10 @@ pub enum SectionContent
 	Bit(bool),
 	StartBit,
 	StopBit,
-	I2cAddress(u8)
+	I2cAddress(u8),
+	Err(&'static str),
+	ParityBit(bool),
+	Word(u32),
 }
 
 #[derive(Copy, Clone, Default)]

@@ -3,6 +3,11 @@ pub type Sample = u8;
 
 pub const BUF_SIZE: usize = 10_000;
 
+fn round(x: f32) -> i32 {
+	let adjustment = 0.5_f32.copysign(x);
+	(x + adjustment) as i32
+}
+
 // Buffer containing samples
 pub struct SampleBuffer
 {
@@ -29,14 +34,14 @@ impl SampleBuffer
 	}
 
 	pub fn pulse_end(&self, mut idx: usize, ch: u32) -> Option<usize> {
-        let (initial_bit, _) = self.get(idx, ch)?;
+        let (initial_bit, _) = self.get_content(idx, ch)?;
         idx += 1;
     
-        let (mut current_bit, _) = self.get(idx, ch)?;
+        let (mut current_bit, _) = self.get_content(idx, ch)?;
     
         while current_bit == initial_bit {
             idx += 1;
-            match self.get(idx, ch) {
+            match self.get_content(idx, ch) {
                 Some((next_bit, _)) => current_bit = next_bit,
                 None => return Some(idx - 1),
             }
@@ -60,6 +65,15 @@ impl SampleBuffer
 	pub fn get(&self, idx: usize, ch: u32) -> (bool, u32)
 	{
 		(self.samples[idx] & (1 << ch) != 0, self.timestamps[idx])
+	}
+
+	// TODO: maybe change name or merge it with get 
+	pub fn get_content(&self, idx: usize, ch: u32) -> Option<(bool, u32)>
+	{
+		if idx >= self.len {
+			return None;
+		}
+        Some((self.samples[idx] & (1 << ch) != 0, self.timestamps[idx]))
 	}
 
 	// start: Timstamp of window start
@@ -246,7 +260,7 @@ impl<'a> BitwiseIterator<'a> {
     }
 
     fn fetch_next_pulse(&mut self) -> Option<Pulse> {
-        let (value, start_time) = self.buffer.get(self.idx, self.ch)?;
+        let (value, start_time) = self.buffer.get_content(self.idx, self.ch)?;
         let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
         let end_time = self.buffer.timestamps[end_idx];
         self.idx = end_idx;
@@ -258,7 +272,7 @@ impl<'a> BitwiseIterator<'a> {
 		// Calc bit timings for the current pulse
 		let pulse_duration = end - start;
 		// TODO: remove .round() call - i believe it's not available without the stdlib
-		let bit_count = (pulse_duration as f32 / self.expected_bit_time).round() as u32;
+		let bit_count = round(pulse_duration as f32 / self.expected_bit_time) as u32;
 		// .max, as pulse must describe at least one bit
 		let bit_time = pulse_duration / bit_count.max(1);
 
