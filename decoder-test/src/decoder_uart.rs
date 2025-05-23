@@ -74,7 +74,7 @@ impl DataState {
 		Some(())
 	}
 
-    pub fn process(mut self, bits: &mut BitwiseIterator, data: &mut Option<Section>, databits: DataBits) -> Option<DecoderUartState> {
+	pub fn process(mut self, bits: &mut BitwiseIterator, data: &mut Option<Section>, databits: DataBits) -> Option<DecoderUartState> {
 		let mut word: u32 = 0;
 
 		let mut section = Section::default();
@@ -90,8 +90,8 @@ impl DataState {
 			None => {None}
 		};
 
-        result
-    }
+		result
+	}
 }
 
 #[derive(Copy, Clone)]
@@ -141,7 +141,7 @@ impl StopState {
 		let next_bit = match stopbits {
 			StopBits::One => {
 				*data = Some(section);
-				return Some(DecoderUartState::Idle(IdleState)) 
+				return Some(DecoderUartState::Idle(IdleState))
 			},
 			StopBits::OneAndHalf => { bits.next_halve_bit()?},
 			StopBits::Two => { bits.next()? }
@@ -195,11 +195,11 @@ impl Decoder for DecoderUart {
 
 		Ok(())
 	}
-	
+
 	fn num_pins(&self) -> usize {
 		2
 	}
-	
+
 	fn get_pin(&self, idx: usize) -> Option<DecoderPin> {
 		match idx
 		{
@@ -208,7 +208,7 @@ impl Decoder for DecoderUart {
 			_ => None,
 		}
 	}
-	
+
 	fn get_pin_name(&self, idx: usize) -> Option<&'static str> {
 		match idx
 		{
@@ -237,34 +237,34 @@ mod tests {
 			baudrate: 300,
 		}
 	}
-	
+
 	fn decode_sections(file: &str, uart: DecoderUart) -> SectionBuffer {
 		let buf = load_sample_buffer(file);
-		
+
 		let mut out_sections = SectionBuffer {
 			sections: [Section::default(); SECBUF_SIZE],
 			len: 0,
 		};
-	
+
 		let result  = uart.decode(&buf, &mut out_sections);
 		assert!(result.is_ok());
-	
+
 		out_sections
 	}
-	
+
 	fn assert_section_sequence(actual: &mut SectionBufferIter, expected: &[SectionContent]) {
 		for expected_content in expected {
 			expect_section(actual.next(), *expected_content);
 		}
 		assert!(actual.next().is_none());
 	}
-	
+
 	#[test]
 	fn test_8n1_h() {
 		let uart = decoder_8n1_300();
 		let sections = decode_sections("UART/UART_8N1_300_H.csv", uart);
 		let mut section_iter = sections.iter();
-	
+
 		let expected = [
 			SectionContent::Empty,
 			SectionContent::StartBit,
@@ -272,16 +272,16 @@ mod tests {
 			SectionContent::StopBit,
 			SectionContent::Empty,
 		];
-	
+
 		assert_section_sequence(&mut section_iter, &expected);
 	}
-	
+
 	#[test]
 	fn test_8n1_hallo() {
 		let uart = decoder_8n1_300();
 		let sections = decode_sections("UART/UART_8N1_300_Hallo.csv", uart);
 		let mut section_iter = sections.iter();
-	
+
 		let expected = [
 			SectionContent::Empty,
 			SectionContent::StartBit, SectionContent::Word('H' as u32), SectionContent::StopBit,
@@ -291,7 +291,7 @@ mod tests {
 			SectionContent::StartBit, SectionContent::Word('o' as u32), SectionContent::StopBit,
 			SectionContent::Empty,
 		];
-	
+
 		assert_section_sequence(&mut section_iter, &expected);
 	}
 
@@ -305,9 +305,9 @@ mod tests {
 		for section in sections.iter() {
 			println!("{:?}", section);
 		}
-		
+
 		let mut section_iter = sections.iter();
-	
+
 		let expected = [
 			SectionContent::Empty,
 			SectionContent::StartBit, SectionContent::Word('1' as u32), SectionContent::StopBit,
@@ -321,8 +321,8 @@ mod tests {
 			SectionContent::StartBit, SectionContent::Word('9' as u32), SectionContent::StopBit,
 			SectionContent::Empty,
 		];
-	
+
 		assert_section_sequence(&mut section_iter, &expected);
 	}
-	
+
 }

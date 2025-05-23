@@ -34,20 +34,20 @@ impl SampleBuffer
 	}
 
 	pub fn pulse_end(&self, mut idx: usize, ch: u32) -> Option<usize> {
-        let (initial_bit, _) = self.get_content(idx, ch)?;
-        idx += 1;
-    
-        let (mut current_bit, _) = self.get_content(idx, ch)?;
-    
-        while current_bit == initial_bit {
-            idx += 1;
-            match self.get_content(idx, ch) {
-                Some((next_bit, _)) => current_bit = next_bit,
-                None => return Some(idx - 1),
-            }
-        }
-    
-        Some(idx)
+		let (initial_bit, _) = self.get_content(idx, ch)?;
+		idx += 1;
+
+		let (mut current_bit, _) = self.get_content(idx, ch)?;
+
+		while current_bit == initial_bit {
+			idx += 1;
+			match self.get_content(idx, ch) {
+				Some((next_bit, _)) => current_bit = next_bit,
+				None => return Some(idx - 1),
+			}
+		}
+
+		Some(idx)
 	}
 
 	pub fn clear(&mut self)
@@ -67,13 +67,13 @@ impl SampleBuffer
 		(self.samples[idx] & (1 << ch) != 0, self.timestamps[idx])
 	}
 
-	// TODO: maybe change name or merge it with get 
+	// TODO: maybe change name or merge it with get
 	pub fn get_content(&self, idx: usize, ch: u32) -> Option<(bool, u32)>
 	{
 		if idx >= self.len {
 			return None;
 		}
-        Some((self.samples[idx] & (1 << ch) != 0, self.timestamps[idx]))
+		Some((self.samples[idx] & (1 << ch) != 0, self.timestamps[idx]))
 	}
 
 	// start: Timstamp of window start
@@ -171,10 +171,10 @@ pub struct BitData {
 
 #[derive(Default)]
 struct Pulse {
-    value: bool,
-    start: u32,
-    end: u32,
-    bit_time: u32,
+	value: bool,
+	start: u32,
+	end: u32,
+	bit_time: u32,
 }
 
 // TODO: could prove useful for other protocols, maybe make tests for it
@@ -199,74 +199,74 @@ impl<'a> BitwiseIterator<'a> {
 		}
 	}
 
-    pub fn peek(&mut self) -> Option<BitData> {
-        if self.current_pulse.start == self.current_pulse.end {
+	pub fn peek(&mut self) -> Option<BitData> {
+		if self.current_pulse.start == self.current_pulse.end {
 			self.current_pulse = self.fetch_next_pulse()?;
-        };
+		};
 
-        Some(BitData {
-            high: self.current_pulse.value,
-            start_time: self.current_pulse.start,
-            end_time: self.current_pulse.start + self.current_pulse.bit_time,
-        })
-    }
+		Some(BitData {
+			high: self.current_pulse.value,
+			start_time: self.current_pulse.start,
+			end_time: self.current_pulse.start + self.current_pulse.bit_time,
+		})
+	}
 
-    // Forward the iterator to the next pulse
-    // Returns the pulse as BitData
-    pub fn next_pulse(&mut self) -> Option<BitData> {
-        if self.current_pulse.start == self.current_pulse.end {
-            self.current_pulse = self.fetch_next_pulse()?;
-        }
+	// Forward the iterator to the next pulse
+	// Returns the pulse as BitData
+	pub fn next_pulse(&mut self) -> Option<BitData> {
+		if self.current_pulse.start == self.current_pulse.end {
+			self.current_pulse = self.fetch_next_pulse()?;
+		}
 
-        let start = self.current_pulse.start;
-        self.current_pulse.start = self.current_pulse.end;
+		let start = self.current_pulse.start;
+		self.current_pulse.start = self.current_pulse.end;
 
-        Some(BitData {
-            high: self.current_pulse.value,
-            start_time: start,
-            end_time: self.current_pulse.end,
-        })
-    }
+		Some(BitData {
+			high: self.current_pulse.value,
+			start_time: start,
+			end_time: self.current_pulse.end,
+		})
+	}
 
-    // TODO: improve this. right now it can break the iterator if used wrong
-    pub fn next_halve_bit(&mut self) -> Option<BitData> {
-        if self.current_pulse.start == self.current_pulse.end {
-            self.current_pulse = self.fetch_next_pulse()?;
-        }
+	// TODO: improve this. right now it can break the iterator if used wrong
+	pub fn next_halve_bit(&mut self) -> Option<BitData> {
+		if self.current_pulse.start == self.current_pulse.end {
+			self.current_pulse = self.fetch_next_pulse()?;
+		}
 
-        let start = self.current_pulse.start;
-        self.current_pulse.start += self.current_pulse.bit_time / 2;
+		let start = self.current_pulse.start;
+		self.current_pulse.start += self.current_pulse.bit_time / 2;
 
-        Some(BitData {
-            high: self.current_pulse.value,
-            start_time: start,
-            end_time: self.current_pulse.start,
-        })
-    }
+		Some(BitData {
+			high: self.current_pulse.value,
+			start_time: start,
+			end_time: self.current_pulse.start,
+		})
+	}
 
-    pub fn next_bit(&mut self) -> Option<BitData> {
-        if self.current_pulse.start == self.current_pulse.end {
-            self.current_pulse = self.fetch_next_pulse()?;
-        }
+	pub fn next_bit(&mut self) -> Option<BitData> {
+		if self.current_pulse.start == self.current_pulse.end {
+			self.current_pulse = self.fetch_next_pulse()?;
+		}
 
-        let start = self.current_pulse.start;
-        self.current_pulse.start += self.current_pulse.bit_time;
+		let start = self.current_pulse.start;
+		self.current_pulse.start += self.current_pulse.bit_time;
 
-        Some(BitData {
-            high: self.current_pulse.value,
-            start_time: start,
-            end_time: self.current_pulse.start,
-        })
-    }
+		Some(BitData {
+			high: self.current_pulse.value,
+			start_time: start,
+			end_time: self.current_pulse.start,
+		})
+	}
 
-    fn fetch_next_pulse(&mut self) -> Option<Pulse> {
-        let (value, start_time) = self.buffer.get_content(self.idx, self.ch)?;
-        let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
-        let end_time = self.buffer.timestamps[end_idx];
-        self.idx = end_idx;
+	fn fetch_next_pulse(&mut self) -> Option<Pulse> {
+		let (value, start_time) = self.buffer.get_content(self.idx, self.ch)?;
+		let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
+		let end_time = self.buffer.timestamps[end_idx];
+		self.idx = end_idx;
 
-        Some(self.calculate_pulse(value, start_time, end_time))
-    }
+		Some(self.calculate_pulse(value, start_time, end_time))
+	}
 
 	fn calculate_pulse(&self, value: bool, mut start: u32, mut end: u32) -> Pulse {
 		// Calc bit timings for the current pulse

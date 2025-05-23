@@ -74,7 +74,7 @@ impl DataState {
 		Some(())
 	}
 
-    pub fn process(mut self, bits: &mut BitwiseIterator, data: &mut Option<Section>, databits: DataBits) -> Option<DecoderUartState> {
+	pub fn process(mut self, bits: &mut BitwiseIterator, data: &mut Option<Section>, databits: DataBits) -> Option<DecoderUartState> {
 		let mut word: u32 = 0;
 
 		let mut section = Section::default();
@@ -90,8 +90,8 @@ impl DataState {
 			None => {None}
 		};
 
-        result
-    }
+		result
+	}
 }
 
 #[derive(Copy, Clone)]
@@ -141,7 +141,7 @@ impl StopState {
 		let next_bit = match stopbits {
 			StopBits::One => {
 				*data = Some(section);
-				return Some(DecoderUartState::Idle(IdleState)) 
+				return Some(DecoderUartState::Idle(IdleState))
 			},
 			StopBits::OneAndHalf => { bits.next_halve_bit()?},
 			StopBits::Two => { bits.next()? }
@@ -195,7 +195,7 @@ impl Decoder for DecoderUart {
 
 		Ok(())
 	}
-	
+
 	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)> {
 		match idx
 		{

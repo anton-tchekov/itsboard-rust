@@ -24,21 +24,21 @@ pub fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
 }
 
 pub fn load_sample_buffer(path: &str) -> SampleBuffer {
-    let mut buf = SampleBuffer {
-        samples: [0; BUF_SIZE],
-        timestamps: [0; BUF_SIZE],
-        len: 0,
-    };
+	let mut buf = SampleBuffer {
+		samples: [0; BUF_SIZE],
+		timestamps: [0; BUF_SIZE],
+		len: 0,
+	};
 
-    load_buf_from_csv(&format!("{BASE_PATH}{path}"), &mut buf).expect("Failed to load buffer from CSV");
+	load_buf_from_csv(&format!("{BASE_PATH}{path}"), &mut buf).expect("Failed to load buffer from CSV");
 
-    buf
+	buf
 }
 
 pub fn expect_section(section: Option<&Section>, content: SectionContent)
 {
-    assert!(section.is_some());
+	assert!(section.is_some());
 
-    let section = section.unwrap();
-    assert_eq!(section.content, content);
+	let section = section.unwrap();
+	assert_eq!(section.content, content);
 }
