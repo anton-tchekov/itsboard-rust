@@ -1037,8 +1037,8 @@ impl Gui
 			mosi_pin: item_to_pin(self.sels[1].into()),
 			sck_pin: item_to_pin(self.sels[2].into()),
 			cs_pin: item_to_pin(self.sels[3].into()),
-			mode: item_to_spimode(self.sels[3].into()),
-			bitorder: item_to_bitorder(self.sels[3].into()),
+			mode: item_to_spimode(self.sels[4].into()),
+			bitorder: item_to_bitorder(self.sels[5].into()),
 		}));
 	}
 

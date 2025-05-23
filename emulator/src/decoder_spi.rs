@@ -20,7 +20,7 @@ pub struct DecoderSPI
 
 fn extract(pins: Sample, pin: i32) -> u8
 {
-	if pin > 0
+	if pin >= 0
 	{
 		(pins >> pin) & 1
 	}
@@ -37,44 +37,28 @@ impl Decoder for DecoderSPI
 		let word_size = 8;
 		let mut mosidata = 0;
 		let mut misodata = 0;
-		let mut oldpins = 0;
 		let mut bitcount = 0;
 		let mut start_sample = 0;
-		let mut sck = 0;
-		let mut miso = 0;
-		let mut mosi = 0;
-		let mut cs = 0;
 		let mut oldsck = 0;
-		let mut first = true;
 
 		for (ts, pins) in samples
 		{
-			sck  =  extract(pins, self.sck_pin);
-			mosi =  extract(pins, self.mosi_pin);
-			miso =  extract(pins, self.miso_pin);
-			cs   =  extract(pins, self.cs_pin);
+			let sck = extract(pins, self.sck_pin);
 
-			if first
-			{
-				oldsck = sck;
-				first = false;
-			}
-
-			if oldpins == pins { continue; }
-
+			// Need any edge on SCK
 			if sck == oldsck { continue; }
 			oldsck = sck;
 
-			if self.mode == 0 && sck == 0 { continue; }
-			else if self.mode == 1 && sck == 1 { continue; }
-			else if self.mode == 2 && sck == 1 { continue; }
-			else if self.mode == 3 && sck == 0 { continue; }
+			// Need rising edge on SCK
+			if sck == 0 { continue; }
 
 			if bitcount == 0
 			{
 				start_sample = ts;
 			}
 
+			let mosi = extract(pins, self.mosi_pin);
+			let miso = extract(pins, self.miso_pin);
 			if self.bitorder == BitOrder::MsbFirst
 			{
 				mosidata |= mosi << (word_size - 1 - bitcount);

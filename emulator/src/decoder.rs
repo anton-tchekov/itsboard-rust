@@ -3,6 +3,8 @@ use crate::sample::*;
 pub type DecoderPin = i32;
 
 pub const SECBUF_SIZE: usize = 100;
+pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
+
 
 // GUI is responsible for choosing representation, colors, etc.
 #[derive(Copy, Clone, Default)]
@@ -17,7 +19,10 @@ pub enum SectionContent
 	Bit(bool),
 	StartBit,
 	StopBit,
-	I2cAddress(u8)
+	I2cAddress(u8),
+	Err(&'static str),
+	ParityBit(bool),
+	Word(u32),
 }
 
 #[derive(Copy, Clone, Default)]
@@ -31,6 +36,16 @@ pub struct Section
 
 	// Arbitrary Content
 	pub content: SectionContent
+}
+
+impl Section {
+	pub fn from_bit(bit: &BitData, content: SectionContent) -> Self {
+		Section {
+			start: bit.start_time,
+			end: bit.end_time,
+			content
+		}
+	}
 }
 
 pub struct SectionBuffer
