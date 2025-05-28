@@ -1,6 +1,7 @@
 use crate::decoder::*;
 use crate::sample::*;
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DecoderI2C
 {
 	pub sda_pin: DecoderPin,

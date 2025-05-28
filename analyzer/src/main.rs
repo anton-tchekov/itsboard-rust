@@ -20,6 +20,7 @@ mod tinyfont;
 mod positionindicator;
 mod decoder_framebuffer;
 mod waveform;
+mod userflash;
 
 use crate::hw::*;
 use crate::lcd::*;

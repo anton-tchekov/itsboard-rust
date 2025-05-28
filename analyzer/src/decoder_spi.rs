@@ -1,13 +1,15 @@
 use crate::decoder::*;
 use crate::sample::*;
 
-#[derive(PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum BitOrder
 {
 	MsbFirst,
 	LsbFirst
 }
 
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DecoderSPI
 {
 	pub mosi_pin: DecoderPin,

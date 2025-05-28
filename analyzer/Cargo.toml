@@ -8,6 +8,9 @@ cortex-m = "0.7.4"
 cortex-m-rt = "0.7.1"
 panic-halt = "0.2.0"
 
+postcard = "1.0.0"
+serde = { version = "1.0.*", default-features = false }
+
 # [dependencies.stm32f4]
 # version = "0.14.0"
 # features = ["stm32f429"]
@@ -21,3 +24,4 @@ codegen-units = 1
 incremental = false
 debug = false
 lto = true
+

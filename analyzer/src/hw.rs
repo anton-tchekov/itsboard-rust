@@ -1,4 +1,4 @@
-use stm32f4xx_hal::{prelude::*, pac::{Peripherals,SPI1}};
+use stm32f4xx_hal::{flash::{FlashExt, FlashSector, LockedFlash, UnlockedFlash}, pac::{Peripherals,SPI1}, prelude::*};
 use stm32f4xx_hal::spi::{Polarity, Mode, Phase, Spi};
 use stm32f4xx_hal::pac::RCC;
 use stm32f4xx_hal::uart::{Config, Serial};
@@ -7,7 +7,7 @@ use stm32f4xx_hal::pac::*;
 use stm32f4xx_hal::serial::Tx;
 use core::ptr::{read_volatile, write_volatile};
 
-use crate::delay_us;
+use crate::{delay_us, userflash::UserFlash};
 
 const LCD_RST: u32 = 12;
 const LCD_DC: u32 = 13;
@@ -19,6 +19,7 @@ pub const TICKS_PER_US: u32 = 90;
 
 pub struct HW
 {
+	pub user_flash: UserFlash,
 	pub spi: Spi<SPI1>,
 	pub tx: Tx<USART3>
 }
@@ -33,9 +34,16 @@ const SPI_SR_RXNE     : u32 = 1 << 0;
 const SPI_SR_TXE      : u32 = 1 << 1;
 const SPI_SR_BSY      : u32 = 1 << 7;
 
+/* We use the last Sector as our User space for flash */
+/* Since theres 2 Banks, we use the Address of Bank 2s last Sector */
+const FLASH_START				: usize = 0x08000000;
+const FLASH_USER_SPACE_START	: usize = 0x081E0000;
+const FLASH_USER_SPACE_END		: usize = 0x081FFFFF;
+
 pub fn hw_init() -> HW
 {
 	let dp = Peripherals::take().unwrap();
+
 	let clocks = dp.RCC.constrain().cfgr
 		.use_hse(8.MHz())
 		.hclk(180.MHz())
@@ -135,9 +143,12 @@ pub fn hw_init() -> HW
 		&clocks,
 	).unwrap();
 
-	writeln!(tx, "ITS-Board initialized\n").unwrap();
+	let raw_flash   = dp.FLASH;
+	let locked_flash = LockedFlash::new(raw_flash);
+	let user_flash   = UserFlash::new(locked_flash);
 
-	HW { spi, tx }
+	writeln!(tx, "ITS-Board initialized\n").unwrap();
+	HW { user_flash, spi, tx }
 }
 
 pub fn timer_get() -> u32
