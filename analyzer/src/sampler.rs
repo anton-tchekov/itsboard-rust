@@ -25,7 +25,7 @@ pub fn sample_blocking(buf: &mut SampleBuffer)
 		if port != prev
 		{
 			prev = port;
-			if buf.len >= buf.samples.len()
+			if buf.len >= buf.samples.len() - 1
 			{
 				break;
 			}
