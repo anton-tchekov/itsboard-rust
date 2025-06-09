@@ -1,4 +1,4 @@
-use stm32f4xx_hal::{flash::{FlashExt, FlashSector, LockedFlash, UnlockedFlash}, pac::{Peripherals,SPI1}, prelude::*};
+use stm32f4xx_hal::{flash::{LockedFlash}, pac::SPI1, prelude::*};
 use stm32f4xx_hal::spi::{Polarity, Mode, Phase, Spi};
 use stm32f4xx_hal::pac::RCC;
 use stm32f4xx_hal::uart::{Config, Serial};
@@ -33,12 +33,6 @@ const SPI1_DR         : u32 = SPI1_BASE + 0x0C;
 const SPI_SR_RXNE     : u32 = 1 << 0;
 const SPI_SR_TXE      : u32 = 1 << 1;
 const SPI_SR_BSY      : u32 = 1 << 7;
-
-/* We use the last Sector as our User space for flash */
-/* Since theres 2 Banks, we use the Address of Bank 2s last Sector */
-const FLASH_START				: usize = 0x08000000;
-const FLASH_USER_SPACE_START	: usize = 0x081E0000;
-const FLASH_USER_SPACE_END		: usize = 0x081FFFFF;
 
 pub fn hw_init() -> HW
 {

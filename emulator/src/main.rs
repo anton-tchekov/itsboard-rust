@@ -18,6 +18,8 @@ mod positionindicator;
 mod decoder_framebuffer;
 mod delay;
 mod hw;
+mod userflash;
+mod decoder_storage;
 
 use crate::hw::HW;
 use crate::graphics::*;

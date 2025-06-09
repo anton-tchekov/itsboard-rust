@@ -184,7 +184,7 @@ impl Decoder for DecoderUart {
 			};
 
 			if let Some(result_section) = section {
-				output.push(result_section)?;
+				output.push(result_section);
 				section = None;
 			}
 

@@ -1,7 +1,7 @@
 // Type used to store one sample containing multiple channels in
 pub type Sample = u8;
 
-pub const BUF_SIZE: usize = 10_000;
+pub const BUF_SIZE: usize = 1000;
 
 fn round(x: f32) -> i32 {
 	let adjustment = 0.5_f32.copysign(x);

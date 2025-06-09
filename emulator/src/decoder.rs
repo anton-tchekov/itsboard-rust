@@ -5,7 +5,6 @@ pub type DecoderPin = i32;
 pub const SECBUF_SIZE: usize = 100;
 pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
 
-
 // GUI is responsible for choosing representation, colors, etc.
 #[derive(Copy, Clone, Default)]
 pub enum SectionContent
@@ -61,16 +60,15 @@ impl SectionBuffer
 		self.len = 0;
 	}
 
-	pub fn push(&mut self, section: Section) -> Result<(), ()>
+	pub fn push(&mut self, section: Section)
 	{
 		if self.len >= self.sections.len()
 		{
-			return Err(());
+			return;
 		}
 
 		self.sections[self.len] = section;
 		self.len += 1;
-		Ok(())
 	}
 
 	// start: Timstamp of window start

@@ -1,14 +1,14 @@
 use crate::decoder::*;
 use crate::sample::*;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Parity {
 	None,
 	Even,
 	Odd
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum DataBits {
 	Five = 5,
 	Six = 6,
@@ -17,7 +17,7 @@ pub enum DataBits {
 	Nine = 9
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum StopBits {
 	One,
 	OneAndHalf,
@@ -155,6 +155,7 @@ impl StopState {
 	}
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DecoderUart {
 	pub rx_pin: DecoderPin,
 	pub tx_pin: DecoderPin,
@@ -183,7 +184,7 @@ impl Decoder for DecoderUart {
 			};
 
 			if let Some(result_section) = section {
-				output.push(result_section)?;
+				output.push(result_section);
 				section = None;
 			}
 

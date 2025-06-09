@@ -20,6 +20,7 @@ use crate::bytewriter::ByteMutWriter;
 use crate::hw;
 use crate::positionindicator::PositionIndicator;
 use crate::waveform::*;
+use crate::decoder_storage::{DecoderUnion, DecoderStorage};
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -556,15 +557,6 @@ pub fn t_to_x(t: u32, start: u32, end: u32) -> u32
 	f64::min(f64::max(x, 0.0), max) as u32
 }
 
-pub enum DecoderStorage
-{
-	None,
-	Uart(DecoderUart),
-	SPI(DecoderSPI),
-	I2C(DecoderI2C),
-	OneWire(DecoderOneWire),
-}
-
 pub struct Gui
 {
 	actions: &'static [Action],
@@ -579,7 +571,7 @@ pub struct Gui
 	term_lens: [u8; 16],
 	buf: SampleBuffer,
 	sec_buf: SectionBuffer,
-	cur_decoder: DecoderStorage,
+	cur_decoder: DecoderUnion,
 	decoder_framebuf: DecoderFrameBuffer<WAVEFORM_W_USIZE>,
 	t_start: u32,
 	t_end: u32,
@@ -622,10 +614,13 @@ impl Gui
 		self.term_rows = 0;
 	}
 
-	pub fn init(hw: HW) -> Self
+	pub fn init(mut hw: HW) -> Self
 	{
 		Self::top_divider();
 		Self::bottom_divider();
+
+		/* Borrow flash Temporarily to get the Saved Decoder */
+		let decoder = DecoderStorage::load(&hw.user_flash);
 
 		let mut gui = Gui
 		{
@@ -645,7 +640,7 @@ impl Gui
 				sections: [Section::default(); decoder::SECBUF_SIZE],
 				len: 0
 			},
-			cur_decoder: DecoderStorage::None,
+			cur_decoder: decoder,
 			decoder_framebuf: DecoderFrameBuffer::new(),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
@@ -654,15 +649,6 @@ impl Gui
 			pi: PositionIndicator::new(),
 			wf: WaveformBuffer::new()
 		};
-
-		/* For Debug Reasons */
-		let debug_section1: Section = Section{start: 0, end: 1_000_000, content: SectionContent::Byte(0xAA)};
-		let debug_section2: Section = Section{start: 1_500_000, end: 3_000_000, content: SectionContent::Byte(0x42)};
-		let debug_section3: Section = Section{start: 500_000, end: 2_000_000, content: SectionContent::TxByte(0x72)};
-
-		let _ = gui.sec_buf.push(debug_section1);
-		let _ = gui.sec_buf.push(debug_section2);
-		let _ = gui.sec_buf.push(debug_section3);
 
 		gui.icon_box();
 		gui.actions_render();
@@ -977,9 +963,11 @@ impl Gui
 		}
 	}
 
-	fn decoder_done(&mut self, d: DecoderStorage)
+	fn decoder_done(&mut self, decoder: DecoderUnion)
 	{
-		self.cur_decoder = d;
+		DecoderStorage::save(&mut self.hw.user_flash, &decoder);
+		self.cur_decoder = decoder;
+
 		Self::draw_config_saved_animation();
 		self.mode_switch(Mode::Main);
 	}
@@ -1002,7 +990,7 @@ impl Gui
 
 	fn u_save(&mut self)
 	{
-		self.decoder_done(DecoderStorage::Uart(DecoderUart
+		let x = DecoderUnion::Uart(DecoderUart
 		{
 			rx_pin: item_to_pin(self.sels[0].into()),
 			tx_pin: item_to_pin(self.sels[1].into()),
@@ -1010,7 +998,9 @@ impl Gui
 			parity: item_to_parity(self.sels[3].into()),
 			stopbits: item_to_stopbits(self.sels[4].into()),
 			baudrate: item_to_baudrate(self.sels[5].into())
-		}));
+		});
+
+		self.decoder_done(x);
 	}
 
 	/* === SPI (S) MODE === */
@@ -1031,7 +1021,7 @@ impl Gui
 
 	fn s_save(&mut self)
 	{
-		self.decoder_done(DecoderStorage::SPI(DecoderSPI
+		let x = DecoderUnion::SPI(DecoderSPI
 		{
 			miso_pin: item_to_pin(self.sels[0].into()),
 			mosi_pin: item_to_pin(self.sels[1].into()),
@@ -1039,7 +1029,9 @@ impl Gui
 			cs_pin: item_to_pin(self.sels[3].into()),
 			mode: item_to_spimode(self.sels[4].into()),
 			bitorder: item_to_bitorder(self.sels[5].into()),
-		}));
+		});
+
+		self.decoder_done(x);
 	}
 
 	/* === I2C (I) MODE === */
@@ -1060,11 +1052,13 @@ impl Gui
 
 	fn i_save(&mut self)
 	{
-		self.decoder_done(DecoderStorage::I2C(DecoderI2C
+		let x = DecoderUnion::I2C(DecoderI2C
 		{
 			sda_pin: item_to_pin(self.sels[0].into()),
 			scl_pin: item_to_pin(self.sels[1].into())
-		}));
+		});
+
+		self.decoder_done(x);
 	}
 
 	/* === ONEWIRE (O) MODE === */
@@ -1085,10 +1079,12 @@ impl Gui
 
 	fn o_save(&mut self)
 	{
-		self.decoder_done(DecoderStorage::OneWire(DecoderOneWire
+		let x = DecoderUnion::OneWire(DecoderOneWire
 		{
 			onewire_pin: item_to_pin(self.sels[0].into())
-		}));
+		});
+
+		self.decoder_done(x);
 	}
 
 	/* === MAIN (MA) MODE === */
@@ -1125,11 +1121,11 @@ impl Gui
 	{
 		let decoder: &dyn Decoder = match &self.cur_decoder
 		{
-			DecoderStorage::None => return,
-			DecoderStorage::Uart(dcd) => dcd,
-			DecoderStorage::SPI(dcd) => dcd,
-			DecoderStorage::I2C(dcd) => dcd,
-			DecoderStorage::OneWire(dcd) => dcd
+			DecoderUnion::None => return,
+			DecoderUnion::Uart(dcd) => dcd,
+			DecoderUnion::SPI(dcd) => dcd,
+			DecoderUnion::I2C(dcd) => dcd,
+			DecoderUnion::OneWire(dcd) => dcd
 		};
 
 		let mut i = 0;
@@ -1267,11 +1263,11 @@ impl Gui
 	{
 		let decoder: &dyn Decoder = match &self.cur_decoder
 		{
-			DecoderStorage::None => return,
-			DecoderStorage::Uart(dcd) => dcd,
-			DecoderStorage::SPI(dcd) => dcd,
-			DecoderStorage::I2C(dcd) => dcd,
-			DecoderStorage::OneWire(dcd) => dcd
+			DecoderUnion::None => return,
+			DecoderUnion::Uart(dcd) => dcd,
+			DecoderUnion::SPI(dcd) => dcd,
+			DecoderUnion::I2C(dcd) => dcd,
+			DecoderUnion::OneWire(dcd) => dcd
 		};
 
 		self.sec_buf.clear();
@@ -1407,11 +1403,11 @@ impl Gui
 	{
 		match self.da_selected
 		{
-			0 => { self.mode_switch(Mode::DecoderUart); },
-			1 => { self.mode_switch(Mode::DecoderSpi); },
-			2 => { self.mode_switch(Mode::DecoderI2C); },
-			3 => { self.mode_switch(Mode::DecoderOneWire); },
-			4 => { self.decoder_done(DecoderStorage::None); },
+			0 => { self.mode_switch(Mode::DecoderUart); 	},
+			1 => { self.mode_switch(Mode::DecoderSpi); 		},
+			2 => { self.mode_switch(Mode::DecoderI2C); 		},
+			3 => { self.mode_switch(Mode::DecoderOneWire); 	},
+			4 => { self.decoder_done(DecoderUnion::None); 	},
 			_ => {}
 		}
 	}

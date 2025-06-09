@@ -20,6 +20,7 @@ use crate::bytewriter::ByteMutWriter;
 use crate::hw;
 use crate::positionindicator::PositionIndicator;
 use crate::waveform::*;
+use crate::decoder_storage::{DecoderUnion, DecoderStorage};
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -617,7 +618,7 @@ impl Gui
 	{
 		Self::top_divider();
 		Self::bottom_divider();
-		
+
 		/* Borrow flash Temporarily to get the Saved Decoder */
 		let decoder = DecoderStorage::load(&hw.user_flash);
 
