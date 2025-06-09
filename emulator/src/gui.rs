@@ -950,23 +950,31 @@ impl Gui
 		}
 	}
 
+	fn draw_config_saved(i: u32, color: u16, s: &str)
+	{
+		let x = 200;
+		let y = 200 - (i * 10);
+		lcd_str(x, y, s, color, LCD_BLACK, TITLE_FONT);
+	}
+
 	fn draw_config_saved_animation()
 	{
 		let s = "Configuration Saved";
-		for i in 0..5
+		for i in 1..4
 		{
-			let x = 200;
-			let y = 200 - (i * 10);
-			lcd_str(x, y, s, LCD_GREEN, LCD_BLACK, TITLE_FONT);
-			delay_ms(50);
-			lcd_str(x, y, s, LCD_BLACK, LCD_BLACK, TITLE_FONT);
+			Self::draw_config_saved(i, LCD_GREEN, s);
+			delay_ms(10);
+			Self::draw_config_saved(i, LCD_BLACK, s);
 		}
 	}
 
 	fn decoder_done(&mut self, decoder: DecoderUnion)
 	{
+		let s = "Saving ...";
+		Self::draw_config_saved(0, LCD_GREEN, s);
 		DecoderStorage::save(&mut self.hw.user_flash, &decoder);
 		self.cur_decoder = decoder;
+		Self::draw_config_saved(0, LCD_BLACK, s);
 
 		Self::draw_config_saved_animation();
 		self.mode_switch(Mode::Main);

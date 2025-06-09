@@ -1269,6 +1269,7 @@ impl Gui
 
 	fn run_decoder(&mut self)
 	{
+		self.sec_buf.clear();
 		let decoder: &dyn Decoder = match &self.cur_decoder
 		{
 			DecoderUnion::None => return,
@@ -1278,7 +1279,6 @@ impl Gui
 			DecoderUnion::OneWire(dcd) => dcd
 		};
 
-		self.sec_buf.clear();
 		let _ = decoder.decode(&self.buf, &mut self.sec_buf);
 	}
 
