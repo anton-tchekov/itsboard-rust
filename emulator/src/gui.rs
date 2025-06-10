@@ -507,7 +507,7 @@ const ACTIONS_SAMPLING: [Action; 8] =
 
 const ACTIONS_MAIN: [Action; 8] =
 [
-	Action::Up, Action::Down, Action::Left, Action::Right,
+	Action::None, Action::None, Action::Left, Action::Right,
 	Action::ZoomIn, Action::ZoomOut, Action::Cycle, Action::Enter
 ];
 

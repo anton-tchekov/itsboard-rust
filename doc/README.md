@@ -1,7 +1,6 @@
 # ITS-Board Logic Analyzer
 
-Dieses Dokument ist eine Dokumentation zum Rust Projekt
-ITS-Board Logic Analyzer.
+Dies ist eine Dokumentation zum ITS-Board Logic Analyzer.
 
 ## Was ist ein Logic Analyzer?
 
@@ -15,10 +14,10 @@ ITS-Board Logic Analyzer.
 
 ## Motivation
 
-Im Rust WP Praktikum ist das Projekt entstanden, einen standalone Logic Analyzer auf dem ITS-Board zu realisieren. Dies könnte bei der Bearbeitung der
+Im Rust WP Praktikum ist das Projekt entstanden, einen standalone Logic Analyzer auf dem ITS-Board zu realisieren. Das kann bei der Bearbeitung der
 4. Praktikumsaufgabe in GS hilfreich sein, um sich die Signale zwischen dem
 ITS-Board und den über das One-Wire Protokoll angesteuerten Temperatursensoren
-(`DS28B12`) visualisieren zu lassen.
+(`DS28B12`) zu visualisieren.
 
 ## Installation des Logic Analyzers auf dem ITS-Board
 
@@ -49,12 +48,12 @@ Das folgende Bild beschreibt die Funktionalitäten auf dem Hauptbildschirm.
 Die Leiste am unteren Rand des Bildschirms zeigt die aktuelle
 Funktion für jede der acht Tasten an.
 
-Die &#9654; Taste eine neue Aufnahme (Capture).
+Die Start-Taste beginnt eine neue Aufnahme (Capture).
 Die Aufnahme endet, wenn man die Stop Taste drückt, oder der interne Puffer
 voll ist, oder die maximale Aufnahmezeit von 45 Sekunden erreicht wurde.
 Die aufgenommenen Daten werden dann auf dem Bildschirm dargestellt.
 
-![Main GUI](capture.png)
+![Capture](capture.png)
 
 ### Technische Details
 
@@ -63,7 +62,12 @@ wenn viele Pinänderungen auftreten, wird der Buffer schneller voll. Zu jeder
 Änderung wird der Zustand vom Port D (1 Byte) sowie der Timestamp (Timer Tick)
 seit Capture-Start (4 Bytes) gespeichert.
 
-### Protokoll Decoder
+## Protokoll Decoder
+
+Protokoll Decoder wandeln die digitalen Signale in ein leichter
+zu lesendes Format um, also statt die Wellenform mühsam per Hand zu
+dekodieren, versteht der Logic Analyzer das Protokoll z.B. I2C oder
+One-Wire und kann so die empfangenen Daten interpretieren.
 
 Im `Select Protocol Decoder` Menü kann man den gewünschten Protokoll Decoder
 auswählen.
