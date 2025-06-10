@@ -273,7 +273,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 				SectionContent::Err(v) => write!(buf, " {}", v).unwrap(),
 				SectionContent::ParityBit(v) => write!(buf, " {}", if v { 1 } else { 0 }).unwrap(),
-				SectionContent::Word(v) => write!(buf, " {:04X}", v).unwrap(),
+				SectionContent::Word(v) => write!(buf, " {:02X}", v).unwrap(),
 			};
 
 			let font = &TERMINUS16_BOLD;

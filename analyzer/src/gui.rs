@@ -1036,10 +1036,10 @@ impl Gui
 		{
 			rx_pin: item_to_pin(self.sels[0].into()),
 			tx_pin: item_to_pin(self.sels[1].into()),
-			databits: item_to_databits(self.sels[2].into()),
-			parity: item_to_parity(self.sels[3].into()),
-			stopbits: item_to_stopbits(self.sels[4].into()),
-			baudrate: item_to_baudrate(self.sels[5].into())
+			databits: item_to_databits(self.sels[3].into()),
+			parity: item_to_parity(self.sels[4].into()),
+			stopbits: item_to_stopbits(self.sels[5].into()),
+			baudrate: item_to_baudrate(self.sels[2].into())
 		};
 
 		if !d.is_valid() { Self::invalid_input(); return; }

@@ -1,5 +1,6 @@
 use crate::hw::*;
 use crate::sample::*;
+use crate::decoder::TIMER_CLOCK_RATE;
 
 fn sample() -> Sample
 {
