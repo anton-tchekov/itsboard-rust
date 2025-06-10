@@ -194,15 +194,15 @@ pub struct DecoderFrameBuffer<const LEN: usize>
 	lines: [DecoderLine<LEN>; 2]
 }
 
-fn format_byte(buf: &mut ByteMutWriter, byte: u8)
+fn format_byte(buf: &mut ByteMutWriter, byte: u32)
 {
 	if byte >= 32 && byte <= 126
 	{
-		write!(buf, " 0x{:02X} '{}'", byte, byte as char).unwrap();
+		write!(buf, " ${:02X} {}", byte, (byte as u8) as char).unwrap();
 	}
 	else
 	{
-		write!(buf, " 0x{:02X}", byte).unwrap();
+		write!(buf, " ${:02X}", byte).unwrap();
 	}
 }
 
@@ -262,10 +262,10 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 					bg = 3;
 					line = &mut self.lines[1];
 
-					format_byte(&mut buf, v);
+					format_byte(&mut buf, v.into());
 				},
-				SectionContent::RxByte(v) => { format_byte(&mut buf, v) },
-				SectionContent::Byte(v) => { format_byte(&mut buf, v) },
+				SectionContent::RxByte(v) => { format_byte(&mut buf, v.into()) },
+				SectionContent::Byte(v) => { format_byte(&mut buf, v.into()) },
 				SectionContent::Empty     => write!(buf, " Empty").unwrap(),
 				SectionContent::Bit(v)    => write!(buf, " {}", v).unwrap(),
 				SectionContent::StartBit  => write!(buf, " Start").unwrap(),
@@ -273,7 +273,7 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
 				SectionContent::Err(v) => write!(buf, " {}", v).unwrap(),
 				SectionContent::ParityBit(v) => write!(buf, " {}", if v { 1 } else { 0 }).unwrap(),
-				SectionContent::Word(v) => write!(buf, " {:02X}", v).unwrap(),
+				SectionContent::Word(v) => format_byte(&mut buf, v),
 			};
 
 			let font = &TERMINUS16_BOLD;
