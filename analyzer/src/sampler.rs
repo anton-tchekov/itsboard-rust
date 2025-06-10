@@ -22,6 +22,12 @@ pub fn sample_blocking(buf: &mut SampleBuffer)
 
 		let port = sample();
 		let ts = timer_get();
+
+		if ts > 45 * TIMER_CLOCK_RATE
+		{
+			break;
+		}
+
 		if port != prev
 		{
 			prev = port;

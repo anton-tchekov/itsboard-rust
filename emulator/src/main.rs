@@ -20,6 +20,7 @@ mod delay;
 mod hw;
 mod userflash;
 mod decoder_storage;
+mod test_utils;
 
 use crate::hw::HW;
 use crate::graphics::*;
@@ -28,6 +29,7 @@ use sdl2::keyboard::Keycode;
 use gui::*;
 use std::sync::mpsc;
 use std::thread;
+use crate::test_utils::load_sample_buffer;
 
 enum EventMessage
 {
@@ -39,6 +41,9 @@ fn main() -> Result<(), String> {
 	let mut hw = HW::new();
 	let mut gui = Gui::init(hw);
 	let (tx, rx) = mpsc::channel();
+
+	let samplebuf = load_sample_buffer("UART/UART_8N1_300_Hallo.csv");
+	gui.buf = samplebuf;
 
 	thread::spawn(move || {
 		loop

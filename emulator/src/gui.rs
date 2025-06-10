@@ -585,7 +585,7 @@ pub struct Gui
 	inputs: &'static [&'static Input],
 	term_rows: u32,
 	term_lens: [u8; 16],
-	buf: SampleBuffer,
+	pub buf: SampleBuffer,
 	sec_buf: SectionBuffer,
 	cur_decoder: DecoderUnion,
 	decoder_framebuf: DecoderFrameBuffer<WAVEFORM_W_USIZE>,
@@ -998,6 +998,7 @@ impl Gui
 		Self::draw_config_saved(0, LCD_BLACK, s);
 
 		Self::draw_config_saved_animation();
+		self.run_decoder();
 		self.mode_switch(Mode::Main);
 	}
 
