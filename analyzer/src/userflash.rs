@@ -18,7 +18,7 @@ impl UserFlash
 		/* unwrap cant fail aslong as the constants are correct */
 		let sector = locked_flash.sector(FLASH_USER_SPACE_START - FLASH_START).unwrap();
 
-		UserFlash { locked_flash, sector}
+		UserFlash { locked_flash, sector }
 	}
 
 	pub fn erase(&mut self)

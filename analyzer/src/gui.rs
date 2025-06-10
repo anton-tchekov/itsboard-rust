@@ -636,7 +636,7 @@ impl Gui
 		Self::bottom_divider();
 
 		/* Borrow flash Temporarily to get the Saved Decoder */
-		let decoder = DecoderStorage::load(&hw.user_flash);
+		let (decoder, sels) = DecoderStorage::load(&hw.user_flash);
 
 		let mut gui = Gui
 		{
@@ -646,7 +646,7 @@ impl Gui
 			ma_selected: 0,
 			da_selected: 0,
 			cd_selected: 0,
-			sels: [0; 8],
+			sels: sels,
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
@@ -944,11 +944,16 @@ impl Gui
 	fn cd_render(&mut self, inputs: &'static [&Input])
 	{
 		self.cd_selected = 0;
+		let same_inputs = core::ptr::addr_eq(self.inputs as *const _, inputs as *const _);
 		self.inputs = inputs;
 		self.actions_set(&ACTIONS_CD);
 		for (y, input) in inputs.iter().enumerate()
 		{
-			self.sels[y] = input.default_val;
+			if !same_inputs || matches!(self.cur_decoder, DecoderUnion::None)
+			{
+				self.sels[y] = input.default_val;
+			}
+
 			self.input_render(input, y as u32);
 		}
 	}
@@ -988,7 +993,7 @@ impl Gui
 	{
 		let s = "Saving ...";
 		Self::draw_config_saved(0, LCD_GREEN, s);
-		DecoderStorage::save(&mut self.hw.user_flash, &decoder);
+		DecoderStorage::save(&mut self.hw.user_flash, &decoder, &self.sels);
 		self.cur_decoder = decoder;
 		Self::draw_config_saved(0, LCD_BLACK, s);
 

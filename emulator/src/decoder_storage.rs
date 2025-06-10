@@ -19,12 +19,12 @@ const FLASH_OFFSET: usize = 0;
 
 impl DecoderStorage
 {
-	pub fn load(flash: &UserFlash) -> DecoderUnion
+	pub fn load(flash: &UserFlash) -> (DecoderUnion, [u8; 8])
 	{
-		DecoderUnion::None
+		(DecoderUnion::None, [0; 8])
 	}
 
-	pub fn save(flash: &mut UserFlash, decoder: &DecoderUnion)
+	pub fn save(flash: &mut UserFlash, decoder: &DecoderUnion, a: &[u8])
 	{
 	}
 }

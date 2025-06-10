@@ -43,11 +43,16 @@ fn main() -> Result<(), String> {
 	thread::spawn(move || {
 		loop
 		{
-			let received = rx.recv().unwrap();
+			let received = rx.recv();
+
 			match received
 			{
-				EventMessage::EventKey(key) => gui.key(key),
-				EventMessage::EventAction(action) => gui.action(action),
+				Ok(r) => match r
+				{
+					EventMessage::EventKey(key) => gui.key(key),
+					EventMessage::EventAction(action) => gui.action(action),
+				}
+				Err(_) => { return; }
 			}
 		}
 	});
