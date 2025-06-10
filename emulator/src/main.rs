@@ -26,10 +26,31 @@ use crate::graphics::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use gui::*;
+use std::sync::mpsc;
+use std::thread;
+
+enum EventMessage
+{
+	EventKey(i32),
+	EventAction(Action)
+}
 
 fn main() -> Result<(), String> {
 	let mut hw = HW::new();
 	let mut gui = Gui::init(hw);
+	let (tx, rx) = mpsc::channel();
+
+	thread::spawn(move || {
+		loop
+		{
+			let received = rx.recv().unwrap();
+			match received
+			{
+				EventMessage::EventKey(key) => gui.key(key),
+				EventMessage::EventAction(action) => gui.action(action),
+			}
+		}
+	});
 
 	let mut gfx = Graphics::init()?;
 	'running: loop {
@@ -39,49 +60,49 @@ fn main() -> Result<(), String> {
 					break 'running;
 				},
 				Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-					gui.action(Action::Escape);
+					tx.send(EventMessage::EventAction(Action::Escape)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
-					gui.action(Action::Left);
+					tx.send(EventMessage::EventAction(Action::Left)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
-					gui.action(Action::Up);
+					tx.send(EventMessage::EventAction(Action::Up)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Space) | Some(Keycode::Return), .. } => {
-					gui.action(Action::Enter);
+					tx.send(EventMessage::EventAction(Action::Enter)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
-					gui.action(Action::Down);
+					tx.send(EventMessage::EventAction(Action::Down)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
-					gui.action(Action::Right);
+					tx.send(EventMessage::EventAction(Action::Right)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Tab), .. } => {
-					gui.action(Action::Cycle);
+					tx.send(EventMessage::EventAction(Action::Cycle)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num1), .. } => {
-					gui.key(7);
+					tx.send(EventMessage::EventKey(7)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num2), .. } => {
-					gui.key(6);
+					tx.send(EventMessage::EventKey(6)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num3), .. } => {
-					gui.key(5);
+					tx.send(EventMessage::EventKey(5)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num4), .. } => {
-					gui.key(4);
+					tx.send(EventMessage::EventKey(4)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num5), .. } => {
-					gui.key(3);
+					tx.send(EventMessage::EventKey(3)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num6), .. } => {
-					gui.key(2);
+					tx.send(EventMessage::EventKey(2)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num7), .. } => {
-					gui.key(1);
+					tx.send(EventMessage::EventKey(1)).unwrap();
 				},
 				Event::KeyDown { keycode: Some(Keycode::Num8), .. } => {
-					gui.key(0);
+					tx.send(EventMessage::EventKey(0)).unwrap();
 				},
 				_ => {}
 			}

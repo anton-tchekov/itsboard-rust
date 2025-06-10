@@ -197,6 +197,11 @@ impl Decoder for DecoderUart {
 		Ok(())
 	}
 
+	fn is_valid(&self) -> bool
+	{
+		self.tx_pin != self.rx_pin
+	}
+
 	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)> {
 		match idx
 		{

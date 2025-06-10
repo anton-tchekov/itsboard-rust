@@ -15,6 +15,11 @@ impl Decoder for DecoderOneWire
 		// TODO
 	}
 
+	fn is_valid(&self) -> bool
+	{
+		true
+	}
+
 	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)>
 	{
 		match idx

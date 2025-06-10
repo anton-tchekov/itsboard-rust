@@ -172,12 +172,13 @@ pub struct Select
 pub struct Input
 {
 	select: &'static Select,
-	label: &'static str
+	label: &'static str,
+	default_val: u8
 }
 
-const SELECT_PIN_LIST: [&str; 9] =
+const SELECT_PIN_LIST: [&str; 8] =
 [
-	"/", "0", "1", "2", "3", "4", "5", "6", "7"
+	"0", "1", "2", "3", "4", "5", "6", "7"
 ];
 
 const SELECT_PARITY_LIST: [&str; 3] =
@@ -259,37 +260,43 @@ const SELECT_STOP_BITS: Select = Select
 const UART_RX: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "RX Pin"
+	label: "RX Pin",
+	default_val: 0
 };
 
 const UART_TX: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "TX Pin"
+	label: "TX Pin",
+	default_val: 1
 };
 
 const UART_BAUDRATE: Input = Input
 {
 	select: &SELECT_BAUDRATE,
-	label: "Baudrate"
+	label: "Baudrate",
+	default_val: 0
 };
 
 const UART_DATABITS: Input = Input
 {
 	select: &SELECT_DATA_BITS,
-	label: "Data Bits"
+	label: "Data Bits",
+	default_val: 0
 };
 
 const UART_PARITY: Input = Input
 {
 	select: &SELECT_PARITY,
-	label: "Parity"
+	label: "Parity",
+	default_val: 0
 };
 
 const UART_STOPBITS: Input = Input
 {
 	select: &SELECT_STOP_BITS,
-	label: "Stop Bits"
+	label: "Stop Bits",
+	default_val: 0
 };
 
 const UART_INPUTS: [&Input; 6] =
@@ -303,28 +310,32 @@ const UART_INPUTS: [&Input; 6] =
 ];
 
 /* SPI */
-const SPI_MISO: Input = Input
-{
-	select: &SELECT_PIN,
-	label: "MISO Pin"
-};
-
 const SPI_MOSI: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "MOSI Pin"
+	label: "MOSI Pin",
+	default_val: 0
+};
+
+const SPI_MISO: Input = Input
+{
+	select: &SELECT_PIN,
+	label: "MISO Pin",
+	default_val: 1
 };
 
 const SPI_SCK: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "SCK Pin"
+	label: "SCK Pin",
+	default_val: 2
 };
 
 const SPI_CS: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "CS Pin"
+	label: "CS Pin",
+	default_val: 3
 };
 
 const SELECT_MODE: Select = Select
@@ -336,7 +347,8 @@ const SELECT_MODE: Select = Select
 const SPI_MODE: Input = Input
 {
 	select: &SELECT_MODE,
-	label: "Mode"
+	label: "Mode",
+	default_val: 0
 };
 
 const SELECT_BITORDER: Select = Select
@@ -348,7 +360,8 @@ const SELECT_BITORDER: Select = Select
 const SPI_BITORDER: Input = Input
 {
 	select: &SELECT_BITORDER,
-	label: "Bit Order"
+	label: "Bit Order",
+	default_val: 0
 };
 
 const SPI_INPUTS: [&Input; 6] =
@@ -365,13 +378,15 @@ const SPI_INPUTS: [&Input; 6] =
 const I2C_SDA: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "SDA Pin"
+	label: "SDA Pin",
+	default_val: 0
 };
 
 const I2C_SCL: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "SCL Pin"
+	label: "SCL Pin",
+	default_val: 1
 };
 
 const I2C_INPUTS: [&Input; 2] =
@@ -384,7 +399,8 @@ const I2C_INPUTS: [&Input; 2] =
 const ONEWIRE_PIN: Input = Input
 {
 	select: &SELECT_PIN,
-	label: "OneWire Pin"
+	label: "OneWire Pin",
+	default_val: 0
 };
 
 const ONEWIRE_INPUTS: [&Input; 1] =
@@ -400,7 +416,7 @@ fn item_to_baudrate(idx: usize) -> u32
 
 fn item_to_pin(idx: usize) -> DecoderPin
 {
-	(idx as i32) - 1
+	idx as DecoderPin
 }
 
 fn item_to_bitorder(idx: usize) -> BitOrder
@@ -932,7 +948,7 @@ impl Gui
 		self.actions_set(&ACTIONS_CD);
 		for (y, input) in inputs.iter().enumerate()
 		{
-			self.sels[y] = 0;
+			self.sels[y] = input.default_val;
 			self.input_render(input, y as u32);
 		}
 	}
@@ -980,6 +996,18 @@ impl Gui
 		self.mode_switch(Mode::Main);
 	}
 
+	fn invalid_input()
+	{
+		let s = "Invalid Input";
+		for i in 0..3
+		{
+			Self::draw_config_saved(0, LCD_RED, s);
+			delay_ms(200);
+			Self::draw_config_saved(0, LCD_BLACK, s);
+			delay_ms(200);
+		}
+	}
+
 	/* === UART (U) MODE === */
 	fn u_open(&mut self)
 	{
@@ -998,7 +1026,7 @@ impl Gui
 
 	fn u_save(&mut self)
 	{
-		let x = DecoderUnion::Uart(DecoderUart
+		let d = DecoderUart
 		{
 			rx_pin: item_to_pin(self.sels[0].into()),
 			tx_pin: item_to_pin(self.sels[1].into()),
@@ -1006,8 +1034,10 @@ impl Gui
 			parity: item_to_parity(self.sels[3].into()),
 			stopbits: item_to_stopbits(self.sels[4].into()),
 			baudrate: item_to_baudrate(self.sels[5].into())
-		});
+		};
 
+		if !d.is_valid() { Self::invalid_input(); return; }
+		let x = DecoderUnion::Uart(d);
 		self.decoder_done(x);
 	}
 
@@ -1029,7 +1059,7 @@ impl Gui
 
 	fn s_save(&mut self)
 	{
-		let x = DecoderUnion::SPI(DecoderSPI
+		let d = DecoderSPI
 		{
 			miso_pin: item_to_pin(self.sels[0].into()),
 			mosi_pin: item_to_pin(self.sels[1].into()),
@@ -1037,8 +1067,10 @@ impl Gui
 			cs_pin: item_to_pin(self.sels[3].into()),
 			mode: item_to_spimode(self.sels[4].into()),
 			bitorder: item_to_bitorder(self.sels[5].into()),
-		});
+		};
 
+		if !d.is_valid() { Self::invalid_input(); return; }
+		let x = DecoderUnion::SPI(d);
 		self.decoder_done(x);
 	}
 
@@ -1060,12 +1092,14 @@ impl Gui
 
 	fn i_save(&mut self)
 	{
-		let x = DecoderUnion::I2C(DecoderI2C
+		let d = DecoderI2C
 		{
 			sda_pin: item_to_pin(self.sels[0].into()),
 			scl_pin: item_to_pin(self.sels[1].into())
-		});
+		};
 
+		if !d.is_valid() { Self::invalid_input(); return; }
+		let x = DecoderUnion::I2C(d);
 		self.decoder_done(x);
 	}
 
@@ -1087,11 +1121,13 @@ impl Gui
 
 	fn o_save(&mut self)
 	{
-		let x = DecoderUnion::OneWire(DecoderOneWire
+		let d = DecoderOneWire
 		{
 			onewire_pin: item_to_pin(self.sels[0].into())
-		});
+		};
 
+		if !d.is_valid() { Self::invalid_input(); return; }
+		let x = DecoderUnion::OneWire(d);
 		self.decoder_done(x);
 	}
 
@@ -1139,12 +1175,8 @@ impl Gui
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
-			if pin_num != -1
-			{
-				let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
-				lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
-			}
-
+			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
+			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
 			i += 1;
 		}
 	}
