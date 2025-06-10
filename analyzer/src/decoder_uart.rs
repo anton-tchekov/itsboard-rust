@@ -40,7 +40,7 @@ impl IdleState {
 	pub fn process(&self, bits: &mut BitwiseIterator, data: &mut Option<Section>) -> Option<DecoderUartState> {
 		if bits.peek()?.high {
 			let bit = bits.next_pulse()?;
-			*data = Some(Section::from_bit(&bit, SectionContent::Empty));
+			*data = None; //Some(Section::from_bit(&bit, SectionContent::Empty));
 		}
 
 		Some(DecoderUartState::Start(StartState))
@@ -168,6 +168,7 @@ pub struct DecoderUart {
 impl Decoder for DecoderUart {
 
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
+
 		let bit_time = TIMER_CLOCK_RATE as f32 / self.baudrate as f32;
 		let mut bits = samples.bitwise_iter(self.rx_pin as u32, bit_time);
 
@@ -184,7 +185,7 @@ impl Decoder for DecoderUart {
 			};
 
 			if let Some(result_section) = section {
-				output.push(result_section)?;
+				output.push(result_section);
 				section = None;
 			}
 
@@ -195,6 +196,11 @@ impl Decoder for DecoderUart {
 		}
 
 		Ok(())
+	}
+
+	fn is_valid(&self) -> bool
+	{
+		self.tx_pin != self.rx_pin
 	}
 
 	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)> {

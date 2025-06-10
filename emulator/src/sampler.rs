@@ -1,4 +1,5 @@
 use crate::sample::*;
+use crate::delay::delay_ms;
 
 pub fn sample_blocking(buf: &mut SampleBuffer) {
 	buf.clear();
@@ -6,4 +7,5 @@ pub fn sample_blocking(buf: &mut SampleBuffer) {
 	buf.push(1, 30_000_000);
 	buf.push(0, 60_000_000);
 	buf.push(0, 90_000_000);
+	delay_ms(3000);
 }

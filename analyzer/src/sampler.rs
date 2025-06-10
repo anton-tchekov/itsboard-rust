@@ -1,5 +1,6 @@
 use crate::hw::*;
 use crate::sample::*;
+use crate::decoder::TIMER_CLOCK_RATE;
 
 fn sample() -> Sample
 {
@@ -22,10 +23,16 @@ pub fn sample_blocking(buf: &mut SampleBuffer)
 
 		let port = sample();
 		let ts = timer_get();
+
+		if ts > 45 * TIMER_CLOCK_RATE
+		{
+			break;
+		}
+
 		if port != prev
 		{
 			prev = port;
-			if buf.len >= buf.samples.len()
+			if buf.len >= buf.samples.len() - 1
 			{
 				break;
 			}

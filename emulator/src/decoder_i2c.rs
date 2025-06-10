@@ -1,6 +1,7 @@
 use crate::decoder::*;
 use crate::sample::*;
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DecoderI2C
 {
 	pub sda_pin: DecoderPin,
@@ -13,6 +14,11 @@ impl Decoder for DecoderI2C
 	{
 		Ok(())
 		// TODO
+	}
+
+	fn is_valid(&self) -> bool
+	{
+		self.sda_pin != self.scl_pin
 	}
 
 	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)>

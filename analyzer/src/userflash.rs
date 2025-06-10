@@ -1,12 +1,9 @@
-use stm32f4xx_hal::{flash::{FlashExt, FlashSector, LockedFlash}, pac::{Peripherals, FLASH}};
-
-use crate::decoder::DecoderUnion;
+use stm32f4xx_hal::{flash::{FlashExt, FlashSector, LockedFlash}};
 
 /* We use the last Sector as our User space for flash */
 /* Since theres 2 Banks, we use the Address of Bank 2s last Sector */
-const FLASH_START				: usize = 0x08000000;
-const FLASH_USER_SPACE_START	: usize = 0x081E0000;
-const FLASH_USER_SPACE_END		: usize = 0x081FFFFF;
+const FLASH_START             : usize = 0x08000000;
+const FLASH_USER_SPACE_START  : usize = 0x081E0000;
 
 pub struct UserFlash
 {
@@ -21,7 +18,7 @@ impl UserFlash
 		/* unwrap cant fail aslong as the constants are correct */
 		let sector = locked_flash.sector(FLASH_USER_SPACE_START - FLASH_START).unwrap();
 
-		UserFlash { locked_flash, sector}
+		UserFlash { locked_flash, sector }
 	}
 
 	pub fn erase(&mut self)
@@ -32,7 +29,7 @@ impl UserFlash
 
 	pub fn write<'a, I>(&mut self, idx: usize, bytes: I)
 	where
-	I: Iterator<Item = &'a u8>, 
+	I: Iterator<Item = &'a u8>,
 	{
 		let mut unlocked_flash = self.locked_flash.unlocked();
 		unlocked_flash.program(self.sector.offset, bytes);

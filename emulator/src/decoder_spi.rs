@@ -1,13 +1,15 @@
 use crate::decoder::*;
 use crate::sample::*;
 
-#[derive(PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum BitOrder
 {
 	MsbFirst,
 	LsbFirst
 }
 
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DecoderSPI
 {
 	pub mosi_pin: DecoderPin,
@@ -18,16 +20,9 @@ pub struct DecoderSPI
 	pub bitorder: BitOrder
 }
 
-fn extract(pins: Sample, pin: i32) -> u8
+fn extract(pins: Sample, pin: DecoderPin) -> u8
 {
-	if pin >= 0
-	{
-		(pins >> pin) & 1
-	}
-	else
-	{
-		0
-	}
+	(pins >> pin) & 1
 }
 
 impl Decoder for DecoderSPI
@@ -82,6 +77,19 @@ impl Decoder for DecoderSPI
 		}
 
 		Ok(())
+	}
+
+	fn is_valid(&self) -> bool
+	{
+		let arr: [DecoderPin; 4] =
+		[
+			self.mosi_pin,
+			self.miso_pin,
+			self.sck_pin,
+			self.cs_pin
+		];
+
+		!pin_duplicates(&arr)
 	}
 
 	fn get_pin(&self, idx: usize) -> Option<(&'static str, DecoderPin)>

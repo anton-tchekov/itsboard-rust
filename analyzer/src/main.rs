@@ -19,6 +19,7 @@ mod decoder_uart;
 mod tinyfont;
 mod positionindicator;
 mod decoder_framebuffer;
+mod decoder_storage;
 mod waveform;
 mod userflash;
 
