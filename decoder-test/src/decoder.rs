@@ -4,6 +4,46 @@ pub type DecoderPin = i32;
 
 pub const SECBUF_SIZE: usize = 100;
 pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
+pub const TIMER_TICKS_PER_US: u32 = TIMER_CLOCK_RATE / 1_000_000;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ROMCommand {
+	ReadROM,
+	SkipROM,
+	MatchROM,
+	SearchROM,
+	OverdriveSkipROM,
+	OverdriveMatchROM
+}
+
+impl TryFrom<u8> for ROMCommand {
+	type Error = &'static str;
+
+	fn try_from(value: u8) -> Result<Self, Self::Error> {
+		match value {
+			0x33 => Ok(ROMCommand::ReadROM),
+			0xCC => Ok(ROMCommand::SkipROM),
+			0x55 => Ok(ROMCommand::MatchROM),
+			0xF0 => Ok(ROMCommand::SearchROM),
+			0x3C => Ok(ROMCommand::OverdriveSkipROM),
+			0x69 => Ok(ROMCommand::OverdriveMatchROM),
+			_ => Err("Invalid ROM command"),
+		}
+	}
+}
+
+impl ROMCommand {
+	fn to_string(&self) -> &'static str {
+		match self {
+			ROMCommand::ReadROM => "Read ROM",
+			ROMCommand::SkipROM => "Skip ROM",
+			ROMCommand::MatchROM => "Match ROM",
+			ROMCommand::SearchROM => "Search ROM",
+			ROMCommand::OverdriveSkipROM => "Overdrive Skip ROM",
+			ROMCommand::OverdriveMatchROM => "Overdrive Match ROM",
+		}
+	}
+}
 
 // GUI is responsible for choosing representation, colors, etc.
 // FIXME: Debug and PartialEq only needed for testing
@@ -20,6 +60,16 @@ pub enum SectionContent {
 	StartBit,
 	StopBit,
 	I2cAddress(u8),
+	Reset,
+	CRC(u8),
+	DeviceResponse,
+	Data(u64),
+	NoDeviceResponse,
+	ResetRecovery,
+	FunctionCmd(u8),
+	FamilyCode(u8),
+	SensorID(u64),
+	ROMCmd(ROMCommand),
 	Err(&'static str)
 }
 
@@ -38,8 +88,8 @@ pub struct Section {
 impl Section {
 	pub fn from_bit(bit: &BitData, content: SectionContent) -> Self {
 		Section {
-			start: bit.start_time,
-			end: bit.end_time,
+			start: bit.start,
+			end: bit.end,
 			content
 		}
 	}
@@ -82,7 +132,7 @@ impl<'a> Iterator for SectionBufferIter<'a> {
 			return None;
 		}
 
-		let item = &self.buffer.sections[self.index];
+		let item: &Section = &self.buffer.sections[self.index];
 		self.index += 1;
 
 		Some(item)

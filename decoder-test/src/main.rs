@@ -1,5 +1,6 @@
 mod decoder;
 mod decoder_uart;
+mod decoder_onewire;
 mod sample;
 mod test_utils;
 

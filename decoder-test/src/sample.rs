@@ -89,19 +89,53 @@ impl SampleBuffer {
 	}
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct BitData {
 	pub high: bool,
-	pub end_time: u32,
-	pub start_time: u32,
+	pub end: u32,
+	pub start: u32,
 }
 
-#[derive(Default)]
-struct Pulse {
-	value: bool,
-	start: u32,
-	end: u32,
-	bit_time: u32,
+impl BitData {
+	pub fn duration(&self) -> u32 {
+		self.end - self.start
+	}
+}
+
+type Pulse = BitData;
+
+pub struct PulsewiseIterator<'a> {
+	buffer: &'a SampleBuffer,
+	idx: usize,
+	// TODO: ask why channel is u32 and not u16
+	ch: u32,
+}
+
+impl<'a> PulsewiseIterator<'a> {
+	pub fn new(buffer: &SampleBuffer, ch: u32) -> PulsewiseIterator<'_> {
+		PulsewiseIterator {
+			buffer,
+			ch,
+			idx: 0,
+		}
+	}
+}
+
+impl<'a> Iterator for PulsewiseIterator<'a> {
+	type Item = Pulse;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let (high, start_time) = self.buffer.get(self.idx, self.ch)?;
+		let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
+		let end_time = self.buffer.timestamps[end_idx];
+		self.idx = end_idx;
+
+		Some(Pulse {
+			high,
+			start: start_time,
+			end: end_time
+		})
+	}
 }
 
 // TODO: could prove useful for other protocols, maybe make tests for it
@@ -113,6 +147,7 @@ pub struct BitwiseIterator<'a> {
 	ch: u32,
 	expected_bit_time: f32,
 	current_pulse: Pulse,
+	bit_time: u32,
 }
 
 impl<'a> BitwiseIterator<'a> {

@@ -33,6 +33,8 @@ enum DecoderUartState {
 	Stop(StopState)
 }
 
+// TODO: Move process method maybe cyclic section buffer
+
 #[derive(Copy, Clone)]
 struct IdleState;
 
