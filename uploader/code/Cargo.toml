@@ -1,0 +1,7 @@
+[package]
+name = "uploader"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.31.1" # Gives us egui, epi and web+native backends
