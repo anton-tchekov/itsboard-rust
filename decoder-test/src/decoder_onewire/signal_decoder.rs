@@ -130,17 +130,6 @@ impl Default for ReadBitsResult {
 	}
 }
 
-// For compile-time check, that N is in range 1..=64
-pub struct BitsAmount<const N: u8>;
-
-impl<const N: u8> BitsAmount<N> {
-    pub const VALUE: u8 = N;
-}
-
-impl<const N: u8> BitsAmount<N> {
-	const ASSERT: () = assert!(N >= 1 && N <= 64, "BitsAmount must be in range 1..=64");
-}
-
 struct SignalDecoder<'a> {
 	output: &'a mut SectionBuffer,
 	signal: PulsewiseIterator<'a>,

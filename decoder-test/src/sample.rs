@@ -168,6 +168,14 @@ pub struct BitwiseIterator<'a> {
 }
 
 impl<'a> BitwiseIterator<'a> {
+	pub fn from(buffer: PulsewiseIterator<'a>, expected_bit_time: f32) -> Self {
+		BitwiseIterator {
+			buffer,
+			expected_bit_time,
+			current_pulse: Pulse::default(),
+			bit_time: 0,
+		}
+	}
 
 	pub fn peek(&mut self) -> Option<BitSignal> {
 		if self.current_pulse.start == self.current_pulse.end {
