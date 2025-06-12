@@ -16,27 +16,6 @@ impl SampleBuffer {
 		self.len = 0;
 	}
 
-	pub fn bitwise_iter(&self, ch: u32, bit_time: f32) -> BitwiseIterator<'_> {
-		BitwiseIterator::new(self, bit_time, ch)
-	}
-
-	pub fn pulse_end(&self, mut idx: usize, ch: u32) -> Option<usize> {
-		let (initial_bit, _) = self.get(idx, ch)?;
-		idx += 1;
-
-		let (mut current_bit, _) = self.get(idx, ch)?;
-
-		while current_bit == initial_bit {
-			idx += 1;
-			match self.get(idx, ch) {
-				Some((next_bit, _)) => current_bit = next_bit,
-				None => return Some(idx - 1),
-			}
-		}
-
-		Some(idx)
-	}
-
 	pub fn push(&mut self, port: Sample, ts: u32) {
 		self.samples[self.len] = port;
 		self.timestamps[self.len] = ts;
@@ -89,34 +68,72 @@ impl SampleBuffer {
 	}
 }
 
+struct Edge {
+	rising: bool,
+	at: u32,
+}
+
+pub struct EdgeWiseIterator<'a> {
+	buffer: &'a SampleBuffer,
+	idx: usize,
+	ch: u32,
+}
+
+impl<'a> EdgeWiseIterator<'a> {
+	pub fn new(buffer: &SampleBuffer, ch: u32) -> EdgeWiseIterator<'_> {
+		EdgeWiseIterator {
+			buffer,
+			ch,
+			idx: 0,
+		}
+	}
+}
+
+impl<'a> Iterator for EdgeWiseIterator<'a> {
+	type Item = Edge;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.idx >= self.buffer.len {
+			return None;
+		}
+
+		let (value, timestamp) = self.buffer.get(self.idx, self.ch)?;
+		self.idx += 1;
+
+		// Skip all samples with the same value
+		while self.idx < self.buffer.len && self.buffer.get(self.idx, self.ch)?.0 == value {
+			self.idx += 1;
+		}
+
+		Some(Edge { rising: value, at: timestamp })
+	}
+}
+
 #[derive(Default, Clone, Copy)]
-pub struct BitData {
+pub struct BitSignal {
 	pub high: bool,
 	pub end: u32,
 	pub start: u32,
 }
 
-impl BitData {
+impl BitSignal {
 	pub fn duration(&self) -> u32 {
 		self.end - self.start
 	}
 }
 
-type Pulse = BitData;
+type Pulse = BitSignal;
 
 pub struct PulsewiseIterator<'a> {
-	buffer: &'a SampleBuffer,
-	idx: usize,
-	// TODO: ask why channel is u32 and not u16
-	ch: u32,
+	buffer: EdgeWiseIterator<'a>,
+	prev: Option<Edge>,
 }
 
-impl<'a> PulsewiseIterator<'a> {
-	pub fn new(buffer: &SampleBuffer, ch: u32) -> PulsewiseIterator<'_> {
+impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a> {
+	fn from(mut iter: EdgeWiseIterator<'a>) -> Self {
 		PulsewiseIterator {
-			buffer,
-			ch,
-			idx: 0,
+			prev: iter.next(),
+			buffer: iter,
 		}
 	}
 }
@@ -125,20 +142,21 @@ impl<'a> Iterator for PulsewiseIterator<'a> {
 	type Item = Pulse;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		let (high, start_time) = self.buffer.get(self.idx, self.ch)?;
-		let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
-		let end_time = self.buffer.timestamps[end_idx];
-		self.idx = end_idx;
+		let prev_edge = self.prev.take()?;
+		let next_edge = self.buffer.next()?;
 
-		Some(Pulse {
-			high,
-			start: start_time,
-			end: end_time
-		})
+		let result = Pulse {
+			high: prev_edge.rising,
+			start: prev_edge.at,
+			end: next_edge.at,
+		};
+
+		self.prev = Some(next_edge);
+		Some(result)
 	}
 }
 
-// TODO: could prove useful for other protocols, maybe make tests for it
+// TODO: will be replaced in the future
 // will probably be changed and moved in the future
 pub struct BitwiseIterator<'a> {
 	buffer: &'a SampleBuffer,
@@ -185,8 +203,8 @@ impl<'a> BitwiseIterator<'a> {
 
 		Some(BitData {
 			high: self.current_pulse.value,
-			start_time: start,
-			end_time: self.current_pulse.end,
+			start: start,
+			end: self.current_pulse.end,
 		})
 	}
 

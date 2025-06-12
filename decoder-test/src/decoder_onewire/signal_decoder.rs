@@ -1,4 +1,6 @@
 
+use std::env::temp_dir;
+
 use crate::decoder::{Section, SectionContent, SectionBuffer};
 use crate::sample::{PulsewiseIterator};
 use crate::decoder_onewire::onewire_error::OneWireError;
@@ -102,12 +104,19 @@ impl<'a> Iterator for OneWireBit<'a> {
 	}
 }
 
+#[derive(Clone, Copy)]
+struct ErrorBit {
+    error: OneWireError,
+    start: u32,
+    end: u32,
+}
+
+#[derive(Clone, Copy)]
 struct ReadBitsResult {
 	value: u64,
 	bits_read: u8,
 	start: u32,
 	end: u32,
-	result: Result<(), OneWireError>,
 }
 
 impl Default for ReadBitsResult {
@@ -117,7 +126,6 @@ impl Default for ReadBitsResult {
 			bits_read: 0,
 			start: 0,
 			end: 0,
-			result: Ok(()),
 		}
 	}
 }
@@ -141,23 +149,21 @@ struct SignalDecoder<'a> {
 impl<'a> SignalDecoder<'a> {
 
 	fn read_bits<'b, const N: u8>(
-		&'b mut self,
-		timing: &'b Timings<u32>,
-	) -> Option<ReadBitsResult>
+		&mut self,
+		timing: &Timings<u32>,
+	) -> Option<(ReadBitsResult, Result<(), ErrorBit>)>
 	where
     	BitsAmount<N>: Sized,
-        'b: 'a,
 	{
 		let mut result = ReadBitsResult::default();
-		let mut bit_iter = OneWireBit::new(&mut self.signal, timing);
-        let mut bit_iterp = bit_iter.peekable();
+		let mut bit_iter = OneWireBit::new(&mut self.signal, timing).peekable();
 		
-		result.end = bit_iterp.peek()?.end;
+		result.end = bit_iter.peek()?.end;
 
 		for i in 0..N {
 			let bit_result = match bit_iter.next() {
 				Some(b) => b,
-				None => { return Some(result); }
+				None => { return Some((result, Ok(()))); }
 			};
 
 			self.output.push(bit_result.to_section()).ok()?;
@@ -169,47 +175,39 @@ impl<'a> SignalDecoder<'a> {
 					result.end = bit_result.end;
 				},
 				Err(err) => {
-					result.result = Err(err);
-					return Some(result);
+					let error = Err({
+                        ErrorBit {
+                            start: bit_result.start,
+                            end: bit_result.end,
+                            error: err,
+                        }
+                    });
+					return Some((result, error));
 				}
 			}
 		}
-		Some(result)
+		Some((result, Ok(())))
 	}
 
-	fn process_bits<const N: u8, F>(
-		&mut self,
-		timing: &Timings<u32>,
+	fn process_bits<'b, const N: u8, F>(
+		&'b mut self,
+		timing: &'b Timings<u32>,
 		value_to_content: F,
-	) -> Option<DecoderOneWireState>
+	) -> Option<Result<(), ErrorBit>>
 	where
 		BitsAmount<N>: Sized,
-		F: FnOnce(u64) -> (SectionContent, Option<DecoderOneWireState>),
+		F: FnOnce(u64) -> SectionContent,
+        'b: 'a,
 	{
-		let read = self.read_bits::<N>(timing)?;
-		// TODO: this is wrong, needs to be fixed
-
-		let (content, next_state) = match read.result {
-			Err(err) => (SectionContent::Err(err), Some(DecoderOneWireState::Reset(ResetState))),
-			Ok(_) => {
-				let (content, next_state) = value_to_content(read.value);
-
-				if read.bits_read == N {
-					(content, next_state)
-				} else {
-					// we still want to push the partial section (the furthest, we could decode)
-					(content, None)
-				}
-			}
-		};
+		let (read, result) = self.read_bits::<N>(timing)?;
 
 		self.push(Section {
 			start: read.start,
 			end: read.end,
-			content,
-		})?;
+			content: value_to_content(read.value),
+		});
 
-		next_state
+		Some(result)
 	}
 
 	// Returns the next reset pulse or the end of the signal if there are no further reset pulses
