@@ -1,3 +1,5 @@
+use std::iter::Peekable;
+
 // Type used to store one sample containing multiple channels in
 pub type Sample = u16;
 
@@ -156,44 +158,32 @@ impl<'a> Iterator for PulsewiseIterator<'a> {
 	}
 }
 
-// TODO: will be replaced in the future
+// TODO: will be replaced in the future (maybe, it's not that bad)
 // will probably be changed and moved in the future
 pub struct BitwiseIterator<'a> {
-	buffer: &'a SampleBuffer,
-	idx: usize,
-	// TODO: ask why channel is u32 and not u16
-	ch: u32,
+	buffer: PulsewiseIterator<'a>,
 	expected_bit_time: f32,
 	current_pulse: Pulse,
 	bit_time: u32,
 }
 
 impl<'a> BitwiseIterator<'a> {
-	pub fn new(buffer: &SampleBuffer, expected_bit_time: f32, ch: u32) -> BitwiseIterator<'_> {
-		BitwiseIterator {
-			expected_bit_time,
-			buffer,
-			ch,
-			idx: 0,
-			current_pulse: Pulse::default(),
-		}
-	}
 
-	pub fn peek(&mut self) -> Option<BitData> {
+	pub fn peek(&mut self) -> Option<BitSignal> {
 		if self.current_pulse.start == self.current_pulse.end {
 			self.current_pulse = self.fetch_next_pulse()?;
 		};
 
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: self.current_pulse.start,
-			end_time: self.current_pulse.start + self.current_pulse.bit_time,
+		Some(BitSignal {
+			high: self.current_pulse.high,
+			start: self.current_pulse.start,
+			end: self.current_pulse.start + self.bit_time,
 		})
 	}
 
 	// Forward the iterator to the next pulse
 	// Returns the pulse as BitData
-	pub fn next_pulse(&mut self) -> Option<BitData> {
+	pub fn next_pulse(&mut self) -> Option<BitSignal> {
 		if self.current_pulse.start == self.current_pulse.end {
 			self.current_pulse = self.fetch_next_pulse()?;
 		}
@@ -201,79 +191,71 @@ impl<'a> BitwiseIterator<'a> {
 		let start = self.current_pulse.start;
 		self.current_pulse.start = self.current_pulse.end;
 
-		Some(BitData {
-			high: self.current_pulse.value,
+		Some(BitSignal {
+			high: self.current_pulse.high,
 			start: start,
 			end: self.current_pulse.end,
 		})
 	}
 
 	// TODO: improve this. right now it can break the iterator if used wrong
-	pub fn next_halve_bit(&mut self) -> Option<BitData> {
+	pub fn next_halve_bit(&mut self) -> Option<BitSignal> {
 		if self.current_pulse.start == self.current_pulse.end {
 			self.current_pulse = self.fetch_next_pulse()?;
 		}
 
 		let start = self.current_pulse.start;
-		self.current_pulse.start += self.current_pulse.bit_time / 2;
+		self.current_pulse.start += self.bit_time / 2;
 
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: start,
-			end_time: self.current_pulse.start,
+		Some(BitSignal {
+			high: self.current_pulse.high,
+			start: start,
+			end: self.current_pulse.start,
 		})
 	}
 
-	pub fn next_bit(&mut self) -> Option<BitData> {
+	pub fn next_bit(&mut self) -> Option<BitSignal> {
 		if self.current_pulse.start == self.current_pulse.end {
 			self.current_pulse = self.fetch_next_pulse()?;
 		}
 
 		let start = self.current_pulse.start;
-		self.current_pulse.start += self.current_pulse.bit_time;
+		self.current_pulse.start += self.bit_time;
 
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: start,
-			end_time: self.current_pulse.start,
+		Some(BitSignal {
+			high: self.current_pulse.high,
+			start,
+			end: self.current_pulse.start,
 		})
 	}
 
 	fn fetch_next_pulse(&mut self) -> Option<Pulse> {
-		let (value, start_time) = self.buffer.get(self.idx, self.ch)?;
-		let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
-		let end_time = self.buffer.timestamps[end_idx];
-		self.idx = end_idx;
-
-		Some(self.calculate_pulse(value, start_time, end_time))
+		let next = self.buffer.next()?;
+		Some(self.calculate_pulse(next))
 	}
 
-	fn calculate_pulse(&self, value: bool, mut start: u32, mut end: u32) -> Pulse {
+	fn calculate_pulse(&mut self, mut pulse: Pulse) -> Pulse {
 		// Calc bit timings for the current pulse
-		let pulse_duration = end - start;
+		let duration = pulse.duration();
 		// TODO: remove .round() call - i believe it's not available without the stdlib
-		let bit_count = (pulse_duration as f32 / self.expected_bit_time).round() as u32;
+		let bit_count = (duration as f32 / self.expected_bit_time).round() as u32;
 		// .max, as pulse must describe at least one bit
-		let bit_time = pulse_duration / bit_count.max(1);
+		let bit_time = duration / bit_count.max(1);
 
-		let padding = pulse_duration % bit_time;
+		let padding = duration % bit_time;
 		let end_padding = padding / 2;
 		let start_padding = padding - end_padding;
 
-		start += start_padding;
-		end -= end_padding;
+		pulse.start += start_padding;
+		pulse.end -= end_padding;
 
-		Pulse {
-			end,
-			start,
-			bit_time,
-			value,
-		}
+		self.bit_time = bit_time;
+		pulse
 	}
 }
 
 impl<'a> Iterator for BitwiseIterator<'a> {
-	type Item = BitData;
+	type Item = BitSignal;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.next_bit()
