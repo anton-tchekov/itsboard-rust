@@ -49,87 +49,51 @@ impl DecoderOneWireState {
 struct ResetState;
 
 impl ResetState {
-	pub fn process(&self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
-		let mut next = decode.next()?;
-		let timing = Timings::standard();
+	pub fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
+		let reset = iter.next_reset();
+		// TODO maybe more general push
+		match reset.result {
+			Err(err) => {
+				output.push_err(iter, err, reset.start, reset.end)?;
+				return Some(DecoderOneWireState::Reset(ResetState))
+			}
 
-		if next.duration() < timing.reset.min {
-			decode.push(Section::from_bit(&next, SectionContent::Err("Reset too short")))?;
-			return Some(DecoderOneWireState::Reset(ResetState));
-		}
+			Ok => {
+				output.push(Section {
+					start: reset.start,
+					end: reset.end,
+					content: SectionContent::Reset,
+				});
+			}
+		};
+
+		let response = iter.next_response();
+		match response.result {
+			Err(err) => {
+				output.push_err(iter, err, response.start, response.end)?;
+				return Some(DecoderOneWireState::Reset(ResetState));
+			}
+
+			Ok(responded) => {
+				output.push(Section {
+					start: response.start,
+					end: response.end,
+					content: SectionContent::ResetResponse(responded) 
+				});
+			}
+		};
 		
-		if next.duration() > timing.reset.max {
-			decode.push(Section::from_bit(&next, SectionContent::Err("Reset too long")))?;
-			return Some(DecoderOneWireState::Reset(ResetState));
-		}
-
-		decode.push(Section::from_bit(&next, SectionContent::Reset))?;
-
-		// Check for response
-		let response_start = next.end;
-		next = decode.next()?;
-
-		let mut response_duration = next.start - response_start;
-		let mut  device_responded = false;
-
-		if response_duration > timing.response.max {
-			decode.push(Section {
-				start: response_start,
-				end: response_start + timing.response.max,
-				content: SectionContent::NoDeviceResponse,
-			})?;
-		}
-		else {
-			next = decode.next()?;
-			response_duration = next.end - response_start;
-
-			if response_duration < timing.response.min {
-				decode.push(Section::from_bit(&next, SectionContent::Err("Response too short/early")))?;
-				return Some(DecoderOneWireState::Reset(ResetState));
-			}
-
-			if response_duration > timing.reset_recover_min {
-				decode.push(Section::from_bit(&next, SectionContent::Err("Response too long")))?;
-				return Some(DecoderOneWireState::Reset(ResetState));
-			}
-
-			decode.push(Section::from_bit(&next, SectionContent::DeviceResponse))?;
-			device_responded = true;
-			next = decode.next()?;
-			response_duration = next.end - response_start;
-		}
-
-		if response_duration < timing.reset_recover_min {
-			decode.push(Section::from_bit(&next, SectionContent::Err("Response recovery too short")))?;
-			return Some(DecoderOneWireState::Reset(ResetState));
-		}
-
-		let recovery_end  = response_start + timing.reset_recover_min;
-
-		decode.push(Section {
-			start: next.start,
-			end: recovery_end,
-			content: SectionContent::ResetRecovery
-		})?;
-
-		decode.push(Section {
-			start: recovery_end,
-			end: next.end,
-			content: SectionContent::Empty
-		})?;
-
-		if device_responded {
-			return Some(DecoderOneWireState::ROMCmd(ROMCommandState))
-		}
-		Some(DecoderOneWireState::Reset(ResetState))
+		Some(DecoderOneWireState::ROMCmd(ROMCommandState))
 	}
 }
 
 struct ROMCommandState;
 
 impl ROMCommandState {
-	fn process(&self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
-		decode.process_bits::<8, _>(&Timings::standard(), |value| {
+	fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
+		let reader = BitReader::new();
+
+		decode.process_bits_reset_on_err(iter, output, reader, |value| {
 			let rom_cmd = ROMCommand::try_from(value as u8);
 			let content = match rom_cmd {
 				Ok(cmd) => SectionContent::ROMCmd(cmd),
@@ -146,7 +110,7 @@ impl ROMCommandState {
 
 struct FamilyCode(Timings<u32>);
 impl FamilyCode {
-	fn process(self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
+	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
 		decode.process_bits::<8, _>(&self.0, |value| {
 			let content: SectionContent = SectionContent::FamilyCode(value as u8);
 			(content, Some(DecoderOneWireState::SensorID(SensorIDState(self.0))))
@@ -156,7 +120,7 @@ impl FamilyCode {
 
 struct SensorIDState(Timings<u32>);
 impl SensorIDState {
-	fn process(self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
+	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
 		decode.process_bits::<48, _>(&self.0, |value| {
 			let content = SectionContent::SensorID(value);
 			(content, Some(DecoderOneWireState::CRC(CRCState(self.0))))
@@ -166,7 +130,7 @@ impl SensorIDState {
 
 struct CRCState(Timings<u32>);
 impl CRCState {
-	fn process(self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
+	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
 		decode.process_bits::<8, _>(&self.0, |value| {
 			let content = SectionContent::CRC(value as u8);
 			(content, Some(DecoderOneWireState::FunctionCmd(FunctionCmdState(self.0))))
@@ -176,7 +140,7 @@ impl CRCState {
 
 struct FunctionCmdState(Timings<u32>);
 impl FunctionCmdState{
-	fn process(self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
+	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
 		decode.process_bits::<8, _>(&self.0, |value| {
 			let content = SectionContent::FunctionCmd(value as u8);
 			(content, Some(DecoderOneWireState::Data(DataState(self.0))))
@@ -189,7 +153,7 @@ struct SearchROMState {
 	iteration: u8,
 }
 impl SearchROMState {
-	fn process(self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
+	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
 		let timing = Timings::standard();
 		if self.iteration >= 3 {
 			return Some(DecoderOneWireState::FunctionCmd(FunctionCmdState(timing)));
@@ -206,7 +170,7 @@ impl SearchROMState {
 
 struct DataState(Timings<u32>);
 impl DataState {
-	fn process(&self, decode: &mut DecodeState) -> Option<DecoderOneWireState> {
+	fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
 		// we don't know how many bits we will read, so we read bit for bit until we reach the end of the signal or a reset pulse
 		let timing = self.0;
 		let peeked = decode.peekable().peek()?;

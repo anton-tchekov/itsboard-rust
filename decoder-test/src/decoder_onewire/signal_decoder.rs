@@ -6,25 +6,6 @@ use crate::sample::{PulsewiseIterator};
 use crate::decoder_onewire::onewire_error::OneWireError;
 use crate::decoder_onewire::timings::Timings;
 
-struct BitResult {
-	high: Result<bool, OneWireError>,
-	start: u32,
-	end: u32,
-}
-
-impl BitResult {
-	fn to_section(&self) -> Section {
-		Section {
-			start: self.start,
-			end: self.end,
-			content: match self.high {
-				Ok(value) => SectionContent::Bit(value),
-				Err(err) => SectionContent::Err(err.to_string()),
-			},
-		}
-	}
-}
-
 struct OneWireBit<'a> {
     signal: &'a mut PulsewiseIterator<'a>,
 	timings: &'a Timings<u32>
@@ -72,8 +53,6 @@ impl<'a> Iterator for OneWireBit<'a> {
 			return Some(result);
 		}
 
-		// consume the initial pulse
-		self.signal.next()?;
 		// bit is high
 		if duration <= self.timings.wr_init.max {
 			result.high = Ok(true);

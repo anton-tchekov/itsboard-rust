@@ -2,12 +2,13 @@ fn process_bits(
     iter: Iterator<Item = OneWirePrimitive>,
     output: &mut SectionBuffer,
     reader: BitReader,
-    sucess: T,
+    on_success: H,
     on_error: F,
 ) -> Option<G>
 where
     F: FnOnce(DecoderOneWireError) -> Result<Option<T>, DecoderOneWireError>,
-    G: FnOnce(u64) -> SectionContent
+    G: FnOnce(u64) -> SectionContent,
+    H: FnOnce(u64) -> Result<Option<T>, DecoderOneWireError>,
 {
     let start = iter.current_time();
     let mut end = iter.current_time();
@@ -27,7 +28,7 @@ where
                 }
 
                 if reader.read_bit(bit) {
-                    Ok(Some(success_state))
+                    on_success()
                 }
                 Ok(None)
             },
