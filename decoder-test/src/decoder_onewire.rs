@@ -91,9 +91,7 @@ struct ROMCommandState;
 
 impl ROMCommandState {
 	fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		let reader = BitReader::new();
-
-		decode.process_bits_reset_on_err(iter, output, reader, |value| {
+		process_bits_reset_on_err(8, iter, output, |value| {
 			let rom_cmd = ROMCommand::try_from(value as u8);
 			let content = match rom_cmd {
 				Ok(cmd) => SectionContent::ROMCmd(cmd),
@@ -111,7 +109,7 @@ impl ROMCommandState {
 struct FamilyCode(Timings<u32>);
 impl FamilyCode {
 	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		decode.process_bits::<8, _>(&self.0, |value| {
+		process_bits_reset_on_err(8, iter, output, |value| {
 			let content: SectionContent = SectionContent::FamilyCode(value as u8);
 			(content, Some(DecoderOneWireState::SensorID(SensorIDState(self.0))))
 		})
@@ -121,7 +119,7 @@ impl FamilyCode {
 struct SensorIDState(Timings<u32>);
 impl SensorIDState {
 	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		decode.process_bits::<48, _>(&self.0, |value| {
+		process_bits_reset_on_err(48, iter, output, |value| {
 			let content = SectionContent::SensorID(value);
 			(content, Some(DecoderOneWireState::CRC(CRCState(self.0))))
 		})
@@ -131,7 +129,7 @@ impl SensorIDState {
 struct CRCState(Timings<u32>);
 impl CRCState {
 	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		decode.process_bits::<8, _>(&self.0, |value| {
+		process_bits_reset_on_err(8, iter, output, |value| {
 			let content = SectionContent::CRC(value as u8);
 			(content, Some(DecoderOneWireState::FunctionCmd(FunctionCmdState(self.0))))
 		})
@@ -141,7 +139,7 @@ impl CRCState {
 struct FunctionCmdState(Timings<u32>);
 impl FunctionCmdState{
 	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		decode.process_bits::<8, _>(&self.0, |value| {
+		process_bits_reset_on_err(8, iter, output, |value| {
 			let content = SectionContent::FunctionCmd(value as u8);
 			(content, Some(DecoderOneWireState::Data(DataState(self.0))))
 		})
@@ -154,12 +152,11 @@ struct SearchROMState {
 }
 impl SearchROMState {
 	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		let timing = Timings::standard();
 		if self.iteration >= 3 {
 			return Some(DecoderOneWireState::FunctionCmd(FunctionCmdState(timing)));
 		}
 
-		decode.process_bits::<64, _>(&timing, |value| {
+		process_bits_reset_on_err(64, iter, output, |value| {
 			let content = SectionContent::Data(value);
 			(content, Some(DecoderOneWireState::SearchROM(SearchROMState {
 				iteration: self.iteration + 1,
@@ -171,70 +168,15 @@ impl SearchROMState {
 struct DataState(Timings<u32>);
 impl DataState {
 	fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<DecoderOneWireState> {
-		// we don't know how many bits we will read, so we read bit for bit until we reach the end of the signal or a reset pulse
-		let timing = self.0;
-		let peeked = decode.peekable().peek()?;
-
-		let mut value = 0;
-		let mut bits_read = 0;
-		let mut start_time = peeked.start;
-		let mut end_time = peeked.end;
-		loop {
-			if bits_read >= 64 {
-				self.push(Section {
-					start: signal.peek()?.start,
-					end: signal.peek()?.end,
-					content: SectionContent::Data(value),
-				})?;
-
-				bits_read = 0;
-				value = 0;
-				start_time = signal.peek()?.start;
-				end_time = signal.peek()?.end;
-			}
-
-			let pulse = signal.peek()?;
-			if !pulse.high && pulse.duration() >= timing.reset.min {
-				return Some(DecoderOneWireState::Reset(ResetState));
-			}
-
-			let mut bit_iter = OneWireBit::new(signal, &timing);
-
-			let bit_result = match bit_iter.next() {
-				Some(b) => b,
-				None => break,
-			};
-
-			output.push(bit_result.to_section())?;
-
-			match bit_result.high {
-				Ok(b) => {
-					value |= (b as u64) << bits_read;
-					bits_read += 1;
-
-					end_time = bit_result.end;
-				},
-
-				Err(err) => {
-					output.push(Section {
-						start: bit_result.start,
-						end: bit_result.end,
-						content: SectionContent::Err(err),
-					})?;
-					return Some(DecoderOneWireState::Reset(ResetState));
+		process_bits(64, iter, output, |value| {
+			OK(Some())
+		}, |err| {
+			match err {
+				DecoderOneWireError::UnexpectedReset => {
+					Ok(Some())
 				}
 			}
 		}
-
-		if bits_read > 0 {
-			output.push(Section {
-				start: start_time,
-				end: end_time,
-				content: SectionContent::Data(value),
-			})?;
-		}
-
-		None
 	}
 }
 
