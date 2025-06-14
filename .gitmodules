@@ -1,0 +1,3 @@
+[submodule "itsboard-uploader"]
+	path = itsboard-uploader
+	url = https://github.com/Haron123/itsboard-uploader

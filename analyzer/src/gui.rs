@@ -65,6 +65,11 @@ pub enum Action
 	None,
 	Up,
 	Down,
+	Cursors,
+	PrevEdge,
+	NextEdge,
+	LeftFast,
+	RightFast,
 	Left,
 	Right,
 	Enter,
@@ -207,8 +212,8 @@ const SELECT_BAUDRATE_LIST: [&str; 11] =
 	"600",
 	"1200",
 	"1800",
-	"4800",
 	"2400",
+	"4800",
 ];
 
 static BAUDRATES: [u32; 11] =
@@ -507,8 +512,14 @@ const ACTIONS_SAMPLING: [Action; 8] =
 
 const ACTIONS_MAIN: [Action; 8] =
 [
-	Action::None, Action::None, Action::Left, Action::Right,
+	Action::None, Action::Cursors, Action::Left, Action::Right,
 	Action::ZoomIn, Action::ZoomOut, Action::Cycle, Action::Enter
+];
+
+const ACTIONS_CURSORS: [Action; 8] =
+[
+	Action::LeftFast, Action::RightFast, Action::Left, Action::Right,
+	Action::PrevEdge, Action::NextEdge, Action::Escape, Action::Cycle
 ];
 
 const ACTIONS_DA: [Action; 8] =
@@ -594,7 +605,8 @@ pub struct Gui
 	hw: HW,
 	zoom: usize,
 	pi: PositionIndicator,
-	wf: WaveformBuffer
+	wf: WaveformBuffer,
+	cursors_en: bool
 }
 
 impl Gui
@@ -663,7 +675,8 @@ impl Gui
 			hw: hw,
 			zoom: 0,
 			pi: PositionIndicator::new(),
-			wf: WaveformBuffer::new()
+			wf: WaveformBuffer::new(),
+			cursors_en: false
 		};
 
 		gui.icon_box();
@@ -702,6 +715,11 @@ impl Gui
 	{
 		match action
 		{
+			Action::Cursors => lcd_icon_bw(x, y, ICON_CURSORS),
+			Action::PrevEdge => lcd_icon_bw(x, y, ICON_PREV_EDGE),
+			Action::NextEdge => lcd_icon_bw(x, y, ICON_NEXT_EDGE),
+			Action::LeftFast => lcd_icon_bw(x, y, ICON_LEFT_FAST),
+			Action::RightFast => lcd_icon_bw(x, y, ICON_RIGHT_FAST),
 			Action::Left => lcd_icon_bw(x, y, ICON_LEFT),
 			Action::Right => lcd_icon_bw(x, y, ICON_RIGHT),
 			Action::Up => lcd_icon_bw(x, y, ICON_UP),
@@ -795,6 +813,51 @@ impl Gui
 			Mode::DecoderOneWire => self.o_open(),
 			Mode::Info => self.info_open()
 		};
+	}
+
+	/* === CURSORS === */
+	fn cursors_action(&mut self, action: Action)
+	{
+		match action
+		{
+			Action::Left => {
+
+			},
+			Action::Right => {
+
+			},
+			Action::Left => {
+
+			},
+			Action::Right => {
+
+			},
+			Action::PrevEdge => {
+
+			},
+			Action::NextEdge => {
+
+			},
+			Action::Escape => {
+				self.cursors_close();
+			},
+			Action::Cycle => {
+
+			}
+			_ => {}
+		}
+	}
+
+	fn cursors_open(&mut self)
+	{
+		self.cursors_en = true;
+		self.actions_set(&ACTIONS_CURSORS);
+	}
+
+	fn cursors_close(&mut self)
+	{
+		self.cursors_en = false;
+		self.actions_set(&ACTIONS_MAIN);
 	}
 
 	/* === INFO === */
@@ -1394,13 +1457,17 @@ impl Gui
 
 	fn ma_action(&mut self, action: Action)
 	{
+		if self.cursors_en
+		{
+			self.cursors_action(action);
+			return;
+		}
+
 		match action
 		{
-			Action::Up =>
+			Action::Cursors =>
 			{
-			}
-			Action::Down =>
-			{
+				self.cursors_open();
 			}
 			Action::Left =>
 			{
@@ -1449,11 +1516,11 @@ impl Gui
 	{
 		match self.da_selected
 		{
-			0 => { self.mode_switch(Mode::DecoderUart); 	},
-			1 => { self.mode_switch(Mode::DecoderSpi); 		},
-			2 => { self.mode_switch(Mode::DecoderI2C); 		},
-			3 => { self.mode_switch(Mode::DecoderOneWire); 	},
-			4 => { self.decoder_done(DecoderUnion::None); 	},
+			0 => { self.mode_switch(Mode::DecoderUart);    },
+			1 => { self.mode_switch(Mode::DecoderSpi);     },
+			2 => { self.mode_switch(Mode::DecoderI2C);     },
+			3 => { self.mode_switch(Mode::DecoderOneWire); },
+			4 => { self.decoder_done(DecoderUnion::None);  },
 			_ => {}
 		}
 	}
