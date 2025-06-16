@@ -17,6 +17,12 @@ pub struct SampleBuffer
 	pub len: usize
 }
 
+impl Default for SampleBuffer {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl SampleBuffer
 {
 	pub fn new() -> Self
@@ -78,6 +84,35 @@ impl SampleBuffer
 
 	// start: Timstamp of window start
 	// Returns sample index
+	pub fn find_prev(&self, start: u32) -> usize
+	{
+		if self.len == 0
+		{
+			return 0;
+		}
+
+		let mut left = 0;
+		let mut right = self.len as isize - 1;
+		let mut closest_index: usize = 0;
+		while left <= right
+		{
+			let mid = (left + right) / 2;
+			if self.timestamps[mid as usize] < start
+			{
+				closest_index = mid as usize;
+				left = mid + 1;
+			}
+			else
+			{
+				right = mid - 1;
+			}
+		}
+
+		closest_index
+	}
+
+	// start: Timstamp of window start
+	// Returns sample index
 	pub fn find_start(&self, start: u32) -> usize
 	{
 		let mut left = 0;
@@ -111,6 +146,35 @@ impl SampleBuffer
 		{
 			let mid = (left + right) / 2;
 			if self.timestamps[mid as usize] >= end
+			{
+				closest_index = mid as usize;
+				right = mid - 1;
+			}
+			else
+			{
+				left = mid + 1;
+			}
+		}
+
+		closest_index
+	}
+
+	// start: Timstamp of window end
+	// Returns sample index
+	pub fn find_next(&self, end: u32) -> usize
+	{
+		if self.len == 0
+		{
+			return 0;
+		}
+
+		let mut left = 0;
+		let mut right = self.len as isize - 1;
+		let mut closest_index: usize = self.len - 1;
+		while left <= right
+		{
+			let mid = (left + right) / 2;
+			if self.timestamps[mid as usize] > end
 			{
 				closest_index = mid as usize;
 				right = mid - 1;

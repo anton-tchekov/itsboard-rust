@@ -196,7 +196,7 @@ pub struct DecoderFrameBuffer<const LEN: usize>
 
 fn format_byte(buf: &mut ByteMutWriter, byte: u32)
 {
-	if byte >= 32 && byte <= 126
+	if (32..=126).contains(&byte)
 	{
 		write!(buf, " ${:02X} {}", byte, (byte as u8) as char).unwrap();
 	}

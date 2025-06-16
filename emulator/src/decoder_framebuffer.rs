@@ -196,7 +196,7 @@ pub struct DecoderFrameBuffer<const LEN: usize>
 
 fn format_byte(buf: &mut ByteMutWriter, byte: u32)
 {
-	if byte >= 32 && byte <= 126
+	if (32..=126).contains(&byte)
 	{
 		write!(buf, " ${:02X} {}", byte, (byte as u8) as char).unwrap();
 	}
@@ -257,24 +257,29 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 			match cur.content
 			{
-				SectionContent::TxByte(v) => {
-					fg = 1;
-					bg = 3;
-					line = &mut self.lines[1];
+					SectionContent::TxByte(v) => {
+									fg = 1;
+									bg = 3;
+									line = &mut self.lines[1];
 
-					format_byte(&mut buf, v.into());
-				},
-				SectionContent::RxByte(v) => { format_byte(&mut buf, v.into()) },
-				SectionContent::Byte(v) => { format_byte(&mut buf, v.into()) },
-				SectionContent::Empty     => write!(buf, " Empty").unwrap(),
-				SectionContent::Bit(v)    => write!(buf, " {}", v).unwrap(),
-				SectionContent::StartBit  => write!(buf, " Start").unwrap(),
-				SectionContent::StopBit   => write!(buf, " Stop").unwrap(),
-				SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
-				SectionContent::Err(v) => write!(buf, " {}", v).unwrap(),
-				SectionContent::ParityBit(v) => write!(buf, " {}", if v { 1 } else { 0 }).unwrap(),
-				SectionContent::Word(v) => format_byte(&mut buf, v),
-			};
+									format_byte(&mut buf, v.into());
+								},
+					SectionContent::RxByte(v) => { format_byte(&mut buf, v.into()) },
+					SectionContent::Byte(v) => { format_byte(&mut buf, v.into()) },
+					SectionContent::Empty     => write!(buf, " Empty").unwrap(),
+					SectionContent::Bit(v)    => write!(buf, " {}", v).unwrap(),
+					SectionContent::StartBit  => write!(buf, " Start").unwrap(),
+					SectionContent::StopBit   => write!(buf, " Stop").unwrap(),
+					SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
+					SectionContent::Err(v) => write!(buf, " {}", v).unwrap(),
+					SectionContent::ParityBit(v) => write!(buf, " {}", if v { 1 } else { 0 }).unwrap(),
+					SectionContent::Word(v) => format_byte(&mut buf, v),
+					SectionContent::RepeatedStart => write!(buf, " RS").unwrap(),
+					SectionContent::Ack => write!(buf, " Ack").unwrap(),
+					SectionContent::Nak => write!(buf, " Nak").unwrap(),
+					SectionContent::I2cWrite => write!(buf, " W").unwrap(),
+					SectionContent::I2cRead => write!(buf, " R").unwrap(),
+				};
 
 			let font = &TERMINUS16_BOLD;
 			let font_width = font.width + 1;

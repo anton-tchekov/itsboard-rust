@@ -21,6 +21,7 @@ use crate::hw;
 use crate::positionindicator::PositionIndicator;
 use crate::waveform::*;
 use crate::decoder_storage::{DecoderUnion, DecoderStorage};
+use crate::cursors::Cursors;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -606,7 +607,7 @@ pub struct Gui
 	zoom: usize,
 	pi: PositionIndicator,
 	wf: WaveformBuffer,
-	cursors_en: bool
+	cursors: Cursors
 }
 
 impl Gui
@@ -642,7 +643,7 @@ impl Gui
 		self.term_rows = 0;
 	}
 
-	pub fn init(mut hw: HW) -> Self
+	pub fn init(hw: HW) -> Self
 	{
 		Self::top_divider();
 		Self::bottom_divider();
@@ -658,7 +659,7 @@ impl Gui
 			ma_selected: 0,
 			da_selected: 0,
 			cd_selected: 0,
-			sels: sels,
+			sels,
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
@@ -672,11 +673,11 @@ impl Gui
 			decoder_framebuf: DecoderFrameBuffer::new(),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
-			hw: hw,
+			hw,
 			zoom: 0,
 			pi: PositionIndicator::new(),
 			wf: WaveformBuffer::new(),
-			cursors_en: false
+			cursors: Cursors::new()
 		};
 
 		gui.icon_box();
@@ -813,51 +814,6 @@ impl Gui
 			Mode::DecoderOneWire => self.o_open(),
 			Mode::Info => self.info_open()
 		};
-	}
-
-	/* === CURSORS === */
-	fn cursors_action(&mut self, action: Action)
-	{
-		match action
-		{
-			Action::Left => {
-
-			},
-			Action::Right => {
-
-			},
-			Action::Left => {
-
-			},
-			Action::Right => {
-
-			},
-			Action::PrevEdge => {
-
-			},
-			Action::NextEdge => {
-
-			},
-			Action::Escape => {
-				self.cursors_close();
-			},
-			Action::Cycle => {
-
-			}
-			_ => {}
-		}
-	}
-
-	fn cursors_open(&mut self)
-	{
-		self.cursors_en = true;
-		self.actions_set(&ACTIONS_CURSORS);
-	}
-
-	fn cursors_close(&mut self)
-	{
-		self.cursors_en = false;
-		self.actions_set(&ACTIONS_MAIN);
 	}
 
 	/* === INFO === */
@@ -1244,8 +1200,8 @@ impl Gui
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
-			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
-			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
+			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + pin_num * WAVEFORM_SPACING;
+			lcd_str(0, y, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
 			i += 1;
 		}
 	}
@@ -1447,7 +1403,7 @@ impl Gui
 	fn max_horizontal_scroll(&self) -> u32
 	{
 		let last = self.last_ts();
-		if last < self.t_end { 0 } else { last - self.t_end }
+		last.saturating_sub(self.t_end)
 	}
 
 	fn horizontal_scroll_amount(&self) -> u32
@@ -1457,9 +1413,14 @@ impl Gui
 
 	fn ma_action(&mut self, action: Action)
 	{
-		if self.cursors_en
+		if self.cursors.en
 		{
-			self.cursors_action(action);
+			if action == Action::Escape
+			{
+				self.actions_set(&ACTIONS_MAIN);
+			}
+
+			self.cursors.action(action, &self.wf, &self.buf);
 			return;
 		}
 
@@ -1467,7 +1428,8 @@ impl Gui
 		{
 			Action::Cursors =>
 			{
-				self.cursors_open();
+				self.cursors.show(self.t_start, self.t_end);
+				self.actions_set(&ACTIONS_CURSORS);
 			}
 			Action::Left =>
 			{

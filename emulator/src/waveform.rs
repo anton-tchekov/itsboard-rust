@@ -65,17 +65,14 @@ impl WaveformBuffer
 				start = 0;
 				len = 0;
 			}
+			else if len == 0
+			{
+				start = x;
+				len = 1;
+			}
 			else
 			{
-				if len == 0
-				{
-					start = x;
-					len = 1;
-				}
-				else
-				{
-					len += 1;
-				}
+				len += 1;
 			}
 		}
 
@@ -97,6 +94,41 @@ impl WaveformBuffer
 					WAVEFORM_H - 1, if c { LCD_WHITE } else { LCD_BLACK });
 			}
 		}
+	}
+
+	pub fn redraw_vline(&self, x: u32)
+	{
+		lcd_window_start(CHANNEL_LABEL_WIDTH + x, WAVEFORMS_Y,
+			1, 8 * WAVEFORM_SPACING);
+
+		for i in 0..8
+		{
+			let bits = (self.prev[x as usize] >> (2 * i)) & 3;
+			match bits
+			{
+				1 => {
+					lcd_emit(LCD_WHITE);
+					for _j in 0..WAVEFORM_H { lcd_emit(LCD_BLACK); }
+				}
+				2 => {
+					for _j in 0..WAVEFORM_H { lcd_emit(LCD_BLACK); }
+					lcd_emit(LCD_WHITE);
+				}
+				3 => {
+					for _j in 0..=WAVEFORM_H { lcd_emit(LCD_WHITE); }
+				}
+				_ => {
+					for _j in 0..=WAVEFORM_H { lcd_emit(LCD_BLACK); }
+				}
+			}
+
+			for _j in 0..(WAVEFORM_SPACING - WAVEFORM_H - 1)
+			{
+				lcd_emit(LCD_BLACK);
+			}
+		}
+
+		lcd_window_end();
 	}
 
 	fn update_one(&self, y: u32, n: u32)

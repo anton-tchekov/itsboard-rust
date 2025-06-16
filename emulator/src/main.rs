@@ -1,3 +1,6 @@
+#[macro_use]
+
+mod macro_utils;
 mod graphics;
 mod lcd;
 mod sample;
@@ -21,6 +24,10 @@ mod hw;
 mod userflash;
 mod decoder_storage;
 mod test_utils;
+mod timeline;
+mod timeindicator;
+mod durationindicator;
+mod cursors;
 
 use crate::hw::HW;
 use crate::graphics::*;
@@ -41,9 +48,6 @@ fn main() -> Result<(), String> {
 	let mut hw = HW::new();
 	let mut gui = Gui::init(hw);
 	let (tx, rx) = mpsc::channel();
-
-	let samplebuf = load_sample_buffer("UART/UART_8N1_300_Hallo.csv");
-	gui.buf = samplebuf;
 
 	thread::spawn(move || {
 		loop
