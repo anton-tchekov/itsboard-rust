@@ -25,7 +25,7 @@ impl DurationIndicator
 	pub fn hide(&mut self)
 	{
 		self.timeindicator.hide();
-		lcd_str_undraw(X, Y, LABEL.len(), &TERMINUS16);
+		lcd_str_undraw(X, Y, LABEL.chars().count(), &TERMINUS16);
 	}
 
 	pub fn show(&mut self, t: u32)

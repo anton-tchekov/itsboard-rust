@@ -49,9 +49,6 @@ fn main() -> Result<(), String> {
 	let mut gui = Gui::init(hw);
 	let (tx, rx) = mpsc::channel();
 
-	let samplebuf = load_sample_buffer("UART/UART_8N1_300_Hallo.csv");
-	gui.buf = samplebuf;
-
 	thread::spawn(move || {
 		loop
 		{

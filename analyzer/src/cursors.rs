@@ -181,6 +181,7 @@ impl Cursors
 			Action::Escape =>
 			{
 				self.hide(wf);
+				return;
 			}
 			Action::Cycle =>
 			{

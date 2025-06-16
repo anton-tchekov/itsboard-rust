@@ -80,6 +80,11 @@ impl SampleBuffer
 	// Returns sample index
 	pub fn find_prev(&self, start: u32) -> usize
 	{
+		if self.len == 0
+		{
+			return 0;
+		}
+
 		let mut left = 0;
 		let mut right = self.len as isize - 1;
 		let mut closest_index: usize = 0;
@@ -152,6 +157,11 @@ impl SampleBuffer
 	// Returns sample index
 	pub fn find_next(&self, end: u32) -> usize
 	{
+		if self.len == 0
+		{
+			return 0;
+		}
+
 		let mut left = 0;
 		let mut right = self.len as isize - 1;
 		let mut closest_index: usize = self.len - 1;
