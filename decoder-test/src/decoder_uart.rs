@@ -1,3 +1,4 @@
+use crate::bit_reader::BitReader;
 use crate::decoder::*;
 use crate::sample::*;
 
@@ -26,33 +27,52 @@ pub enum StopBits {
 
 #[derive(Copy, Clone)]
 enum DecoderUartState {
-	Idle(IdleState),
 	Start(StartState),
 	Data(DataState),
 	Parity(ParityState),
 	Stop(StopState)
 }
 
+impl DecoderUartState {
+	fn process(&self, bits: &mut BitwiseIterator, output: &mut UartOutput, decoder: &DecoderUart) -> Option<DecoderUartState> {
+		match &self {
+			DecoderUartState::Start(state) => {state.process(bits, output)},
+			DecoderUartState::Data(state) => {state.process(bits, output, decoder.databits)},
+			DecoderUartState::Parity(state) => {state.process(bits, output, decoder.parity)},
+			DecoderUartState::Stop(state) => {state.process(bits, output, decoder.stopbits)},
+		}
+	}
+}
+
+#[derive(Default, Clone, Copy)]
+pub struct BitSignal {
+	pub high: bool,
+	pub end: u32,
+	pub start: u32,
+}
+
+impl BitSignal {
+	pub fn duration(&self) -> u32 {
+		self.end - self.start
+	}
+}
+
 // TODO: will be replaced in the future (maybe, it's not that bad)
 // will probably be changed and moved in the future
 pub struct BitwiseIterator<'a> {
 	buffer: EdgeWiseIterator<'a>,
-	idx: usize,
-	start: u32,
-	target_idx: usize,
 	expected_bit_time: f32,
+	current_pulse: Pulse,
 	bit_time: u32,
 }
 
 impl<'a> BitwiseIterator<'a> {
-	pub fn from(buffer: EdgeWiseIterator<'a>, expected_bit_time: f32) -> Self {
+	pub fn from(buffer: PulsewiseIterator<'a>, expected_bit_time: f32) -> Self {
 		BitwiseIterator {
-			start: buffer.current_time(),
 			buffer,
 			expected_bit_time,
+			current_pulse: Pulse::default(),
 			bit_time: 0,
-			target_idx: 0,
-			idx: 0
 		}
 	}
 
@@ -68,9 +88,13 @@ impl<'a> BitwiseIterator<'a> {
 		})
 	}
 
+	fn current_time(&self) -> u32 {
+		self.current_pulse.start
+	}
+
 	// Forward the iterator to the next pulse
 	// Returns the pulse as BitData
-	pub fn next_edge(&mut self) -> Option<Edge> {
+	pub fn next_pulse(&mut self) -> Option<BitSignal> {
 		if self.current_pulse.start == self.current_pulse.end {
 			self.current_pulse = self.fetch_next_pulse()?;
 		}
@@ -116,35 +140,27 @@ impl<'a> BitwiseIterator<'a> {
 		})
 	}
 
-	fn fetch_next_edge(&mut self) -> Option<Edge> {
-		self.start = self.buffer.current_time();
+	fn fetch_next_pulse(&mut self) -> Option<Pulse> {
 		let next = self.buffer.next()?;
-		let end = self.buffer.current_time();
-
-		self.calc_next_target(end);
-		Some(next)
+		Some(self.calculate_pulse(next))
 	}
 
-	fn current_time(&self) -> u32 {
-		self.start + self.idx * self.bit_time
-	}
-
-	fn calc_next_target(&mut self, end: u32) {
+	fn calculate_pulse(&mut self, mut pulse: Pulse) -> Pulse {
 		// Calc bit timings for the current pulse
-		let duration = end - self.start;
-		// TODO: remove .round() call - i believe it's not available without the stdlib
+		let duration = pulse.duration();
+		let bit_count = (duration as f32 / self.expected_bit_time).round() as u32;
 		// .max, as pulse must describe at least one bit
-		let bit_count = (duration as f32 / self.expected_bit_time).round().max(1) as u32;
-		let bit_time = duration / bit_count;
+		let bit_time = duration / bit_count.max(1);
 
 		let padding = duration % bit_time;
 		let end_padding = padding / 2;
 		let start_padding = padding - end_padding;
 
-		self.start += start_padding;
+		pulse.start += start_padding;
+		pulse.end -= end_padding;
+
 		self.bit_time = bit_time;
-		self.target_idx = bit_count;
-		self.idx = 0;
+		pulse
 	}
 }
 
@@ -156,17 +172,28 @@ impl<'a> Iterator for BitwiseIterator<'a> {
 	}
 }
 
-#[derive(Copy, Clone)]
-struct IdleState;
+struct UartOutput<'a> {
+	output: &'a mut SectionBuffer
+}
 
-impl IdleState {
-	pub fn process(&self, bits: &mut BitwiseIterator, data: &mut Option<Section>) -> Option<DecoderUartState> {
-		if bits.peek()?.high {
-			let bit = bits.next_pulse()?;
-			*data = Some(Section::from_bit(&bit, SectionContent::Empty));
-		}
+impl <'a>UartOutput<'a> {
+	fn push_next<T>(&mut self, iter: &mut BitwiseIterator, value_to_content: T) -> Option<()> 
+	where T: FnOnce(bool) -> SectionContent
+	{
+		let bit = iter.next()?;
+		self.push_signal(bit, value_to_content(bit.high))
+	}
 
-		Some(DecoderUartState::Start(StartState))
+	fn push(&mut self, section: Section) -> Option<()> {
+		self.output.push(section)
+	}
+
+	pub fn push_signal(&mut self, bit: BitSignal, content: SectionContent) -> Option<()> {
+		self.push(Section { 
+			start: bit.start, 
+			end: bit.end,
+			content
+		})
 	}
 }
 
@@ -174,46 +201,37 @@ impl IdleState {
 struct StartState;
 
 impl StartState {
-	pub fn process(&self, bits: &mut BitwiseIterator, data: &mut Option<Section>) -> Option<DecoderUartState> {
-		*data = Some(Section::from_bit(&bits.next()?, SectionContent::StartBit));
-
+	pub fn process(&self, bits: &mut BitwiseIterator, output: &mut UartOutput) -> Option<DecoderUartState> {
+		if bits.peek()?.high {
+			bits.next_pulse()?;
+		}
+		output.push_next(bits, |_| SectionContent::StartBit)?;
 		Some(DecoderUartState::Data(DataState::default()))
 	}
 }
 
 #[derive(Copy, Clone, Default)]
 struct DataState;
-
 impl DataState {
+	pub fn process(mut self, bits: &mut BitwiseIterator, output: &mut UartOutput, databits: DataBits) -> Option<DecoderUartState> {
+		let reader = BitReader::lsb(databits as u8);
+		let start = bits.peek()?.start;
 
-	fn iterate(&mut self, databits: DataBits, bits: &mut BitwiseIterator, section: &mut Section, word: &mut u32) -> Option<()> {
-		for i in 0..databits as usize {
+		while !reader.is_finished() {
 			let bit = bits.next()?;
+			reader.read_bit(bit.high);
 
-			*word |= (bit.high as u32) << i;
-			section.end = bit.end_time;
-		}
-
-		Some(())
-	}
-
-	pub fn process(mut self, bits: &mut BitwiseIterator, data: &mut Option<Section>, databits: DataBits) -> Option<DecoderUartState> {
-		let mut word: u32 = 0;
-
-		let mut section = Section::default();
-		section.start = bits.peek()?.start_time;
-
-		let completed = self.iterate(databits, bits, &mut section, &mut word);
-		section.content = SectionContent::Word(word);
-
-		*data = Some(section);
-
-		let result = match completed {
-			Some(()) => {Some(DecoderUartState::Parity(ParityState { word }))},
-			None => {None}
+			output.push_signal(bit, SectionContent::Bit(bit.high))?
 		};
+		let value = reader.get_value().unwrap();
 
-		result
+		output.push(Section { 
+			start,
+			end: bits.current_time(),
+			content: SectionContent::Data(value)
+		})?;
+
+		Some(DecoderUartState::Parity(value))
 	}
 }
 
@@ -223,11 +241,10 @@ struct ParityState {
 }
 
 impl ParityState {
-	pub fn process(self, bits: &mut BitwiseIterator, data: &mut Option<Section>, parity: Parity) -> Option<DecoderUartState> {
+	pub fn process(self, bits: &mut BitwiseIterator, output: &mut UartOutput, parity: Parity) -> Option<DecoderUartState> {
 		if parity == Parity::None {
 			return Some(DecoderUartState::Stop(StopState))
 		}
-
 		let bit = bits.next()?;
 
 		let ones = self.word.count_ones() + bit.high as u32;
@@ -239,7 +256,7 @@ impl ParityState {
 			_ => SectionContent::ParityBit(bit.high)
 		};
 
-		*data = Some(Section::from_bit(&bit, content));
+		output.push_signal(bit, content)?;
 		Some(DecoderUartState::Stop(StopState))
 	}
 }
@@ -253,28 +270,24 @@ impl StopState {
 		if has_error {
 			return SectionContent::Err("expected high bit value, but was low")
 		}
-
 		SectionContent::StopBit
 	}
 
-	pub fn process(&self, bits: &mut BitwiseIterator, data: &mut Option<Section>, stopbits: StopBits) -> Option<DecoderUartState> {
+	pub fn process(&self, bits: &mut BitwiseIterator, output: &mut UartOutput, stopbits: StopBits) -> Option<DecoderUartState> {
+		let start = bits.peek()?.start;
 		let bit = bits.next()?;
-		let mut section = Section::from_bit(&bit, SectionContent::StopBit);
 
 		let next_bit = match stopbits {
-			StopBits::One => {
-				*data = Some(section);
-				return Some(DecoderUartState::Idle(IdleState))
-			},
-			StopBits::OneAndHalf => { bits.next_halve_bit()?},
-			StopBits::Two => { bits.next()? }
+			StopBits::OneAndHalf => { bits.next_halve_bit()?.high },
+			StopBits::Two => { bits.next()?.high }
+			_ => {true}
 		};
 
-		section.content = self.get_content(!(next_bit.high && bit.high));
-		section.end = next_bit.end_time;
-		*data = Some(section);
+		let content = self.get_content(!(next_bit && bit.high));
+		let end = bits.current_time();
 
-		Some(DecoderUartState::Idle(IdleState))
+		output.push(Section { start, end, content})?;
+		Some(DecoderUartState::Start(StartState))
 	}
 }
 
@@ -290,29 +303,17 @@ pub struct DecoderUart {
 impl Decoder for DecoderUart {
 
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
+		if self.baudrate > TIMER_CLOCK_RATE {return Err(())}
 		let bit_time = TIMER_CLOCK_RATE as f32 / self.baudrate as f32;
-		let mut bits = samples.bitwise_iter(self.rx_pin, bit_time);
 
-		let mut section: Option<Section> = None;
-		let mut state = DecoderUartState::Idle(IdleState);
+		let mut bits = BitwiseIterator::from(samples, bit_time);
+		let mut output = UartOutput {output};
+		let mut state = DecoderUartState::Start(StartState);
 
-		while bits.peek().is_some() {
-			let result: Option<DecoderUartState> = match state {
-				DecoderUartState::Idle(state) => {state.process(&mut bits, &mut section)},
-				DecoderUartState::Start(state) => {state.process(&mut bits, &mut section)},
-				DecoderUartState::Data(state) => {state.process(&mut bits, &mut section, self.databits)},
-				DecoderUartState::Parity(state) => {state.process(&mut bits, &mut section, self.parity)},
-				DecoderUartState::Stop(state) => {state.process(&mut bits, &mut section, self.stopbits)},
-			};
-
-			if let Some(result_section) = section {
-				output.push(result_section)?;
-				section = None;
-			}
-
-			match result {
-				Some(new_state) => {state = new_state},
-				None => {break}
+		loop {
+			state = match state.process(&mut bits, &mut output, &self) {
+				Some(state) => state,
+				None => break
 			}
 		}
 
@@ -389,11 +390,9 @@ mod tests {
 		let mut section_iter = sections.iter();
 
 		let expected = [
-			SectionContent::Empty,
 			SectionContent::StartBit,
 			SectionContent::Word('H' as u32),
 			SectionContent::StopBit,
-			SectionContent::Empty,
 		];
 
 		assert_section_sequence(&mut section_iter, &expected);
@@ -406,13 +405,11 @@ mod tests {
 		let mut section_iter = sections.iter();
 
 		let expected = [
-			SectionContent::Empty,
 			SectionContent::StartBit, SectionContent::Word('H' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('a' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('l' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('l' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('o' as u32), SectionContent::StopBit,
-			SectionContent::Empty,
 		];
 
 		assert_section_sequence(&mut section_iter, &expected);
@@ -432,7 +429,6 @@ mod tests {
 		let mut section_iter = sections.iter();
 
 		let expected = [
-			SectionContent::Empty,
 			SectionContent::StartBit, SectionContent::Word('1' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('2' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('3' as u32), SectionContent::StopBit,
@@ -442,10 +438,8 @@ mod tests {
 			SectionContent::StartBit, SectionContent::Word('7' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('8' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('9' as u32), SectionContent::StopBit,
-			SectionContent::Empty,
 		];
 
 		assert_section_sequence(&mut section_iter, &expected);
 	}
-
 }

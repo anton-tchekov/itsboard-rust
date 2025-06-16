@@ -144,3 +144,46 @@ impl<'a> Iterator for EdgeWiseIterator<'a> {
 		Some(Edge::from(value))
 	}
 }
+
+#[derive(Default, Clone, Copy)]
+pub struct BitSignal {
+	pub high: bool,
+	pub end: u32,
+	pub start: u32,
+}
+
+impl BitSignal {
+	pub fn duration(&self) -> u32 {
+		self.end - self.start
+	}
+}
+
+pub type Pulse = BitSignal;
+
+pub struct PulsewiseIterator<'a> {
+	buffer: EdgeWiseIterator<'a>,
+}
+
+impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a> {
+	fn from(mut iter: EdgeWiseIterator<'a>) -> Self {
+		PulsewiseIterator {
+			buffer: iter,
+		}
+	}
+}
+
+impl<'a> Iterator for PulsewiseIterator<'a> {
+	type Item = Pulse;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let start = self.buffer.current_time();
+		let next_edge = self.buffer.next()?;
+		let end = self.buffer.current_time();
+
+		Some(Pulse {
+			high: next_edge.into(),
+			start,
+			end,
+		})
+	}
+}
