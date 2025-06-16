@@ -70,9 +70,20 @@ impl SampleBuffer {
 	}
 }
 
-struct Edge {
-	rising: bool,
-	at: u32,
+#[derive(PartialEq, Eq)]
+pub enum Edge {
+	Rising,
+	Falling
+}
+
+impl From<bool> for Edge {
+	// bool is the value of the previous pulse
+	fn from(value: bool) -> Self {
+		match value {
+			true => Edge::Falling,
+			false => Edge::Rising
+		}
+	}
 }
 
 pub struct EdgeWiseIterator<'a> {
@@ -88,6 +99,25 @@ impl<'a> EdgeWiseIterator<'a> {
 			ch,
 			idx: 0,
 		}
+	}
+
+	pub fn current_index(&self) -> usize {
+		self.idx
+	}
+
+	pub fn set_index(&mut self, idx: usize) -> Result<(), ()> {
+		if idx > self.buffer.len {
+			return Err(())
+		}
+		self.idx = idx;
+		Ok(())
+	}
+
+	pub fn current_time(&self) -> u32 {
+		if self.buffer.len == 0 {
+			return 0
+		}
+		self.buffer.timestamps[self.idx]
 	}
 }
 
@@ -107,7 +137,7 @@ impl<'a> Iterator for EdgeWiseIterator<'a> {
 			self.idx += 1;
 		}
 
-		Some(Edge { rising: value, at: timestamp })
+		Some(Edge::from(value))
 	}
 }
 
@@ -121,40 +151,6 @@ pub struct BitSignal {
 impl BitSignal {
 	pub fn duration(&self) -> u32 {
 		self.end - self.start
-	}
-}
-
-type Pulse = BitSignal;
-
-pub struct PulsewiseIterator<'a> {
-	buffer: EdgeWiseIterator<'a>,
-	prev: Option<Edge>,
-}
-
-impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a> {
-	fn from(mut iter: EdgeWiseIterator<'a>) -> Self {
-		PulsewiseIterator {
-			prev: iter.next(),
-			buffer: iter,
-		}
-	}
-}
-
-impl<'a> Iterator for PulsewiseIterator<'a> {
-	type Item = Pulse;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		let prev_edge = self.prev.take()?;
-		let next_edge = self.buffer.next()?;
-
-		let result = Pulse {
-			high: prev_edge.rising,
-			start: prev_edge.at,
-			end: next_edge.at,
-		};
-
-		self.prev = Some(next_edge);
-		Some(result)
 	}
 }
 

@@ -1,7 +1,7 @@
-#[derive(Copy, Clone)]
 pub enum OneWireError {
 	ResponseTooShort,
 	ResponseTooLong,
+	ResetRecoveryTooShort,
 	ResetTooShort,
 	ResetTooLong,
 	BitInitTooShort,
@@ -10,13 +10,17 @@ pub enum OneWireError {
 	BitSlotTooLong,
 	LineRecoveryTooShort,
 	UnexpectedReset,
+	// programmer error if these occur
+	UnexpectedFallingEdge,
+	UnexpectedRisingEdge
 }
 
 impl OneWireError {
 	pub fn to_string(&self) -> &'static str {
 		match self {
-			OneWireError::ResponseTooShort => "Response too short",
+			OneWireError::ResponseTooShort => "Response too short/early",
 			OneWireError::ResponseTooLong => "Response too long",
+			OneWireError::ResetRecoveryTooShort => "Reset Recovery too short",
 			OneWireError::ResetTooShort => "Reset too short",
 			OneWireError::ResetTooLong => "Reset too long",
 			OneWireError::BitInitTooShort => "Bit initialization too short",
@@ -25,6 +29,8 @@ impl OneWireError {
 			OneWireError::BitSlotTooLong => "Bit slot too long",
 			OneWireError::LineRecoveryTooShort => "Line recovery too short",
 			OneWireError::UnexpectedReset => "Unexpected reset pulse",
+			OneWireError::UnexpectedFallingEdge => "Unexpected falling edge",
+			OneWireError::UnexpectedRisingEdge => "Unexpected rising edge"
 		}
 	}
 }

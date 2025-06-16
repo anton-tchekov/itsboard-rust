@@ -2,6 +2,7 @@ mod decoder;
 mod decoder_uart;
 mod decoder_onewire;
 mod sample;
+mod bit_reader;
 mod test_utils;
 
 use crate::sample::SampleBuffer;
