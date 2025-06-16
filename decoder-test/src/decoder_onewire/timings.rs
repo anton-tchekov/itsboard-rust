@@ -91,7 +91,7 @@ impl Timings<u32> {
 			wr_init: Range { min: 5, max: 15 },
 			wr_slot: Range { min: 52, max: 120 },
 			line_recover_min: 8,
-			response: Range { min: 68, max: 80 },
+			response: Range { min: 63, max: 78 },
 			reset: Range { min: 480, max: 640 },
 			reset_recover_min: 473,
 		}

@@ -1,23 +1,23 @@
-enum BitOrder {
+pub enum BitOrder {
     LSB,
     MSB
 }
 
-struct BitReader {
+pub struct BitReader {
     i: u8,
     order: BitOrder, 
-    amount: u8, 
+    amount: u8,
     value: u64
 }
 
 impl BitReader {
-    fn new(amount: u8, order: BitOrder) -> Self {
-        assert!(i <= 64 && i > 0, "i must be between 1 and 64");
-        BitReader {amount, i: 0, value: 0}
+    pub fn new(amount: u8, order: BitOrder) -> Self {
+        assert!(amount <= 64 && amount > 0, "i must be between 1 and 64");
+        BitReader {amount, i: 0, value: 0, order}
     }
 
     pub fn get_value(&self) -> Option<u64> {
-        if i > 0 {
+        if self.i > 0 {
             return Some(self.value);
         }
         None
@@ -26,7 +26,7 @@ impl BitReader {
     // returns true if the reader is finished
     pub fn read_bit(&self, bit: bool) -> bool
     {
-        if self.i >= amount {
+        if self.i >= self.amount {
             return true
         }
 
@@ -35,11 +35,11 @@ impl BitReader {
             BitOrder::MSB => self.amount - self.i
         };
 
-        self.value |= (bit as u64) << i;
+        self.value |= (bit as u64) << shift;
         false
     }
  
     pub fn is_finished(&self) {
-        i == amount
+        self.i == self.amount
     }
 }

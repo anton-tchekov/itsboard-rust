@@ -1,172 +1,192 @@
-struct BitResult {
-	high: Result<bool, OneWireError>,
-	start: u32,
-	end: u32,
-}
+use crate::decoder_onewire::onewire_error::OneWireError;
+use crate::decoder_onewire::timings::Timings;
+use crate::sample::{Edge, EdgeWiseIterator};
 
-impl BitResult {
-	fn to_section(&self) -> Section {
-		Section {
-			start: self.start,
-			end: self.end,
-			content: match self.high {
-				Ok(value) => SectionContent::Bit(value),
-				Err(err) => SectionContent::Err(err.to_string()),
-			},
-		}
-	}
-}
-
-struct OnewireIter<'a> {
-    iter: EdgewiseIterator<'a>,
+pub struct OnewireIter<'a> {
+    iter: EdgeWiseIterator<'a>,
     last_idx: usize,
     timing: Timings<u32>,
 }
 
 impl <'a>OnewireIter<'a> {
 
-	fn check_timings(&self, duration: u32) -> Result<(), OneWireError> {
+	fn check_bit_timings(&self, duration: u32) -> Result<(), OneWireError> {
         match duration {
-            d if d < self.timings.wr_init.min => Err(OneWireError::BitInitTooShort),
-            d if d > self.timings.wr_slot.max && d >= self.timings.reset.min => {
+            d if d < self.timing.wr_init.min => Err(OneWireError::BitInitTooShort),
+            d if d > self.timing.wr_slot.max && d >= self.timing.reset.min => {
 				Err(OneWireError::UnexpectedReset)
 			}
-			d if d > self.timings.wr_slot.max && d < self.timings.reset.min => {
+			d if d > self.timing.wr_slot.max && d < self.timing.reset.min => {
 				Err(OneWireError::BitSlotTooLong)
 			}
-            d if d > self.timings.wr_init.max && d < self.timings.wr_slot.min => {
+            d if d > self.timing.wr_init.max && d < self.timing.wr_slot.min => {
                 Err(OneWireError::BitInitTooLong)
             }
             _ => Ok(()),
         }
     }
 
-    fn next_bit() {
-		self.iter.idx = self.last_idx;
+    pub fn next_bit(&mut self) -> Option<(u32, Result<bool, OneWireError>)> {
+		self.last_idx = self.iter.current_index();
+		
+		let start_time = self.current_time();
+		let init = self.iter.next()?;
+		let mut end_time = self.current_time();
 
-		let init = self.signal.next()?;
-		let mut duration = init.duration();
+		match init {
+			Edge::Falling => return Some((end_time, Err(OneWireError::UnexpectedFallingEdge))),
+			_ => {}
+		}
 
-		let mut result = BitResult {
-			high: Ok(false),
-			start: init.start,
-			end: init.end,
-		}; 
+		let mut duration = end_time - start_time;
 
-		if let Err(err) = self.check_timings(duration) {
-			result.high = Err(err);
-			return Some(result);
+		if let Err(err) = self.check_bit_timings(duration) {
+			return Some((end_time, Err(err)));
 		}
 
 		// bit is high
-		if duration <= self.timings.wr_init.max {
-			result.high = Ok(true);
-
-			let high = self.signal.next()?; 
+		if duration <= self.timing.wr_init.max {
+			self.iter.next()?;
 			// we don't want to stretch the time if the line is idle after bit
-			duration += high.duration().min(self.timings.wr_slot.max);
+			duration += (self.current_time() - start_time).min(self.timing.wr_slot.max);
+			end_time = start_time + duration;
 
-			if duration < self.timings.wr_slot.min + self.timings.line_recover_min {
-				result.high = Err(OneWireError::BitSlotTooShort);
-				result.end = high.end;
-				return Some(result);
+			if duration < self.timing.wr_slot.min + self.timing.line_recover_min {
+				return Some((end_time, Err(OneWireError::BitInitTooShort)));
 			}
 
-			return Some(result);
+			return Some((end_time, Ok(true)));
 		}
 
 		// bit was low
-		let recovery = self.signal.next()?;
-		result.end = recovery.start;
+		self.iter.next()?;
+		let recovery_duration = self.current_time() - end_time;
 
-		if recovery.duration() < self.timings.line_recover_min {
-			result.high = Err(OneWireError::LineRecoveryTooShort);
- 			return Some(result);
+		if recovery_duration < self.timing.line_recover_min {
+ 			return Some((self.current_time(), Err(OneWireError::LineRecoveryTooShort)));
 		}
 
-		Some(result)
+		Some((end_time + self.timing.line_recover_min, Ok(false)))
     }
 
-    fn next_reset() {
-		self.iter.idx = last_idx;
+    pub fn next_reset(&mut self) -> Option<Result<(), OneWireError>> {
+		self.last_idx = self.iter.current_index();
 
-		let mut next = iter.next()?;
+		let start_time = self.current_time();
+		let reset = self.iter.next()?;
+		let end_time = self.current_time();
+		match reset {
+			Edge::Falling => return Some(Err(OneWireError::UnexpectedFallingEdge)),
+			_ => {}
+		}
 
-		if next.duration() < timing.reset.min {
-			decode.push(Section::from_bit(&next, SectionContent::Err("Reset too short")))?;
-			return Some(DecoderOneWireState::Reset(ResetState));
+		let duration = end_time - start_time;
+
+		if duration < self.timing.reset.min {
+			return Some(Err(OneWireError::ResetTooShort));
 		}
 		
-		if next.duration() > timing.reset.max {
-			decode.push(Section::from_bit(&next, SectionContent::Err("Reset too long")))?;
-			return Some(DecoderOneWireState::Reset(ResetState));
+		if duration > self.timing.reset.max {
+			return Some(Err(OneWireError::ResetTooLong))
 		}
 
-		decode.push(Section::from_bit(&next, SectionContent::Reset))?;
+		Some(Ok(()))
     }
 
-    fn next_response() {
-		self.iter.idx = last_idx;
+    pub fn next_response(&mut self) -> Option<(u32, Result<(u32, bool), OneWireError>)> {
+		self.last_idx = self.iter.current_index();
 
-		let response_start = next.end;
-		next = decode.next()?;
-
-		let mut response_duration = next.start - response_start;
-		let mut  device_responded = false;
-
-		if response_duration > timing.response.max {
-			decode.push(Section {
-				start: response_start,
-				end: response_start + timing.response.max,
-				content: SectionContent::NoDeviceResponse,
-			})?;
+		let start_time = self.current_time();
+		let reset = self.iter.next()?;
+		let end_time = self.current_time();
+		match reset {
+			Edge::Rising => return Some((start_time, Err(OneWireError::UnexpectedRisingEdge))),
+			_ => {}
 		}
-		else {
-			next = decode.next()?;
-			response_duration = next.end - response_start;
 
-			if response_duration < timing.response.min {
-				decode.push(Section::from_bit(&next, SectionContent::Err("Response too short/early")))?;
-				return Some(DecoderOneWireState::Reset(ResetState));
+		let mut duration = end_time - start_time;
+		
+		let mut response_start = start_time;
+		let mut response_end = start_time + self.timing.response.max;
+		let mut device_responded = false;
+
+		if duration < self.timing.response.max {
+			self.iter.next()?;
+
+			response_start = end_time;
+			response_end = self.current_time();
+
+			duration = response_start - start_time;
+
+			if duration < self.timing.response.min {
+				return Some((response_start, Err(OneWireError::ResponseTooShort)));
 			}
 
-			if response_duration > timing.reset_recover_min {
-				decode.push(Section::from_bit(&next, SectionContent::Err("Response too long")))?;
-				return Some(DecoderOneWireState::Reset(ResetState));
+			if duration > self.timing.reset_recover_min {
+				return Some((response_start, Err(OneWireError::ResponseTooLong)));
 			}
 
-			decode.push(Section::from_bit(&next, SectionContent::DeviceResponse))?;
 			device_responded = true;
-			next = decode.next()?;
-			response_duration = next.end - response_start;
+			self.iter.next()?;
+		} else {
+			self.discard_last();
 		}
 
-		if response_duration < timing.reset_recover_min {
-			decode.push(Section::from_bit(&next, SectionContent::Err("Response recovery too short")))?;
-			return Some(DecoderOneWireState::Reset(ResetState));
+		Some((response_start, Ok((response_end, device_responded))))
+    }
+
+	pub fn next_reset_recovery(&mut self, response_start: u32) -> Option<Result<u32, OneWireError>> {
+		self.last_idx = self.iter.current_index();
+
+		let start_time = self.current_time();
+		let reset = self.iter.next()?;
+		match reset {
+			Edge::Rising => return Some(Err(OneWireError::UnexpectedRisingEdge)),
+			_ => {}
 		}
 
-		let recovery_end  = response_start + timing.reset_recover_min;
+		if (self.current_time() - response_start) < self.timing.reset_recover_min {
+			return Some(Err(OneWireError::ResetRecoveryTooShort))
+		}
+
+		Some(Ok(start_time + self.timing.reset_recover_min))
+	}
+
+	// forwards self, so self.next_reset() will be a 'valid' reset
+    pub fn forward_to_reset(&mut self) -> Option<_> {
+		self.last_idx = self.iter.current_index();
+
+		loop {
+			let mut idx = self.iter.current_index();
+			let mut start = self.current_time();
+			let mut next = self.iter.next()?;
+
+			if (start - self.current_time()) >= self.timing.reset.min && next == Edge::Rising {
+				self.iter.set_index(idx);
+				return Some(())
+			}
+		}
     }
 
-    fn forward_to_reset() {
+    pub fn discard_last(&mut self) {
+		self.iter.set_index(self.last_idx);
     }
 
-    fn consume_last() {
+    pub fn current_time(&self) -> u32 {
+		self.iter.current_time()
     }
 
-    fn current_time() {
-    }
-
-    fn set_timing() {
+    pub fn set_timing(&mut self, timing: Timings<u32>) {
+		self.timing = timing;
     }
 }
 
-impl <'a>From<EdgewiseIterator<'a>> for OnewireIter<'a> {
-    fn from(iter: EdgewiseIterator<'a>) -> Self {
+impl <'a>From<EdgeWiseIterator<'a>> for OnewireIter<'a> {
+    fn from(iter: EdgeWiseIterator<'a>) -> Self {
         OnewireIter {
+			last_idx: iter.current_index(),
+			timing: Timings::standard(),
             iter,
-            last_idx: iter.idx,
         }
     }
 }
