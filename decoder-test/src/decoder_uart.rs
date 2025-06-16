@@ -177,13 +177,6 @@ struct UartOutput<'a> {
 }
 
 impl <'a>UartOutput<'a> {
-	fn push_next<T>(&mut self, iter: &mut BitwiseIterator, value_to_content: T) -> Option<()> 
-	where T: FnOnce(bool) -> SectionContent
-	{
-		let bit = iter.next()?;
-		self.push_signal(bit, value_to_content(bit.high))
-	}
-
 	fn push(&mut self, section: Section) -> Option<()> {
 		self.output.push(section)
 	}
@@ -202,10 +195,12 @@ struct StartState;
 
 impl StartState {
 	pub fn process(&self, bits: &mut BitwiseIterator, output: &mut UartOutput) -> Option<DecoderUartState> {
-		if bits.peek()?.high {
+		let mut bit = bits.next()?;
+		if bit.high {
 			bits.next_pulse()?;
+			bit = bits.next()?;
 		}
-		output.push_next(bits, |_| SectionContent::StartBit)?;
+		output.push_signal(bit, SectionContent::StartBit)?;
 		Some(DecoderUartState::Data(DataState::default()))
 	}
 }
