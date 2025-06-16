@@ -8,11 +8,11 @@ pub struct OneWireOutput<'a> {
 }
 
 impl <'a>OneWireOutput<'a> {
-    pub fn push(&self, section: Section) -> Option<_> {
+    pub fn push(&self, section: Section) -> Option<()> {
         self.output.push(section).ok()
     }
 
-    pub fn push_err(&self, iter: &mut OnewireIter, start_time: u32, err: OneWireError) -> Option<_> {
+    pub fn push_err(&self, iter: &mut OnewireIter, start_time: u32, err: OneWireError) -> Option<()> {
         iter.set_timing(Timings::standard());
         iter.forward_to_reset()?;
 

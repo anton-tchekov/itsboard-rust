@@ -1,49 +1,11 @@
 use crate::sample::*;
+use crate::decoder_onewire::rom_cmd::ROMCmd;
 
 pub type DecoderPin = u32;
 
 pub const SECBUF_SIZE: usize = 100;
 pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
 pub const TIMER_TICKS_PER_US: u32 = TIMER_CLOCK_RATE / 1_000_000;
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum ROMCommand {
-	ReadROM,
-	SkipROM,
-	MatchROM,
-	SearchROM,
-	OverdriveSkipROM,
-	OverdriveMatchROM
-}
-
-impl TryFrom<u8> for ROMCommand {
-	type Error = &'static str;
-
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0x33 => Ok(ROMCommand::ReadROM),
-			0xCC => Ok(ROMCommand::SkipROM),
-			0x55 => Ok(ROMCommand::MatchROM),
-			0xF0 => Ok(ROMCommand::SearchROM),
-			0x3C => Ok(ROMCommand::OverdriveSkipROM),
-			0x69 => Ok(ROMCommand::OverdriveMatchROM),
-			_ => Err("Invalid ROM command"),
-		}
-	}
-}
-
-impl ROMCommand {
-	fn to_string(&self) -> &'static str {
-		match self {
-			ROMCommand::ReadROM => "Read ROM",
-			ROMCommand::SkipROM => "Skip ROM",
-			ROMCommand::MatchROM => "Match ROM",
-			ROMCommand::SearchROM => "Search ROM",
-			ROMCommand::OverdriveSkipROM => "Overdrive Skip ROM",
-			ROMCommand::OverdriveMatchROM => "Overdrive Match ROM",
-		}
-	}
-}
 
 // GUI is responsible for choosing representation, colors, etc.
 // FIXME: Debug and PartialEq only needed for testing
@@ -68,7 +30,7 @@ pub enum SectionContent {
 	FunctionCmd(u8),
 	FamilyCode(u8),
 	SensorID(u64),
-	ROMCmd(ROMCommand),
+	ROMCmd(ROMCmd),
 	Err(&'static str)
 }
 
@@ -82,16 +44,6 @@ pub struct Section {
 
 	// Arbitrary Content
 	pub content: SectionContent
-}
-
-impl Section {
-	pub fn from_bit(bit: &BitData, content: SectionContent) -> Self {
-		Section {
-			start: bit.start,
-			end: bit.end,
-			content
-		}
-	}
 }
 
 pub struct SectionBuffer {

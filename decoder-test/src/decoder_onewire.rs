@@ -1,15 +1,75 @@
 mod timings;
 mod onewire_error;
-mod process_bits;
 mod onwire_iter;
 mod onewire_output;
+pub mod rom_cmd;
 
 use timings::*;
 
+use crate::bit_reader::BitReader;
 use crate::decoder::*;
 use crate::decoder_onewire::onewire_output::OneWireOutput;
 use crate::decoder_onewire::onwire_iter::OnewireIter;
+use crate::decoder_onewire::rom_cmd::ROMCmd;
 use crate::sample::*;
+use onewire_error::*;
+
+pub fn process_bits<F, G>(
+    iter: &mut OnewireIter,
+    output: &mut OneWireOutput,
+    amount:  u8,
+    success_state: OneWireState,
+    value_to_content: G,
+) -> Option<OneWireState>
+where
+    G: FnOnce(u64) -> SectionContent,
+{
+    let start = iter.current_time();
+    let mut reader = BitReader::lsb(amount);
+    let (end, result) = read_bits(iter, output, &mut reader)?;
+
+    if let Some(value) = reader.get_value() {
+        let content = value_to_content(value);
+        output.push(Section { start, end, content })?;
+    }
+
+    if reader.is_finished() {
+        return Some(success_state)
+    }
+
+    if let Err(err) = result {
+        output.push_err(iter, end, err)?;
+        return Some(OneWireState::Reset(ResetState));
+    };
+
+    None
+}
+
+pub fn read_bits(    
+    iter: &mut OnewireIter,
+    output: &mut OneWireOutput,
+    reader: &mut BitReader,
+) -> Option<(u32, Result<(), OneWireError>)> {
+    let mut current_time = iter.current_time();
+
+    while let Some((end_time, value)) = iter.next_bit() {
+        match value {
+            Ok(bit) => {
+                output.push(Section { 
+                    start: current_time,
+                    end: end_time,
+                    content: SectionContent::Bit(bit)
+                })?;
+                if reader.read_bit(bit) { break; }
+            },
+            Err(err) => return Some(Err(err)),
+        };
+
+        current_time = iter.current_time();
+    }
+
+    Some(Ok(current_time))
+}
 
 enum OneWireState {
 	Reset(ResetState),
@@ -35,19 +95,19 @@ impl OneWireState {
 		}
 	}
 
-	pub fn from_rom(iter: &mut OnewireIter, cmd: ROMCommand) -> OneWireState {
+	pub fn from_rom(iter: &mut OnewireIter, cmd: ROMCmd) -> OneWireState {
 		match cmd {
-			ROMCommand::SearchROM => OneWireState::SearchROM(SearchROMState),
-			ROMCommand::SkipROM => OneWireState::FunctionCmd(FunctionCmdState),
-			ROMCommand::OverdriveSkipROM => {
+			ROMCmd::SearchROM => OneWireState::SearchROM(SearchROMState {iteration: 0}),
+			ROMCmd::SkipROM => OneWireState::FunctionCmd(FunctionCmdState),
+			ROMCmd::OverdriveSkipROM => {
 				iter.set_timing(Timings::overdrive());
 				OneWireState::FunctionCmd(FunctionCmdState)
 			},
-			ROMCommand::OverdriveMatchROM => {
+			ROMCmd::OverdriveMatchROM => {
 				iter.set_timing(Timings::overdrive());
-				OneWireState::FamilyCode(FamilyCode)
+				OneWireState::FamilyCode(FamilyCodeState)
 			},
-			_ => OneWireState::FamilyCode(FamilyCode),
+			_ => OneWireState::FamilyCode(FamilyCodeState),
 		}
 	}
 }
@@ -118,58 +178,75 @@ impl ResetState {
 struct ROMCommandState;
 
 impl ROMCommandState {
-	fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
-		process_bits_reset_on_err(8, iter, output, |value| {
-			let rom_cmd = ROMCommand::try_from(value as u8);
-			let content = match rom_cmd {
-				Ok(cmd) => SectionContent::ROMCmd(cmd),
-				Err(err) => SectionContent::Err(err),
+	fn process(&self, iter: &mut OnewireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
+		let reader = BitReader::lsb(8);
+
+		let start = iter.current_time();
+		let (end, result) = read_bits(iter, output, &mut reader)?;
+
+		if let Some(value) = reader.get_value() {
+			let rom_cmd = ROMCmd::try_from(value);
+
+			match (rom_cmd, result) {
+				(Err(code), Err(_)) => {
+					output.push(Section { start, end, content: SectionContent::Err(code.to_string())});
+				},
+
+				(Err(code), Ok(_)) => {
+					result = Err(code)
+				},
+
+				Ok(cmd) => {
+					output.push(Section { start, end, content: SectionContent::ROMCmd(cmd) });
+					
+					if reader.is_finished() {
+						return Some(OneWireState::from_rom(iter, cmd));
+					}
+				},
 			};
+		};
 
-			match rom_cmd {
-				Ok(cmd) => (content, Some(OneWireState::from_rom(cmd))),
-				Err(_) => (content, None),
-			}
+		if let Err(err) = result {
+			output.push_err(iter, end, err)?;
+			return Some(OneWireState::Reset(ResetState));
+		};
+
+		None
+	}
+}
+
+struct FamilyCodeState;
+impl FamilyCodeState {
+	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
+		process_bits(iter, output, 8, OneWireState::SensorID(SensorIDState), |value| {
+			SectionContent::FamilyCode(value)
 		})
 	}
 }
 
-struct FamilyCode(Timings<u32>);
-impl FamilyCode {
-	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
-		process_bits_reset_on_err(8, iter, output, |value| {
-			let content: SectionContent = SectionContent::FamilyCode(value as u8);
-			(content, Some(OneWireState::SensorID(SensorIDState(self.0))))
-		})
-	}
-}
-
-struct SensorIDState(Timings<u32>);
+struct SensorIDState;
 impl SensorIDState {
-	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
-		process_bits_reset_on_err(48, iter, output, |value| {
-			let content = SectionContent::SensorID(value);
-			(content, Some(OneWireState::CRC(CRCState(self.0))))
+	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
+		process_bits(iter, output, 48, OneWireState::CRC(CRCState), |value| {
+			SectionContent::SensorID(value)
 		})
 	}
 }
 
-struct CRCState(Timings<u32>);
+struct CRCState;
 impl CRCState {
-	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
-		process_bits_reset_on_err(8, iter, output, |value| {
-			let content = SectionContent::CRC(value as u8);
-			(content, Some(OneWireState::FunctionCmd(FunctionCmdState(self.0))))
+	fn process(self, iter: &mut OnewireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
+		process_bits(iter, output, 8, OneWireState::FunctionCmd(FunctionCmdState), |value| {
+			SectionContent::CRC(value)
 		})
 	}
 }
 
-struct FunctionCmdState(Timings<u32>);
+struct FunctionCmdState;
 impl FunctionCmdState{
-	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
-		process_bits_reset_on_err(8, iter, output, |value| {
-			let content = SectionContent::FunctionCmd(value as u8);
-			(content, Some(OneWireState::Data(DataState(self.0))))
+	fn process(self, iter: &mut OnewireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
+		process_bits(iter, output, 8, OneWireState::Data(DataState), |value| {
+			SectionContent::FunctionCmd(value)
 		})
 	}
 }
@@ -178,26 +255,49 @@ impl FunctionCmdState{
 struct SearchROMState {
 	iteration: u8,
 }
+
 impl SearchROMState {
-	fn process(self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
+	fn process(self, iter: &mut OnewireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
 		if self.iteration >= 3 {
-			return Some(OneWireState::FunctionCmd(FunctionCmdState(timing)));
+			return Some(OneWireState::FunctionCmd(FunctionCmdState));
 		}
 
-		process_bits_reset_on_err(64, iter, output, |value| {
-			let content = SectionContent::Data(value);
-			(content, Some(OneWireState::SearchROM(SearchROMState {
-				iteration: self.iteration + 1,
-			})))
+		process_bits(iter, output, 64, OneWireState::SearchROM(SearchROMState {iteration: self.iteration + 1 }), |value| {
+			SectionContent::Data(value)
 		})
 	}
 }
 
-struct DataState(Timings<u32>);
+struct DataState;
 impl DataState {
-	fn process(&self, iter: &mut OneWireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
-	}
+	fn process(&self, iter: &mut OnewireIter, output: &mut SectionBuffer) -> Option<OneWireState> {
+		let reader = BitReader::lsb(64);
 
+		let start = iter.current_time();
+		let (end, result) = read_bits(iter, output, &mut reader)?;
+
+		if let Some(value) = reader.get_value() {
+			let content = SectionContent::Data(value);
+			output.push(Section { start, end, content })?;
+		}
+
+		if reader.is_finished() {
+			return Some(OneWireState::Data(DataState))
+		}
+
+		if let Err(err) = result {
+			match err {
+				OneWireError::UnexpectedReset => {
+					iter.discard_last();
+					return Some(OneWireState::Reset(ResetState))
+				},
+				_ => {}
+			}
+
+			output.push_err(iter, end, err)?;
+			return Some(OneWireState::Reset(ResetState))
+		};
+	}
 }
 
 pub struct DecoderOneWire {
@@ -206,14 +306,12 @@ pub struct DecoderOneWire {
 
 impl Decoder for DecoderOneWire {
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
-		let pulse_iter = PulsewiseIterator::new(samples, self.onewire_pin as u32);
-		let mut signal = pulse_iter.peekable();
-
-		let mut section_buf = OneWireSectionBuffer::from_buf(output);
+		let mut iter = OnewireIter::from(samples.edge_iter(self.onewire_pin));
+		let mut output = OneWireOutput::from(output);
 
 		let mut state = OneWireState::Reset(ResetState);
 
-		while let Some(next) = state.process(&mut signal, &mut section_buf) {
+		while let Some(next) = state.process(&mut iter, &mut output) {
 			state = next;
 		}
 
