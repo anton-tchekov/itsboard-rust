@@ -1,9 +1,6 @@
 use crate::durationindicator::DurationIndicator;
-use crate::font::{lcd_str, lcd_str_undraw};
-use crate::lcd::{lcd_color, lcd_vline, LCD_WHITE, LCD_BLACK, LCD_WIDTH};
-use crate::tinyfont::TINYFONT;
+use crate::lcd::{lcd_color, lcd_vline};
 use crate::gui::Action;
-use crate::macro_utils;
 use crate::waveform::{WaveformBuffer, WAVEFORM_SPACING, CHANNEL_LABEL_WIDTH, WAVEFORMS_Y, WAVEFORM_W};
 use crate::sample::SampleBuffer;
 
@@ -45,17 +42,30 @@ impl Cursors
 
 	fn render_duration(&mut self)
 	{
-		let x0 = u32::min(self.x[0], self.x[1]);
-		let x1 = u32::max(self.x[0], self.x[1]);
-
 		let t = self.t_end - self.t_start;
+		let t0 =
+			if self.ts[0] == u32::MAX
+			{
+				((self.x[0] as f64) / (WAVEFORM_W as f64) * (t as f64)) as u32
+			}
+			else
+			{
+				self.ts[0] - self.t_start
+			};
 
-		let t0 = (x0 as f64) / (WAVEFORM_W as f64) * (t as f64);
-		let t1 = (x1 as f64) / (WAVEFORM_W as f64) * (t as f64);
 
-		let dt = t1 - t0;
+		let t1 =
+			if self.ts[1] == u32::MAX
+			{
+				((self.x[1] as f64) / (WAVEFORM_W as f64) * (t as f64)) as u32
+			}
+			else
+			{
+				self.ts[1] - self.t_start
+			};
 
-		self.durationindicator.show(dt as u32);
+		let dt = t1.abs_diff(t0);
+		self.durationindicator.show(dt);
 	}
 
 	fn render(&mut self, x: [u32; 2], wf: &WaveformBuffer)
@@ -137,6 +147,18 @@ impl Cursors
 		((t_off / (t_whole as f64)) * ((WAVEFORM_W - 1) as f64)) as u32
 	}
 
+	fn set_t(&mut self, nt: u32, new_x: &mut [u32; 2])
+	{
+		if nt < self.t_start || nt > self.t_end
+		{
+			self.ts[0] = u32::MAX;
+			return;
+		}
+
+		self.ts[0] = nt;
+		new_x[0] = self.to_x(nt);
+	}
+
 	pub fn action(&mut self, action: Action, wf: &WaveformBuffer, buf: &SampleBuffer)
 	{
 		let mut new_x: [u32; 2] = self.x;
@@ -147,16 +169,14 @@ impl Cursors
 				let t = self.get_t();
 				let idx = buf.find_prev(t);
 				let nt = buf.timestamps[idx];
-				self.ts[0] = nt;
-				new_x[0] = self.to_x(nt);
+				self.set_t(nt, &mut new_x);
 			}
 			Action::NextEdge =>
 			{
 				let t = self.get_t();
 				let idx = buf.find_next(t);
 				let nt = buf.timestamps[idx];
-				self.ts[0] = nt;
-				new_x[0] = self.to_x(nt);
+				self.set_t(nt, &mut new_x);
 			}
 			Action::LeftFast =>
 			{

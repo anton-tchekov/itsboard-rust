@@ -65,17 +65,14 @@ impl WaveformBuffer
 				start = 0;
 				len = 0;
 			}
+			else if len == 0
+			{
+				start = x;
+				len = 1;
+			}
 			else
 			{
-				if len == 0
-				{
-					start = x;
-					len = 1;
-				}
-				else
-				{
-					len += 1;
-				}
+				len += 1;
 			}
 		}
 

@@ -24,7 +24,7 @@ impl UserFlash
 	pub fn erase(&mut self)
 	{
 		let mut unlocked_flash = self.locked_flash.unlocked();
-		unlocked_flash.erase(self.sector.number);
+		let _ = unlocked_flash.erase(self.sector.number);
 	}
 
 	pub fn write<'a, I>(&mut self, idx: usize, bytes: I)
@@ -32,7 +32,7 @@ impl UserFlash
 	I: Iterator<Item = &'a u8>,
 	{
 		let mut unlocked_flash = self.locked_flash.unlocked();
-		unlocked_flash.program(self.sector.offset, bytes);
+		let _ = unlocked_flash.program(self.sector.offset, bytes);
 	}
 
 	pub fn as_slice(&self) -> &[u8]

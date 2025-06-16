@@ -1,7 +1,7 @@
 use crate::tinyfont::TINYFONT;
 use crate::hw;
 use crate::font::{lcd_str_undraw, lcd_char, lcd_str};
-use crate::lcd::{LCD_WHITE, LCD_BLACK, lcd_vline, lcd_hline};
+use crate::lcd::{LCD_WHITE, LCD_BLACK};
 use crate::bytewriter::ByteMutWriter;
 use core::fmt::Write;
 
@@ -24,8 +24,8 @@ impl TimeIndicator
 	{
 		TimeIndicator
 		{
-			x: x,
-			y: y,
+			x,
+			y,
 			visible: false,
 			digits: [0; NUM_DIGITS]
 		}

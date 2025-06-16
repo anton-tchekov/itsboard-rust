@@ -1,7 +1,3 @@
-use crate::tinyfont::TINYFONT;
-use crate::hw;
-use crate::font::{lcd_str_undraw, lcd_char, lcd_str};
-use crate::lcd::{LCD_WHITE, LCD_BLACK, lcd_vline, lcd_hline};
 use crate::timeindicator::TimeIndicator;
 use crate::timeline::TimeLine;
 

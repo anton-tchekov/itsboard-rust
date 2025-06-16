@@ -17,6 +17,12 @@ pub struct SampleBuffer
 	pub len: usize
 }
 
+impl Default for SampleBuffer {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl SampleBuffer
 {
 	pub fn new() -> Self

@@ -1,6 +1,3 @@
-use crate::tinyfont::TINYFONT;
-use crate::hw;
-use crate::font::{lcd_str_undraw, lcd_char, lcd_str};
 use crate::lcd::{LCD_WHITE, LCD_BLACK, lcd_vline, lcd_hline};
 
 pub struct TimeLine
@@ -20,10 +17,10 @@ impl TimeLine
 	{
 		TimeLine
 		{
-			x: x,
-			y: y,
-			w: w,
-			h: h,
+			x,
+			y,
+			w,
+			h,
 			x0: u32::MAX,
 			x1: u32::MAX,
 			visible: false

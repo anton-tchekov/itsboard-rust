@@ -643,7 +643,7 @@ impl Gui
 		self.term_rows = 0;
 	}
 
-	pub fn init(mut hw: HW) -> Self
+	pub fn init(hw: HW) -> Self
 	{
 		Self::top_divider();
 		Self::bottom_divider();
@@ -659,7 +659,7 @@ impl Gui
 			ma_selected: 0,
 			da_selected: 0,
 			cd_selected: 0,
-			sels: sels,
+			sels,
 			inputs: &UART_INPUTS,
 			term_rows: 0,
 			term_lens: [0; 16],
@@ -673,7 +673,7 @@ impl Gui
 			decoder_framebuf: DecoderFrameBuffer::new(),
 			t_start: 0,
 			t_end: 5 * 1_000_000 * hw::TICKS_PER_US,
-			hw: hw,
+			hw,
 			zoom: 0,
 			pi: PositionIndicator::new(),
 			wf: WaveformBuffer::new(),
@@ -1200,8 +1200,8 @@ impl Gui
 		let mut i = 0;
 		while let Some((text, pin_num)) = decoder.get_pin(i)
 		{
-			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + (pin_num as u32) * WAVEFORM_SPACING;
-			lcd_str(0, y as u32, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
+			let y = WAVEFORMS_Y + WAVEFORM_PIN_Y + pin_num * WAVEFORM_SPACING;
+			lcd_str(0, y, text, LCD_WHITE, LCD_BLACK, &TINYFONT);
 			i += 1;
 		}
 	}
@@ -1403,7 +1403,7 @@ impl Gui
 	fn max_horizontal_scroll(&self) -> u32
 	{
 		let last = self.last_ts();
-		if last < self.t_end { 0 } else { last - self.t_end }
+		last.saturating_sub(self.t_end)
 	}
 
 	fn horizontal_scroll_amount(&self) -> u32

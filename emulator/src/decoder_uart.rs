@@ -54,7 +54,7 @@ impl StartState {
 	pub fn process(&self, bits: &mut BitwiseIterator, data: &mut Option<Section>) -> Option<DecoderUartState> {
 		*data = Some(Section::from_bit(&bits.next()?, SectionContent::StartBit));
 
-		Some(DecoderUartState::Data(DataState::default()))
+		Some(DecoderUartState::Data(DataState))
 	}
 }
 
@@ -85,12 +85,9 @@ impl DataState {
 
 		*data = Some(section);
 
-		let result = match completed {
-			Some(()) => {Some(DecoderUartState::Parity(ParityState { word }))},
-			None => {None}
-		};
+		
 
-		result
+		completed.map(|()| DecoderUartState::Parity(ParityState { word }))
 	}
 }
 
@@ -170,7 +167,7 @@ impl Decoder for DecoderUart {
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
 
 		let bit_time = TIMER_CLOCK_RATE as f32 / self.baudrate as f32;
-		let mut bits = samples.bitwise_iter(self.rx_pin as u32, bit_time);
+		let mut bits = samples.bitwise_iter(self.rx_pin, bit_time);
 
 		let mut section: Option<Section> = None;
 		let mut state = DecoderUartState::Idle(IdleState);

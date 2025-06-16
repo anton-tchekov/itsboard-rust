@@ -10,7 +10,7 @@ pub struct DurationIndicator
 
 const X: u32 = 105;
 const Y: u32 = LCD_HEIGHT - 30 + 7;
-const LABEL: &'static str = "ΔT:";
+const LABEL: &str = "ΔT:";
 
 impl DurationIndicator
 {
