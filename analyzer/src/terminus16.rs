@@ -1,6 +1,6 @@
 use crate::font::Font;
 
-const TERMINUS16_BITMAP: [u8; 2272] =
+const TERMINUS16_BITMAP: [u8; 2288] =
 [
 	0x00,
 	0x00,
@@ -2462,6 +2462,24 @@ const TERMINUS16_BITMAP: [u8; 2272] =
 	0x00,
 	0x00,
 	0x00,
+
+	/* DELTA */
+	0x00,
+	0x00,
+	0x00,
+	0x10,
+	0x10,
+	0x28,
+	0x28,
+	0x44,
+	0x44,
+	0x82,
+	0x82,
+	0xFE,
+	0x00,
+	0x00,
+	0x00,
+	0x00
 ];
 
 pub const ICON_LEFT: u32 = 134;
@@ -2484,6 +2502,8 @@ pub const ICON_RIGHT_FAST: u32 = 166;
 pub const ICON_TIME_EXPAND: u32 = 168;
 pub const ICON_CYCLE: u32 = 170;
 pub const ICON_START: u32 = 172;
+
+pub const CHAR_DELTA: u32 = 174;
 
 pub const TERMINUS16: Font = Font
 {

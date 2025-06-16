@@ -74,6 +74,7 @@ pub fn remap_char(c: u32) -> u32
 	match c {
 		..32 => CHAR_MISSING,
 		0xB5 => CHAR_MICRO,
+		0x394 => CHAR_DELTA,
 		_ => c as u32
 	}
 }

@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
+#[macro_use]
 
+mod macro_utils;
 mod hw;
 mod font;
 mod delay;
@@ -17,6 +19,10 @@ mod decoder_i2c;
 mod decoder_onewire;
 mod decoder_uart;
 mod tinyfont;
+mod timeindicator;
+mod timeline;
+mod durationindicator;
+mod cursors;
 mod positionindicator;
 mod decoder_framebuffer;
 mod decoder_storage;

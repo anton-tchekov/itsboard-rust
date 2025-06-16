@@ -10,6 +10,11 @@ emu:
 	cp src/terminus16_bold.rs ../emulator/src/terminus16_bold.rs
 	cp src/terminus16.rs ../emulator/src/terminus16.rs
 	cp src/tinyfont.rs ../emulator/src/tinyfont.rs
+	cp src/durationindicator.rs ../emulator/src/durationindicator.rs
+	cp src/timeindicator.rs ../emulator/src/timeindicator.rs
+	cp src/timeline.rs ../emulator/src/timeline.rs
+	cp src/cursors.rs ../emulator/src/cursors.rs
+	cp src/macro_utils.rs ../emulator/src/macro_utils.rs
 	cp src/decoder_framebuffer.rs ../emulator/src/decoder_framebuffer.rs
 	cp src/positionindicator.rs ../emulator/src/positionindicator.rs
 	cp src/waveform.rs ../emulator/src/waveform.rs

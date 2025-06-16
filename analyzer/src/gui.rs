@@ -21,6 +21,7 @@ use crate::hw;
 use crate::positionindicator::PositionIndicator;
 use crate::waveform::*;
 use crate::decoder_storage::{DecoderUnion, DecoderStorage};
+use crate::cursors::Cursors;
 
 const BUTTON_COUNT: usize = 8;
 const ICON_BOX: u32 = 30;
@@ -606,7 +607,7 @@ pub struct Gui
 	zoom: usize,
 	pi: PositionIndicator,
 	wf: WaveformBuffer,
-	cursors_en: bool
+	cursors: Cursors
 }
 
 impl Gui
@@ -676,7 +677,7 @@ impl Gui
 			zoom: 0,
 			pi: PositionIndicator::new(),
 			wf: WaveformBuffer::new(),
-			cursors_en: false
+			cursors: Cursors::new()
 		};
 
 		gui.icon_box();
@@ -813,51 +814,6 @@ impl Gui
 			Mode::DecoderOneWire => self.o_open(),
 			Mode::Info => self.info_open()
 		};
-	}
-
-	/* === CURSORS === */
-	fn cursors_action(&mut self, action: Action)
-	{
-		match action
-		{
-			Action::Left => {
-
-			},
-			Action::Right => {
-
-			},
-			Action::Left => {
-
-			},
-			Action::Right => {
-
-			},
-			Action::PrevEdge => {
-
-			},
-			Action::NextEdge => {
-
-			},
-			Action::Escape => {
-				self.cursors_close();
-			},
-			Action::Cycle => {
-
-			}
-			_ => {}
-		}
-	}
-
-	fn cursors_open(&mut self)
-	{
-		self.cursors_en = true;
-		self.actions_set(&ACTIONS_CURSORS);
-	}
-
-	fn cursors_close(&mut self)
-	{
-		self.cursors_en = false;
-		self.actions_set(&ACTIONS_MAIN);
 	}
 
 	/* === INFO === */
@@ -1457,9 +1413,14 @@ impl Gui
 
 	fn ma_action(&mut self, action: Action)
 	{
-		if self.cursors_en
+		if self.cursors.en
 		{
-			self.cursors_action(action);
+			if action == Action::Escape
+			{
+				self.actions_set(&ACTIONS_MAIN);
+			}
+
+			self.cursors.action(action, &self.wf);
 			return;
 		}
 
@@ -1467,7 +1428,8 @@ impl Gui
 		{
 			Action::Cursors =>
 			{
-				self.cursors_open();
+				self.cursors.show(self.t_end - self.t_start);
+				self.actions_set(&ACTIONS_CURSORS);
 			}
 			Action::Left =>
 			{

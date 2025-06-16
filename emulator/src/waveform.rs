@@ -99,6 +99,41 @@ impl WaveformBuffer
 		}
 	}
 
+	pub fn redraw_vline(&self, x: u32)
+	{
+		lcd_window_start(CHANNEL_LABEL_WIDTH + x, WAVEFORMS_Y,
+			1, 8 * WAVEFORM_SPACING);
+
+		for i in 0..8
+		{
+			let bits = (self.prev[x as usize] >> (2 * i)) & 3;
+			match bits
+			{
+				1 => {
+					lcd_emit(LCD_WHITE);
+					for _j in 0..WAVEFORM_H { lcd_emit(LCD_BLACK); }
+				}
+				2 => {
+					for _j in 0..WAVEFORM_H { lcd_emit(LCD_BLACK); }
+					lcd_emit(LCD_WHITE);
+				}
+				3 => {
+					for _j in 0..=WAVEFORM_H { lcd_emit(LCD_WHITE); }
+				}
+				_ => {
+					for _j in 0..=WAVEFORM_H { lcd_emit(LCD_BLACK); }
+				}
+			}
+
+			for _j in 0..(WAVEFORM_SPACING - WAVEFORM_H - 1)
+			{
+				lcd_emit(LCD_BLACK);
+			}
+		}
+
+		lcd_window_end();
+	}
+
 	fn update_one(&self, y: u32, n: u32)
 	{
 		self.update_hline(y, 2 * n);

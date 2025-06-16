@@ -1,3 +1,6 @@
+#[macro_use]
+
+mod macro_utils;
 mod graphics;
 mod lcd;
 mod sample;
@@ -21,6 +24,10 @@ mod hw;
 mod userflash;
 mod decoder_storage;
 mod test_utils;
+mod timeline;
+mod timeindicator;
+mod durationindicator;
+mod cursors;
 
 use crate::hw::HW;
 use crate::graphics::*;
