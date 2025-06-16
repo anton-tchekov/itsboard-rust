@@ -5,6 +5,7 @@ use crate::tinyfont::TINYFONT;
 use crate::gui::Action;
 use crate::macro_utils;
 use crate::waveform::{WaveformBuffer, WAVEFORM_SPACING, CHANNEL_LABEL_WIDTH, WAVEFORMS_Y, WAVEFORM_W};
+use crate::sample::SampleBuffer;
 
 const H: u32 = 8 * WAVEFORM_SPACING;
 const COLOR_DEF: u16 = lcd_color(192, 192, 192);
@@ -16,8 +17,10 @@ pub struct Cursors
 {
 	durationindicator: DurationIndicator,
 	x: [u32; 2],
+	ts: [u32; 2],
 	pub en: bool,
-	t: u32
+	t_start: u32,
+	t_end: u32
 }
 
 impl Cursors
@@ -27,9 +30,11 @@ impl Cursors
 		Cursors
 		{
 			durationindicator: DurationIndicator::new(),
-			x: [ u32::MAX, u32::MAX ],
+			x: [ 0, 0 ],
+			ts: [ 0, 0 ],
 			en: false,
-			t: 0
+			t_start: 0,
+			t_end: 0
 		}
 	}
 
@@ -43,8 +48,10 @@ impl Cursors
 		let x0 = u32::min(self.x[0], self.x[1]);
 		let x1 = u32::max(self.x[0], self.x[1]);
 
-		let t0 = (x0 as f64) / (WAVEFORM_W as f64) * (self.t as f64);
-		let t1 = (x1 as f64) / (WAVEFORM_W as f64) * (self.t as f64);
+		let t = self.t_end - self.t_start;
+
+		let t0 = (x0 as f64) / (WAVEFORM_W as f64) * (t as f64);
+		let t1 = (x1 as f64) / (WAVEFORM_W as f64) * (t as f64);
 
 		let dt = t1 - t0;
 
@@ -94,34 +101,82 @@ impl Cursors
 		self.render_duration();
 	}
 
-	pub fn action(&mut self, action: Action, wf: &WaveformBuffer)
+	fn get_t(&self) -> u32
+	{
+		if self.ts[0] != u32::MAX
+		{
+			return self.ts[0];
+		}
+
+		let x0 = self.x[0];
+		let t = self.t_end - self.t_start;
+		let t0 = (x0 as f64) / (WAVEFORM_W as f64) * (t as f64);
+		(t0 as u32) + self.t_start
+	}
+
+	fn to_x(&self, t: u32) -> u32
+	{
+		if t <= self.t_start
+		{
+			return 0;
+		}
+
+		if t >= self.t_end
+		{
+			return WAVEFORM_W - 1;
+		}
+
+		let t_off = (t - self.t_start) as f64;
+		let t_whole = self.t_end - self.t_start;
+
+		if t_whole == 0
+		{
+			return 0;
+		}
+
+		((t_off / (t_whole as f64)) * ((WAVEFORM_W - 1) as f64)) as u32
+	}
+
+	pub fn action(&mut self, action: Action, wf: &WaveformBuffer, buf: &SampleBuffer)
 	{
 		let mut new_x: [u32; 2] = self.x;
 		match action
 		{
 			Action::PrevEdge =>
 			{
-
+				let t = self.get_t();
+				let idx = buf.find_prev(t);
+				let nt = buf.timestamps[idx];
+				self.ts[0] = nt;
+				new_x[0] = self.to_x(nt);
 			}
 			Action::NextEdge =>
 			{
-
+				let t = self.get_t();
+				let idx = buf.find_next(t);
+				let nt = buf.timestamps[idx];
+				self.ts[0] = nt;
+				new_x[0] = self.to_x(nt);
 			}
 			Action::LeftFast =>
 			{
 				limit_dec_by!(new_x[0], LARGE_MOVE);
+				self.ts[0] = u32::MAX;
 			}
 			Action::RightFast =>
 			{
 				limit_inc_by!(new_x[0], LARGE_MOVE, WAVEFORM_W - 1);
+				self.ts[0] = u32::MAX;
 			}
 			Action::Left =>
 			{
 				limit_dec_by!(new_x[0], 1);
+				self.ts[0] = u32::MAX;
 			}
 			Action::Right =>
 			{
 				limit_inc_by!(new_x[0], 1, WAVEFORM_W - 1);
+				self.ts[0] = u32::MAX;
 			}
 			Action::Escape =>
 			{
@@ -130,6 +185,7 @@ impl Cursors
 			Action::Cycle =>
 			{
 				swap!(new_x[0], new_x[1]);
+				swap!(self.ts[0], self.ts[1]);
 			}
 			_ => {}
 		};
@@ -149,14 +205,18 @@ impl Cursors
 		}
 	}
 
-	pub fn show(&mut self, t: u32)
+	pub fn show(&mut self, t_start: u32, t_end: u32)
 	{
 		if !self.en
 		{
 			self.en = true;
 		}
 
-		self.t = t;
+		self.t_start = t_start;
+		self.t_end = t_end;
+
+		self.ts[0] = u32::MAX;
+		self.ts[1] = u32::MAX;
 
 		self.x[0] = WAVEFORM_W / 4;
 		self.x[1] = WAVEFORM_W / 4 * 3;

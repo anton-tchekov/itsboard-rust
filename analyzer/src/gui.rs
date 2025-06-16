@@ -1420,7 +1420,7 @@ impl Gui
 				self.actions_set(&ACTIONS_MAIN);
 			}
 
-			self.cursors.action(action, &self.wf);
+			self.cursors.action(action, &self.wf, &self.buf);
 			return;
 		}
 
@@ -1428,7 +1428,7 @@ impl Gui
 		{
 			Action::Cursors =>
 			{
-				self.cursors.show(self.t_end - self.t_start);
+				self.cursors.show(self.t_start, self.t_end);
 				self.actions_set(&ACTIONS_CURSORS);
 			}
 			Action::Left =>
