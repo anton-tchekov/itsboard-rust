@@ -13,7 +13,7 @@ fn ceilf(x: f32) -> u32 {
 }
 
 #[derive(Copy, Clone)]
-struct Range<T>
+pub struct Range<T>
 where
     T: Add<Output = T> + Mul<Output = T> + Copy
 {
@@ -69,10 +69,6 @@ impl <T>Timings<T>
 where 
 	T: Add<Output = T> + Mul<Output = T> + Copy,
 {
-	fn max_bit_length(&self) -> T {
-		self.wr_slot.max + self.line_recover_min
-	}
-
 	fn scale(&self, factor: T) -> Self {
 		Self {
 			wr_init: self.wr_init.scale(factor),

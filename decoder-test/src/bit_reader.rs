@@ -32,7 +32,7 @@ impl BitReader {
     }
 
     // returns true if the reader is finished
-    pub fn read_bit(&self, bit: bool) -> bool
+    pub fn read_bit(&mut self, bit: bool) -> bool
     {
         if self.bits_read >= self.amount {
             return true
@@ -47,7 +47,7 @@ impl BitReader {
         false
     }
  
-    pub fn is_finished(&self) {
+    pub fn is_finished(&self) -> bool {
         self.bits_read == self.amount
     }
 }

@@ -8,7 +8,6 @@ pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
 pub const TIMER_TICKS_PER_US: u32 = TIMER_CLOCK_RATE / 1_000_000;
 
 // GUI is responsible for choosing representation, colors, etc.
-// FIXME: Debug and PartialEq only needed for testing
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub enum SectionContent {
 	// Add more when needed

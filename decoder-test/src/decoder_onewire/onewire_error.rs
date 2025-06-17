@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub enum OneWireError {
 	ResponseTooShort,
 	ResponseTooLong,
@@ -10,6 +11,7 @@ pub enum OneWireError {
 	BitSlotTooLong,
 	LineRecoveryTooShort,
 	UnexpectedReset,
+	InvalidROM,
 	// programmer error if these occur
 	UnexpectedFallingEdge,
 	UnexpectedRisingEdge
@@ -30,7 +32,8 @@ impl OneWireError {
 			OneWireError::LineRecoveryTooShort => "Line recovery too short",
 			OneWireError::UnexpectedReset => "Unexpected reset pulse",
 			OneWireError::UnexpectedFallingEdge => "Unexpected falling edge",
-			OneWireError::UnexpectedRisingEdge => "Unexpected rising edge"
+			OneWireError::UnexpectedRisingEdge => "Unexpected rising edge",
+			OneWireError::InvalidROM => "Rom command does not exist",
 		}
 	}
 }

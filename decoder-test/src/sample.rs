@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 // Type used to store one sample containing multiple channels in
 pub type Sample = u16;
 
@@ -90,6 +88,15 @@ impl From<bool> for Edge {
 	}
 }
 
+impl Into<bool> for Edge {
+	fn into(self) -> bool {
+		match self {
+			Edge::Falling => true,
+			Edge::Rising => false
+		}
+	}
+}
+
 pub struct EdgeWiseIterator<'a> {
 	buffer: &'a SampleBuffer,
 	idx: usize,
@@ -133,7 +140,7 @@ impl<'a> Iterator for EdgeWiseIterator<'a> {
 			return None;
 		}
 
-		let (value, timestamp) = self.buffer.get(self.idx, self.ch)?;
+		let (value, _) = self.buffer.get(self.idx, self.ch)?;
 		self.idx += 1;
 
 		// Skip all samples with the same value
@@ -165,7 +172,7 @@ pub struct PulsewiseIterator<'a> {
 }
 
 impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a> {
-	fn from(mut iter: EdgeWiseIterator<'a>) -> Self {
+	fn from(iter: EdgeWiseIterator<'a>) -> Self {
 		PulsewiseIterator {
 			buffer: iter,
 		}

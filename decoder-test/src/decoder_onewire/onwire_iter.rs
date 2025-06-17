@@ -52,7 +52,7 @@ impl <'a>OnewireIter<'a> {
 			end_time = start_time + duration;
 
 			if duration < self.timing.wr_slot.min + self.timing.line_recover_min {
-				return Some((end_time, Err(OneWireError::BitInitTooShort)));
+				return Some((end_time, Err(OneWireError::BitSlotTooShort)));
 			}
 
 			return Some((end_time, Ok(true)));
@@ -153,23 +153,23 @@ impl <'a>OnewireIter<'a> {
 	}
 
 	// forwards self, so self.next_reset() will be a 'valid' reset
-    pub fn forward_to_reset(&mut self) -> Option<_> {
+    pub fn forward_to_reset(&mut self) -> Option<()> {
 		self.last_idx = self.iter.current_index();
 
 		loop {
-			let mut idx = self.iter.current_index();
-			let mut start = self.current_time();
-			let mut next = self.iter.next()?;
+			let idx = self.iter.current_index();
+			let start = self.current_time();
+			let next = self.iter.next()?;
 
 			if (start - self.current_time()) >= self.timing.reset.min && next == Edge::Rising {
-				self.iter.set_index(idx);
+				self.iter.set_index(idx).unwrap();
 				return Some(())
 			}
 		}
     }
 
     pub fn discard_last(&mut self) {
-		self.iter.set_index(self.last_idx);
+		self.iter.set_index(self.last_idx).unwrap();
     }
 
     pub fn current_time(&self) -> u32 {

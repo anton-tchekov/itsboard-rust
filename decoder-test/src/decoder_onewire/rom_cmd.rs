@@ -21,13 +21,13 @@ impl TryFrom<u8> for ROMCmd {
 			0xF0 => Ok(ROMCmd::SearchROM),
 			0x3C => Ok(ROMCmd::OverdriveSkipROM),
 			0x69 => Ok(ROMCmd::OverdriveMatchROM),
-			_ => Err("Invalid ROM command"),
+			_ => Err(OneWireError::InvalidROM),
 		}
 	}
 }
 
 impl ROMCmd {
-	fn to_string(&self) -> OneWireError {
+	fn to_string(&self) -> &'static str {
 		match self {
 			ROMCmd::ReadROM => "Read ROM",
 			ROMCmd::SkipROM => "Skip ROM",

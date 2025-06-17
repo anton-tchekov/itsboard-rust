@@ -52,14 +52,8 @@ pub struct BitSignal {
 	pub start: u32,
 }
 
-impl BitSignal {
-	pub fn duration(&self) -> u32 {
-		self.end - self.start
-	}
-}
-
 pub struct BitwiseIterator<'a> {
-	buffer: EdgeWiseIterator<'a>,
+	buffer: PulsewiseIterator<'a>,
 	expected_bit_time: f32,
 	current_pulse: Pulse,
 	bit_time: u32,
@@ -177,7 +171,7 @@ struct UartOutput<'a> {
 
 impl <'a>UartOutput<'a> {
 	fn push(&mut self, section: Section) -> Option<()> {
-		self.output.push(section)
+		self.output.push(section).ok()
 	}
 
 	pub fn push_signal(&mut self, bit: BitSignal, content: SectionContent) -> Option<()> {
@@ -207,8 +201,8 @@ impl StartState {
 #[derive(Copy, Clone, Default)]
 struct DataState;
 impl DataState {
-	pub fn process(mut self, bits: &mut BitwiseIterator, output: &mut UartOutput, databits: DataBits) -> Option<DecoderUartState> {
-		let reader = BitReader::lsb(databits as u8);
+	pub fn process(self, bits: &mut BitwiseIterator, output: &mut UartOutput, databits: DataBits) -> Option<DecoderUartState> {
+		let mut reader = BitReader::lsb(databits as u8);
 		let start = bits.peek()?.start;
 
 		while !reader.is_finished() {
@@ -225,13 +219,13 @@ impl DataState {
 			content: SectionContent::Data(value)
 		})?;
 
-		Some(DecoderUartState::Parity(value))
+		Some(DecoderUartState::Parity(ParityState { word: value }))
 	}
 }
 
 #[derive(Copy, Clone)]
 struct ParityState {
-	word: u32,
+	word: u64,
 }
 
 impl ParityState {
@@ -300,7 +294,7 @@ impl Decoder for DecoderUart {
 		if self.baudrate > TIMER_CLOCK_RATE {return Err(())}
 		let bit_time = TIMER_CLOCK_RATE as f32 / self.baudrate as f32;
 
-		let mut bits = BitwiseIterator::from(samples, bit_time);
+		let mut bits = BitwiseIterator::from(samples.edge_iter(self.rx_pin).into(), bit_time);
 		let mut output = UartOutput {output};
 		let mut state = DecoderUartState::Start(StartState);
 
