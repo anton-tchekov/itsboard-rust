@@ -28,6 +28,14 @@ ASM Dump:
 
 ## TODO
 
+Ist das alles?
+
 - OneWire
+- SPI Clock Modes
+- I2C Colors
+- Mac OS
+- touch support
+	- Kein multitouch
+
 - Dokumentation
-- Code aufräumen
+- i guess qality of life
