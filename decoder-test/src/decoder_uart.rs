@@ -2,6 +2,7 @@ use crate::bit_reader::BitReader;
 use crate::decoder::*;
 use crate::sample::*;
 
+// TODO: use .peekable() in rust core
 #[derive(Copy, Clone, PartialEq)]
 pub enum Parity {
 	None,
@@ -57,8 +58,6 @@ impl BitSignal {
 	}
 }
 
-// TODO: will be replaced in the future (maybe, it's not that bad)
-// will probably be changed and moved in the future
 pub struct BitwiseIterator<'a> {
 	buffer: EdgeWiseIterator<'a>,
 	expected_bit_time: f32,
