@@ -121,29 +121,18 @@ impl Decoder for DecoderI2C
 							let addr = cur_byte >> 1;
 							let rw = cur_byte & 1;
 							output.push(Section{start: cur_byte_start, end: ts, content: SectionContent::I2cAddress(addr)});
-							if rw == 0
-							{
-								output.push(Section{start: last_ts, end: ts, content: SectionContent::I2cWrite});
-							}
-							else
-							{
-								output.push(Section{start: last_ts, end: ts, content: SectionContent::I2cRead});
-							}
+
+							output.push(Section{start: last_ts, end: ts, content:
+								if rw == 0 { SectionContent::I2cWrite } else { SectionContent::I2cRead }});
 
 							address_seen = true;
 						}
 
 						/* Check for Acknowledge after the last Bit */
 						let ack = !sda;
-						if ack
-						{
-							output.push(Section{start: last_ts, end: ts, content: SectionContent::Ack});
-						}
-						else
-						{
-							output.push(Section{start: last_ts, end: ts, content: SectionContent::Nak});
-						}
-						
+						output.push(Section{start: last_ts, end: ts, content:
+							if ack { SectionContent::Ack } else { SectionContent::Nak }});
+
 						cur_byte = 0;
 						cur_byte_index = 0;
 					}
@@ -157,7 +146,7 @@ impl Decoder for DecoderI2C
 
 		Ok(())
 	}
-	
+
 	fn is_valid(&self) -> bool
 	{
 		self.sda_pin != self.scl_pin
