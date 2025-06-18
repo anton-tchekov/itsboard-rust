@@ -341,3 +341,58 @@ impl Decoder for DecoderOneWire {
 		}
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::sample::*;
+	use crate::decoder::*;
+	use crate::decoder_uart::*;
+	use crate::test_utils::*;
+
+	fn decoder() -> DecoderOneWire {
+		DecoderOneWire {
+			onewire_pin: 1
+		}
+	}
+
+	fn decode_sections(file: &str, onewire: DecoderOneWire) -> SectionBuffer {
+		let buf = load_sample_buffer(file);
+
+		let mut out_sections = SectionBuffer {
+			sections: [Section::default(); SECBUF_SIZE],
+			len: 0,
+		};
+
+		let result  = onewire.decode(&buf, &mut out_sections);
+		assert!(result.is_ok());
+
+		out_sections
+	}
+
+	fn assert_section_sequence(actual: &mut SectionBufferIter, expected: &[SectionContent]) {
+		for expected_content in expected {
+			expect_section(actual.next(), *expected_content);
+		}
+		assert!(actual.next().is_none());
+	}
+
+	#[test]
+	fn test_measure_temp() {
+		let onewire = decoder();
+		let sections = decode_sections("1Wire/OneWireReadROM_MeasureTemp.csv", onewire);
+		let mut section_iter = sections.iter();
+
+		let expected = [
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery, 
+			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
+			SectionContent::FunctionCmd(0), SectionContent::Data(0),
+
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
+			SectionContent::FunctionCmd(0), SectionContent::Data(0),
+		];
+
+		assert_section_sequence(&mut section_iter, &expected);
+	}
+}

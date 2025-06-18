@@ -1,8 +1,9 @@
 use csv::*;
 
+use crate::bit_reader::{BitOrder, BitReader};
 use crate::sample::SampleBuffer;
 use crate::sample::*;
-use crate::decoder::{Section, SectionContent};
+use crate::decoder::{Section, SectionBufferIter, SectionContent};
 
 const BASE_PATH: &str = "../sample_data/";
 
@@ -21,6 +22,33 @@ pub fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
 	}
 
 	Ok(())
+}
+
+pub fn expect_bits(amount: u8, mut buf: SectionBufferIter, order: BitOrder, expected: u64) {
+    let mut reader = BitReader::new(amount, order);
+
+    for _ in 0..amount {
+        let bit = loop {
+            match buf.next() {
+                Some(s) => match s.content {
+                    SectionContent::Bit(b) => break b,
+                    _ => continue,
+                },
+                None => panic!("Unexpected end of buffer while reading bits"),
+            }
+        };
+        reader.read_bit(bit);
+    }
+
+    assert_eq!(reader.get_value(), Some(expected));
+}
+
+pub fn expect_bits_lsb(amount: u8, buf: SectionBufferIter, expected: u64) {
+	expect_bits(amount, buf, BitOrder::LSB, expected);
+}
+
+pub fn expect_bits_msb(amount: u8, buf: SectionBufferIter, expected: u64) {
+	expect_bits(amount, buf, BitOrder::MSB, expected);
 }
 
 pub fn load_sample_buffer(path: &str) -> SampleBuffer {

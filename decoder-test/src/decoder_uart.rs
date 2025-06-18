@@ -45,13 +45,6 @@ impl DecoderUartState {
 	}
 }
 
-#[derive(Default, Clone, Copy)]
-pub struct BitSignal {
-	pub high: bool,
-	pub end: u32,
-	pub start: u32,
-}
-
 pub struct BitwiseIterator<'a> {
 	buffer: PulsewiseIterator<'a>,
 	expected_bit_time: f32,
@@ -364,26 +357,31 @@ mod tests {
 		out_sections
 	}
 
-	fn assert_section_sequence(actual: &mut SectionBufferIter, expected: &[SectionContent]) {
-		for expected_content in expected {
-			expect_section(actual.next(), *expected_content);
-		}
-		assert!(actual.next().is_none());
+	fn expect_top_layer(actual: &SectionBuffer, expected: &[SectionContent]) {
+		let buf = &actual.sections[..actual.len];
+		let filtered: Vec<SectionContent> = buf
+			.iter()
+			.filter_map(|s| match s.content {
+				SectionContent::Bit(_) => None,
+				other => Some(other),
+			})
+			.collect();
+
+		assert_eq!(&filtered, &expected);
 	}
 
 	#[test]
 	fn test_8n1_h() {
 		let uart = decoder_8n1_300();
 		let sections = decode_sections("UART/UART_8N1_300_H.csv", uart);
-		let mut section_iter = sections.iter();
 
-		let expected = [
+		expect_top_layer(&sections, &mut [
 			SectionContent::StartBit,
 			SectionContent::Word('H' as u32),
 			SectionContent::StopBit,
-		];
+		]);
 
-		assert_section_sequence(&mut section_iter, &expected);
+		expect_bits_lsb(8, sections.iter(), 'H' as u64);
 	}
 
 	#[test]
@@ -401,6 +399,12 @@ mod tests {
 		];
 
 		assert_section_sequence(&mut section_iter, &expected);
+
+		expect_bits_lsb(8, &mut section_iter, 'H' as u64);
+		expect_bits_lsb(8, &mut section_iter, 'a' as u64);
+		expect_bits_lsb(8, &mut section_iter, 'l' as u64);
+		expect_bits_lsb(8, &mut section_iter, 'l' as u64);
+		expect_bits_lsb(8, &mut section_iter, 'o' as u64);
 	}
 
 	#[test]
@@ -427,6 +431,16 @@ mod tests {
 			SectionContent::StartBit, SectionContent::Word('8' as u32), SectionContent::StopBit,
 			SectionContent::StartBit, SectionContent::Word('9' as u32), SectionContent::StopBit,
 		];
+
+		expect_bits_lsb(8, &mut section_iter, '1' as u64);
+		expect_bits_lsb(8, &mut section_iter, '2' as u64);
+		expect_bits_lsb(8, &mut section_iter, '3' as u64);
+		expect_bits_lsb(8, &mut section_iter, '4' as u64);
+		expect_bits_lsb(8, &mut section_iter, '5' as u64);
+		expect_bits_lsb(8, &mut section_iter, '6' as u64);
+		expect_bits_lsb(8, &mut section_iter, '7' as u64);
+		expect_bits_lsb(8, &mut section_iter, '8' as u64);
+		expect_bits_lsb(8, &mut section_iter, '9' as u64);
 
 		assert_section_sequence(&mut section_iter, &expected);
 	}

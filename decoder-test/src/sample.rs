@@ -117,7 +117,7 @@ impl<'a> EdgeWiseIterator<'a> {
 	}
 
 	pub fn set_index(&mut self, idx: usize) -> Result<(), ()> {
-		if idx > self.buffer.len {
+		if idx >= self.buffer.len {
 			return Err(())
 		}
 		self.idx = idx;
@@ -136,18 +136,11 @@ impl<'a> Iterator for EdgeWiseIterator<'a> {
 	type Item = Edge;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if self.idx >= self.buffer.len {
-			return None;
-		}
-
-		let (value, _) = self.buffer.get(self.idx, self.ch)?;
-		self.idx += 1;
+		self.set_index(self.idx + 1).ok()?;
+		let (value, _) = self.buffer.get(self.idx - 1, self.ch)?;
 
 		// Skip all samples with the same value
-		while self.idx < self.buffer.len && self.buffer.get(self.idx, self.ch)?.0 == value {
-			self.idx += 1;
-		}
-
+		while self.set_index(self.idx + 1).is_ok() && self.buffer.get(self.idx, self.ch)?.0 == value {}
 		Some(Edge::from(value))
 	}
 }
