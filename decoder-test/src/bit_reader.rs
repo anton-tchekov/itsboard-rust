@@ -44,6 +44,7 @@ impl BitReader {
         };
 
         self.value |= (bit as u64) << shift;
+        self.bits_read += 1;
         false
     }
  

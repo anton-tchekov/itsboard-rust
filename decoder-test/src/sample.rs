@@ -72,7 +72,7 @@ impl SampleBuffer {
 	}
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Edge {
 	Rising,
 	Falling
@@ -140,7 +140,7 @@ impl<'a> Iterator for EdgeWiseIterator<'a> {
 		let (value, _) = self.buffer.get(self.idx - 1, self.ch)?;
 
 		// Skip all samples with the same value
-		while self.set_index(self.idx + 1).is_ok() && self.buffer.get(self.idx, self.ch)?.0 == value {}
+		while self.buffer.get(self.idx, self.ch)?.0 == value && self.set_index(self.idx + 1).is_ok() {}
 		Some(Edge::from(value))
 	}
 }
@@ -186,4 +186,50 @@ impl<'a> Iterator for PulsewiseIterator<'a> {
 			end,
 		})
 	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::test_utils::load_sample_buffer;
+
+	fn sample_buffer() -> SampleBuffer {
+		load_sample_buffer("UART/UART_8N1_300_H.csv")
+	}
+
+	#[test]
+	fn test_get() {
+		let buf = sample_buffer();
+		assert_eq!(buf.len, 8);
+
+		assert_eq!(buf.get(0, 0), Some((true, 0)));
+        assert_eq!(buf.get(1, 0), Some((false, 38173934)));
+        assert_eq!(buf.get(2, 0), Some((true, 39372990)));
+        assert_eq!(buf.get(3, 0), Some((false, 39672860)));
+		assert_eq!(buf.get(4, 0), Some((true, 40272490)));
+		assert_eq!(buf.get(5, 0), Some((false, 40572216)));
+		assert_eq!(buf.get(6, 0), Some((true, 40872038)));
+		assert_eq!(buf.get(7, 0), Some((true, 65141112)))
+	}
+
+	#[test]
+    fn test_edge_iterator() {
+        let buf = sample_buffer();
+        let edge_iter = buf.edge_iter(0);
+
+        let edges: Vec<Edge> = edge_iter.collect();
+
+        assert_eq!(
+            edges,
+            vec![
+                Edge::Falling,
+                Edge::Rising,
+                Edge::Falling,
+                Edge::Rising,
+                Edge::Falling,
+                Edge::Rising,
+				Edge::Falling,
+            ]
+        );
+    }
 }

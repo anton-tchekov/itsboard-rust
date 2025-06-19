@@ -356,34 +356,13 @@ mod tests {
 		}
 	}
 
-	fn decode_sections(file: &str, onewire: DecoderOneWire) -> SectionBuffer {
-		let buf = load_sample_buffer(file);
-
-		let mut out_sections = SectionBuffer {
-			sections: [Section::default(); SECBUF_SIZE],
-			len: 0,
-		};
-
-		let result  = onewire.decode(&buf, &mut out_sections);
-		assert!(result.is_ok());
-
-		out_sections
-	}
-
-	fn assert_section_sequence(actual: &mut SectionBufferIter, expected: &[SectionContent]) {
-		for expected_content in expected {
-			expect_section(actual.next(), *expected_content);
-		}
-		assert!(actual.next().is_none());
-	}
-
 	#[test]
 	fn test_measure_temp() {
 		let onewire = decoder();
 		let sections = decode_sections("1Wire/OneWireReadROM_MeasureTemp.csv", onewire);
 		let mut section_iter = sections.iter();
 
-		let expected = [
+		assert_top_layer_eq(&sections, &[
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery, 
 			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
@@ -391,8 +370,15 @@ mod tests {
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
 			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
-		];
+		])
+	}
 
-		assert_section_sequence(&mut section_iter, &expected);
+	#[test]
+	fn test_time_overlap() {
+		let onewire = decoder();
+		let sections = decode_sections("1Wire/OneWireReadROM_MeasureTemp.csv", onewire);
+
+		assert_bit_layer_no_time_overlap(&sections);
+		assert_top_layer_no_time_overlap(&sections);
 	}
 }

@@ -343,45 +343,18 @@ mod tests {
 		}
 	}
 
-	fn decode_sections(file: &str, uart: DecoderUart) -> SectionBuffer {
-		let buf = load_sample_buffer(file);
-
-		let mut out_sections = SectionBuffer {
-			sections: [Section::default(); SECBUF_SIZE],
-			len: 0,
-		};
-
-		let result  = uart.decode(&buf, &mut out_sections);
-		assert!(result.is_ok());
-
-		out_sections
-	}
-
-	fn expect_top_layer(actual: &SectionBuffer, expected: &[SectionContent]) {
-		let buf = &actual.sections[..actual.len];
-		let filtered: Vec<SectionContent> = buf
-			.iter()
-			.filter_map(|s| match s.content {
-				SectionContent::Bit(_) => None,
-				other => Some(other),
-			})
-			.collect();
-
-		assert_eq!(&filtered, &expected);
-	}
-
 	#[test]
 	fn test_8n1_h() {
 		let uart = decoder_8n1_300();
 		let sections = decode_sections("UART/UART_8N1_300_H.csv", uart);
+		let mut section_iter = sections.iter();
 
-		expect_top_layer(&sections, &mut [
-			SectionContent::StartBit,
-			SectionContent::Word('H' as u32),
-			SectionContent::StopBit,
+		assert_top_layer_eq(&sections, &[
+			SectionContent::StartBit, SectionContent::Data('H' as u64), SectionContent::StopBit,
 		]);
 
-		expect_bits_lsb(8, sections.iter(), 'H' as u64);
+		// bit layer
+		assert_bits_lsb_eq(8, &mut section_iter, 'H' as u64);
 	}
 
 	#[test]
@@ -390,58 +363,65 @@ mod tests {
 		let sections = decode_sections("UART/UART_8N1_300_Hallo.csv", uart);
 		let mut section_iter = sections.iter();
 
-		let expected = [
-			SectionContent::StartBit, SectionContent::Word('H' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('a' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('l' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('l' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('o' as u32), SectionContent::StopBit,
-		];
+		assert_top_layer_eq(&sections, &[
+			SectionContent::StartBit, SectionContent::Data('H' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('a' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('l' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('l' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('o' as u64), SectionContent::StopBit,
+		]);
 
-		assert_section_sequence(&mut section_iter, &expected);
-
-		expect_bits_lsb(8, &mut section_iter, 'H' as u64);
-		expect_bits_lsb(8, &mut section_iter, 'a' as u64);
-		expect_bits_lsb(8, &mut section_iter, 'l' as u64);
-		expect_bits_lsb(8, &mut section_iter, 'l' as u64);
-		expect_bits_lsb(8, &mut section_iter, 'o' as u64);
+		// bit layer
+		assert_bits_lsb_eq(8, &mut section_iter, 'H' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, 'a' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, 'l' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, 'l' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, 'o' as u64);
 	}
 
 	#[test]
-	fn test_8n1_123456789() {
+	fn test_8n1_1234567() {
 		// TODO: ask Haron if the test was taken correctly (it seems to be wrong), could still be useful
 		let uart = decoder_8n1_300();
 		let sections = decode_sections("UART/UART_8N1_300_123456789.csv", uart);
-
-
-		for section in sections.iter() {
-			println!("{:?}", section);
-		}
-
 		let mut section_iter = sections.iter();
 
-		let expected = [
-			SectionContent::StartBit, SectionContent::Word('1' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('2' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('3' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('4' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('5' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('6' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('7' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('8' as u32), SectionContent::StopBit,
-			SectionContent::StartBit, SectionContent::Word('9' as u32), SectionContent::StopBit,
-		];
+		assert_top_layer_eq(&sections, &[
+			SectionContent::StartBit, SectionContent::Data('1' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('2' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('3' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('4' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('5' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('6' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, SectionContent::Data('7' as u64), SectionContent::StopBit,
+			SectionContent::StartBit, // sudden stop
+		]);
 
-		expect_bits_lsb(8, &mut section_iter, '1' as u64);
-		expect_bits_lsb(8, &mut section_iter, '2' as u64);
-		expect_bits_lsb(8, &mut section_iter, '3' as u64);
-		expect_bits_lsb(8, &mut section_iter, '4' as u64);
-		expect_bits_lsb(8, &mut section_iter, '5' as u64);
-		expect_bits_lsb(8, &mut section_iter, '6' as u64);
-		expect_bits_lsb(8, &mut section_iter, '7' as u64);
-		expect_bits_lsb(8, &mut section_iter, '8' as u64);
-		expect_bits_lsb(8, &mut section_iter, '9' as u64);
+		// bit layer
+		assert_bits_lsb_eq(8, &mut section_iter, '1' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, '2' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, '3' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, '4' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, '5' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, '6' as u64);
+		assert_bits_lsb_eq(8, &mut section_iter, '7' as u64);
+	}
 
-		assert_section_sequence(&mut section_iter, &expected);
+	#[test]
+	fn test_time_overlap() {
+		let uart = decoder_8n1_300();
+		let sections = decode_sections("UART/UART_8N1_300_Hallo.csv", uart);
+		assert_bit_layer_no_time_overlap(&sections);
+		assert_top_layer_no_time_overlap(&sections);
+
+		let uart = decoder_8n1_300();
+		let sections = decode_sections("UART/UART_8N1_300_H.csv", uart);
+		assert_bit_layer_no_time_overlap(&sections);
+		assert_top_layer_no_time_overlap(&sections);
+
+		let uart = decoder_8n1_300();
+		let sections = decode_sections("UART/UART_8N1_300_123456789.csv", uart);
+		assert_bit_layer_no_time_overlap(&sections);
+		assert_top_layer_no_time_overlap(&sections);
 	}
 }

@@ -1,9 +1,11 @@
+use std::fs::read;
+
 use csv::*;
 
 use crate::bit_reader::{BitOrder, BitReader};
 use crate::sample::SampleBuffer;
 use crate::sample::*;
-use crate::decoder::{Section, SectionBufferIter, SectionContent};
+use crate::decoder::{Decoder, Section, SectionBuffer, SectionBufferIter, SectionContent, SECBUF_SIZE};
 
 const BASE_PATH: &str = "../sample_data/";
 
@@ -24,31 +26,96 @@ pub fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
 	Ok(())
 }
 
-pub fn expect_bits(amount: u8, mut buf: SectionBufferIter, order: BitOrder, expected: u64) {
+pub fn assert_top_layer_eq(actual: &SectionBuffer, expected: &[SectionContent]) {
+	assert_eq!(&top_layer(actual), &expected);
+}
+
+pub fn decode_sections(file: &str, decoder: impl Decoder) -> SectionBuffer {
+	let buf = load_sample_buffer(file);
+
+	let mut out_sections = SectionBuffer {
+		sections: [Section::default(); SECBUF_SIZE],
+		len: 0,
+	};
+
+	let result  = decoder.decode(&buf, &mut out_sections);
+	assert!(result.is_ok());
+
+	out_sections
+}
+
+pub fn assert_bits_eq(amount: u8, buf: &mut SectionBufferIter, order: BitOrder, expected: u64) {
     let mut reader = BitReader::new(amount, order);
 
-    for _ in 0..amount {
-        let bit = loop {
-            match buf.next() {
-                Some(s) => match s.content {
-                    SectionContent::Bit(b) => break b,
-                    _ => continue,
-                },
-                None => panic!("Unexpected end of buffer while reading bits"),
-            }
+    while !reader.is_finished() {
+        match buf.next() {
+			Some(s) => match s.content {
+				SectionContent::Bit(b) => reader.read_bit(b),
+				_ => continue,
+			},
+            None => panic!("Unexpected end of buffer while reading bits"),
         };
-        reader.read_bit(bit);
     }
 
     assert_eq!(reader.get_value(), Some(expected));
 }
 
-pub fn expect_bits_lsb(amount: u8, buf: SectionBufferIter, expected: u64) {
-	expect_bits(amount, buf, BitOrder::LSB, expected);
+pub fn assert_bits_lsb_eq(amount: u8, buf: &mut SectionBufferIter, expected: u64) {
+	assert_bits_eq(amount, buf, BitOrder::LSB, expected);
 }
 
-pub fn expect_bits_msb(amount: u8, buf: SectionBufferIter, expected: u64) {
-	expect_bits(amount, buf, BitOrder::MSB, expected);
+pub fn assert_bits_msb_eq(amount: u8, buf: &mut SectionBufferIter, expected: u64) {
+	assert_bits_eq(amount, buf, BitOrder::MSB, expected);
+}
+
+fn assert_no_time_overlap(buf: &SectionBuffer, is_bit_layer: bool) {
+	let buf: Vec<Section> = buf
+		.iter()
+		.filter(|s| match s.content {
+			SectionContent::Bit(_) => is_bit_layer,
+			_ => !is_bit_layer
+		})
+		.cloned()
+		.collect();
+
+	let mut iter = buf.iter();
+	let mut prev = match iter.next() {
+		Some(s) => s,
+		None => return,
+	};
+
+	for section in iter {
+		assert!(prev.end <= section.start);
+		prev = section
+	}
+}
+
+pub fn assert_bit_layer_no_time_overlap(buf: &SectionBuffer) {
+	assert_no_time_overlap(buf, true);
+}
+
+pub fn assert_top_layer_no_time_overlap(buf: &SectionBuffer) {
+	assert_no_time_overlap(buf, false);
+}
+
+fn top_layer(buf: &SectionBuffer) -> Vec<SectionContent> {
+	buf
+	.iter()
+	.filter_map(|s| match s.content {
+		SectionContent::Bit(_) => None,
+		other => Some(other),
+	})
+	.collect()
+}
+
+fn bit_layer(buf: &SectionBuffer) -> Vec<bool> {
+	buf
+	.iter()
+	.filter_map(|s| match s.content {
+		SectionContent::Bit(b) => Some(b),
+		_ => None,
+	})
+	.collect()
 }
 
 pub fn load_sample_buffer(path: &str) -> SampleBuffer {
@@ -61,12 +128,4 @@ pub fn load_sample_buffer(path: &str) -> SampleBuffer {
 	load_buf_from_csv(&format!("{BASE_PATH}{path}"), &mut buf).expect("Failed to load buffer from CSV");
 
 	buf
-}
-
-pub fn expect_section(section: Option<&Section>, content: SectionContent)
-{
-	assert!(section.is_some());
-
-	let section = section.unwrap();
-	assert_eq!(section.content, content);
 }
