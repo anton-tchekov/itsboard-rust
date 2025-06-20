@@ -73,6 +73,7 @@ pub fn read_bits(
     Some((end_time, Ok(())))
 }
 
+#[derive(Debug)]
 enum OneWireState {
 	Reset(ResetState),
 	ROMCmd(ROMCommandState),
@@ -114,6 +115,7 @@ impl OneWireState {
 	}
 }
 
+#[derive(Debug)]
 struct ResetState;
 
 impl ResetState {
@@ -138,25 +140,25 @@ impl ResetState {
 				});
 			}
 		};
-
-		let (start, response) = iter.next_response()?;
+		
+		let recovery_start = iter.current_time();
+		let (start, end, response) = iter.next_response()?;
 		match response {
 			Err(err) => {
 				output.push_err(iter, start, err)?;
 				return Some(OneWireState::Reset(ResetState));
 			}
 
-			Ok((end, responded)) => {
+			Ok(responded) => {
 				output.push(Section {
 					start,
 					end,
-					content: SectionContent::ResetResponse(responded) 
+					content: SectionContent::ResetResponse(responded)
 				});
 			}
 		};
 
-		let start = iter.current_time();
-		let recovery = iter.next_reset_recovery(start)?;
+		let recovery = iter.next_reset_recovery(recovery_start)?;
 		match recovery {
 			Err(err) => {
 				output.push_err(iter, start, err)?;
@@ -172,11 +174,18 @@ impl ResetState {
 			}
 		}
 
+		let reset = iter.next_reset()?;
+		iter.discard_last();
+		
+		if reset.is_ok() {
+			return Some(OneWireState::Reset(ResetState))
+		}
 		
 		Some(OneWireState::ROMCmd(ROMCommandState))
 	}
 }
 
+#[derive(Debug)]
 struct ROMCommandState;
 
 impl ROMCommandState {
@@ -191,7 +200,7 @@ impl ROMCommandState {
 
 			match (rom_cmd, result) {
 				(Err(code), Err(_)) => {
-					output.push(Section { start, end, content: SectionContent::Err(code.to_string())});
+					output.push(Section { start, end, content: SectionContent::Err(code.to_string())})?;
 				},
 
 				(Err(code), Ok(_)) => {
@@ -199,7 +208,7 @@ impl ROMCommandState {
 				},
 
 				(Ok(cmd), _) => {
-					output.push(Section { start, end, content: SectionContent::ROMCmd(cmd) });
+					output.push(Section { start, end, content: SectionContent::ROMCmd(cmd) })?;
 					
 					if reader.is_finished() {
 						return Some(OneWireState::from_rom(iter, cmd));
@@ -217,6 +226,7 @@ impl ROMCommandState {
 	}
 }
 
+#[derive(Debug)]
 struct FamilyCodeState;
 impl FamilyCodeState {
 	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
@@ -226,6 +236,7 @@ impl FamilyCodeState {
 	}
 }
 
+#[derive(Debug)]
 struct SensorIDState;
 impl SensorIDState {
 	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
@@ -235,15 +246,25 @@ impl SensorIDState {
 	}
 }
 
+#[derive(Debug)]
 struct CRCState;
 impl CRCState {
 	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
-		process_bits(iter, output, 8, OneWireState::FunctionCmd(FunctionCmdState), |value| {
+		let result = process_bits(iter, output, 8, OneWireState::FunctionCmd(FunctionCmdState), |value| {
 			SectionContent::CRC(value as u8)
-		})
+		})?;
+
+		let reset = iter.next_reset()?;
+		iter.discard_last();
+
+		if reset.is_ok() {
+			return Some(OneWireState::Reset(ResetState));
+		}
+		Some(result)
 	}
 }
 
+#[derive(Debug)]
 struct FunctionCmdState;
 impl FunctionCmdState{
 	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
@@ -254,11 +275,13 @@ impl FunctionCmdState{
 }
 
 // TODO: decode more information from SearchROM
+#[derive(Debug)]
 struct SearchROMState {
 	iteration: u8,
 }
 
 impl SearchROMState {
+	// TODO: actually decode the discovered sensor
 	fn process(self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
 		if self.iteration >= 3 {
 			return Some(OneWireState::FunctionCmd(FunctionCmdState));
@@ -270,6 +293,7 @@ impl SearchROMState {
 	}
 }
 
+#[derive(Debug)]
 struct DataState;
 impl DataState {
 	fn process(&self, iter: &mut OnewireIter, output: &mut OneWireOutput) -> Option<OneWireState> {
@@ -313,6 +337,7 @@ impl Decoder for DecoderOneWire {
 		let mut output = OneWireOutput::from(output);
 
 		let mut state = OneWireState::Reset(ResetState);
+		if iter.forward_to_reset().is_none() {return Ok(())}
 
 		while let Some(next) = state.process(&mut iter, &mut output) {
 			state = next;
@@ -352,7 +377,7 @@ mod tests {
 
 	fn decoder() -> DecoderOneWire {
 		DecoderOneWire {
-			onewire_pin: 1
+			onewire_pin: 0
 		}
 	}
 
@@ -363,6 +388,7 @@ mod tests {
 		let mut section_iter = sections.iter();
 
 		assert_top_layer_eq(&sections, &[
+			// This is wrong
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery, 
 			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),

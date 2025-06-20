@@ -44,9 +44,10 @@ impl <'a>OnewireIter<'a> {
 			return Some((end_time, Err(err)));
 		}
 
+		self.iter.next()?;
+
 		// bit is high
 		if duration <= self.timing.wr_init.max {
-			self.iter.next()?;
 			// we don't want to stretch the time if the line is idle after bit
 			duration += (self.current_time() - start_time).min(self.timing.wr_slot.max);
 			end_time = start_time + duration;
@@ -59,7 +60,6 @@ impl <'a>OnewireIter<'a> {
 		}
 
 		// bit was low
-		self.iter.next()?;
 		let recovery_duration = self.current_time() - end_time;
 
 		if recovery_duration < self.timing.line_recover_min {
@@ -93,63 +93,51 @@ impl <'a>OnewireIter<'a> {
 		Some(Ok(()))
     }
 
-    pub fn next_response(&mut self) -> Option<(u32, Result<(u32, bool), OneWireError>)> {
+    pub fn next_response(&mut self) -> Option<(u32, u32, Result<bool, OneWireError>)> {
 		self.last_idx = self.iter.current_index();
 
-		let start_time = self.current_time();
+		let mut start_time = self.current_time();
 		let reset = self.iter.next()?;
-		let end_time = self.current_time();
+		let mut end_time = self.current_time();
 		match reset {
-			Edge::Rising => return Some((start_time, Err(OneWireError::UnexpectedRisingEdge))),
+			Edge::Rising => return Some((start_time, end_time, Err(OneWireError::UnexpectedRisingEdge))),
 			_ => {}
 		}
 
 		let mut duration = end_time - start_time;
 		
-		let mut response_start = start_time;
-		let mut response_end = start_time + self.timing.response.max;
+		end_time = start_time + self.timing.response.max;
 		let mut device_responded = false;
 
 		if duration < self.timing.response.max {
 			self.iter.next()?;
 
-			response_start = end_time;
-			response_end = self.current_time();
+			end_time = self.current_time();
+			duration = end_time - start_time;
 
-			duration = response_start - start_time;
+			start_time = end_time;
 
 			if duration < self.timing.response.min {
-				return Some((response_start, Err(OneWireError::ResponseTooShort)));
+				return Some((start_time, end_time, Err(OneWireError::ResponseTooShort)));
 			}
 
 			if duration > self.timing.reset_recover_min {
-				return Some((response_start, Err(OneWireError::ResponseTooLong)));
+				return Some((start_time, end_time, Err(OneWireError::ResponseTooLong)));
 			}
 
 			device_responded = true;
 			self.iter.next()?;
-		} else {
-			self.discard_last();
 		}
 
-		Some((response_start, Ok((response_end, device_responded))))
+		Some((start_time, end_time, Ok(device_responded)))
     }
 
-	pub fn next_reset_recovery(&mut self, response_start: u32) -> Option<Result<u32, OneWireError>> {
-		self.last_idx = self.iter.current_index();
-
-		let start_time = self.current_time();
-		let reset = self.iter.next()?;
-		match reset {
-			Edge::Rising => return Some(Err(OneWireError::UnexpectedRisingEdge)),
-			_ => {}
-		}
-
+	pub fn next_reset_recovery(&mut self,  response_start: u32) -> Option<Result<u32, OneWireError>> {
 		if (self.current_time() - response_start) < self.timing.reset_recover_min {
 			return Some(Err(OneWireError::ResetRecoveryTooShort))
 		}
 
-		Some(Ok(start_time + self.timing.reset_recover_min))
+		Some(Ok(response_start + self.timing.reset_recover_min))
 	}
 
 	// forwards self, so self.next_reset() will be a 'valid' reset
@@ -161,7 +149,7 @@ impl <'a>OnewireIter<'a> {
 			let start = self.current_time();
 			let next = self.iter.next()?;
 
-			if (start - self.current_time()) >= self.timing.reset.min && next == Edge::Rising {
+			if (self.current_time() - start) >= self.timing.reset.min && next == Edge::Rising {
 				self.iter.set_index(idx).unwrap();
 				return Some(())
 			}
