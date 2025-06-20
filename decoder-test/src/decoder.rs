@@ -3,7 +3,7 @@ use crate::decoder_onewire::rom_cmd::ROMCmd;
 
 pub type DecoderPin = u32;
 
-pub const SECBUF_SIZE: usize = 100;
+pub const SECBUF_SIZE: usize = 1000;
 pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
 pub const TIMER_TICKS_PER_US: u32 = TIMER_CLOCK_RATE / 1_000_000;
 
