@@ -1,6 +1,6 @@
 build:
 	clear
-	cargo build --release
+	cargo build --release --target=thumbv7em-none-eabihf
 	arm-none-eabi-objcopy -O ihex target/thumbv7em-none-eabihf/release/itsboard-rust out.hex
 
 emu:
