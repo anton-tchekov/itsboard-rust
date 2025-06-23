@@ -1,12 +1,14 @@
 use crate::sample::*;
+use crate::decoder_onewire::rom_cmd::ROMCmd;
 
 pub type DecoderPin = u32;
 
 pub const SECBUF_SIZE: usize = 1000;
 pub const TIMER_CLOCK_RATE: u32 = 90_000_000;
+pub const TIMER_TICKS_PER_US: u32 = TIMER_CLOCK_RATE / 1_000_000;
 
 // GUI is responsible for choosing representation, colors, etc.
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub enum SectionContent
 {
 	// Add more when needed
@@ -24,12 +26,20 @@ pub enum SectionContent
 	I2cWrite,
 	I2cRead,
 	I2cAddress(u8),
-	Err(&'static str),
 	ParityBit(bool),
-	Word(u32),
+	Err(&'static str),
+	Reset,
+	CRC(u8),
+	ResetResponse(bool),
+	Data(u64),
+	ResetRecovery,
+	FunctionCmd(u8),
+	FamilyCode(u8),
+	SensorID(u64),
+	ROMCmd(ROMCmd),
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Section
 {
 	// Which time the section starts on
@@ -40,19 +50,6 @@ pub struct Section
 
 	// Arbitrary Content
 	pub content: SectionContent
-}
-
-impl Section
-{
-	pub fn from_bit(bit: &BitData, content: SectionContent) -> Self
-	{
-		Section
-		{
-			start: bit.start_time,
-			end: bit.end_time,
-			content
-		}
-	}
 }
 
 pub struct SectionBuffer
@@ -70,13 +67,26 @@ impl SectionBuffer
 
 	pub fn push(&mut self, section: Section)
 	{
-		if self.len >= self.sections.len()
+		if self.is_full()
 		{
 			return;
 		}
 
 		self.sections[self.len] = section;
 		self.len += 1;
+	}
+
+	pub fn is_full(&self) -> bool 
+	{
+		self.len >= self.sections.len()
+	}
+
+	pub fn iter(&self) -> SectionBufferIter 
+	{
+		SectionBufferIter {
+			buffer: self,
+			index: 0,
+		}
 	}
 
 	// start: Timstamp of window start
@@ -100,6 +110,28 @@ impl SectionBuffer
 		}
 
 		(first.unwrap_or(0), last)
+	}
+}
+
+pub struct SectionBufferIter<'a> 
+{
+	buffer: &'a SectionBuffer,
+	index: usize,
+}
+
+impl<'a> Iterator for SectionBufferIter<'a> 
+{
+	type Item = &'a Section;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.index >= self.buffer.len {
+			return None;
+		}
+
+		let item: &Section = &self.buffer.sections[self.index];
+		self.index += 1;
+
+		Some(item)
 	}
 }
 

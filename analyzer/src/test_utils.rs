@@ -1,5 +1,3 @@
-use std::fs::read;
-
 use csv::*;
 
 use crate::bit_reader::{BitOrder, BitReader};
@@ -20,7 +18,7 @@ pub fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
 		let timestamp = &record[0].parse::<u32>().unwrap();
 		let data = &record[1].parse::<u16>().unwrap();
 
-		buf.push(*data, *timestamp);
+		buf.push(*data as u8, *timestamp);
 	}
 
 	Ok(())

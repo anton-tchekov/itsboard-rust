@@ -1,16 +1,7 @@
 use core::ops::{Add, Mul};
+use libm::ceilf;
 
 use crate::decoder::TIMER_TICKS_PER_US;
-
-// TODO: use crate instead
-fn ceilf(x: f32) -> u32 {
-    let xi = x as u32;
-    if x > xi as f32 {
-        xi + 1
-    } else {
-        xi
-    }
-}
 
 #[derive(Copy, Clone)]
 pub struct Range<T>

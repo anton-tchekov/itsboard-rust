@@ -3,11 +3,6 @@ pub type Sample = u8;
 
 pub const BUF_SIZE: usize = 1000;
 
-fn round(x: f32) -> i32 {
-	let adjustment = 0.5_f32.copysign(x);
-	(x + adjustment) as i32
-}
-
 // Buffer containing samples
 pub struct SampleBuffer
 {
@@ -17,8 +12,10 @@ pub struct SampleBuffer
 	pub len: usize
 }
 
-impl Default for SampleBuffer {
-	fn default() -> Self {
+impl Default for SampleBuffer 
+{
+	fn default() -> Self 
+	{
 		Self::new()
 	}
 }
@@ -33,27 +30,6 @@ impl SampleBuffer
 			timestamps: [0; BUF_SIZE],
 			len: 0
 		}
-	}
-
-	pub fn bitwise_iter(&self, ch: u32, bit_time: f32) -> BitwiseIterator<'_> {
-		BitwiseIterator::new(self, bit_time, ch)
-	}
-
-	pub fn pulse_end(&self, mut idx: usize, ch: u32) -> Option<usize> {
-		let (initial_bit, _) = self.get_content(idx, ch)?;
-		idx += 1;
-
-		let (mut current_bit, _) = self.get_content(idx, ch)?;
-
-		while current_bit == initial_bit {
-			idx += 1;
-			match self.get_content(idx, ch) {
-				Some((next_bit, _)) => current_bit = next_bit,
-				None => return Some(idx - 1),
-			}
-		}
-
-		Some(idx)
 	}
 
 	pub fn clear(&mut self)
@@ -80,6 +56,11 @@ impl SampleBuffer
 			return None;
 		}
 		Some((self.samples[idx] & (1 << ch) != 0, self.timestamps[idx]))
+	}
+
+	pub fn edge_iter(&self, ch: u32) -> EdgeWiseIterator<'_> 
+	{
+		EdgeWiseIterator::new(self, ch)
 	}
 
 	// start: Timstamp of window start
@@ -226,140 +207,195 @@ impl<'a> Iterator for SampleBufferIterator<'a>
 	}
 }
 
-#[derive(Default)]
-pub struct BitData {
-	pub high: bool,
-	pub end_time: u32,
-	pub start_time: u32,
+#[derive(PartialEq, Eq, Debug)]
+pub enum Edge 
+{
+	Rising,
+	Falling
 }
 
-#[derive(Default)]
-struct Pulse {
-	value: bool,
-	start: u32,
-	end: u32,
-	bit_time: u32,
+impl From<bool> for Edge 
+{
+	// bool is the value of the previous pulse
+	fn from(value: bool) -> Self 
+	{
+		match value 
+		{
+			true => Edge::Falling,
+			false => Edge::Rising
+		}
+	}
 }
 
-// TODO: could prove useful for other protocols, maybe make tests for it
-// will probably be changed and moved in the future
-pub struct BitwiseIterator<'a> {
+impl Into<bool> for Edge 
+{
+	fn into(self) -> bool 
+	{
+		match self 
+		{
+			Edge::Falling => true,
+			Edge::Rising => false
+		}
+	}
+}
+
+pub struct EdgeWiseIterator<'a> 
+{
 	buffer: &'a SampleBuffer,
 	idx: usize,
-	// TODO: ask why channel is u32 and not u16
 	ch: u32,
-	expected_bit_time: f32,
-	current_pulse: Pulse,
 }
 
-impl<'a> BitwiseIterator<'a> {
-	pub fn new(buffer: &SampleBuffer, expected_bit_time: f32, ch: u32) -> BitwiseIterator<'_> {
-		BitwiseIterator {
-			expected_bit_time,
+impl<'a> EdgeWiseIterator<'a> 
+{
+	pub fn new(buffer: &SampleBuffer, ch: u32) -> EdgeWiseIterator<'_> 
+	{
+		EdgeWiseIterator 
+		{
 			buffer,
 			ch,
 			idx: 0,
-			current_pulse: Pulse::default(),
 		}
 	}
 
-	pub fn peek(&mut self) -> Option<BitData> {
-		if self.current_pulse.start == self.current_pulse.end {
-			self.current_pulse = self.fetch_next_pulse()?;
-		};
-
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: self.current_pulse.start,
-			end_time: self.current_pulse.start + self.current_pulse.bit_time,
-		})
+	pub fn current_index(&self) -> usize 
+	{
+		self.idx
 	}
 
-	// Forward the iterator to the next pulse
-	// Returns the pulse as BitData
-	pub fn next_pulse(&mut self) -> Option<BitData> {
-		if self.current_pulse.start == self.current_pulse.end {
-			self.current_pulse = self.fetch_next_pulse()?;
+	pub fn set_index(&mut self, idx: usize) -> Result<(), ()> 
+	{
+		if idx >= self.buffer.len 
+		{
+			return Err(())
 		}
-
-		let start = self.current_pulse.start;
-		self.current_pulse.start = self.current_pulse.end;
-
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: start,
-			end_time: self.current_pulse.end,
-		})
+		self.idx = idx;
+		Ok(())
 	}
 
-	// TODO: improve this. right now it can break the iterator if used wrong
-	pub fn next_halve_bit(&mut self) -> Option<BitData> {
-		if self.current_pulse.start == self.current_pulse.end {
-			self.current_pulse = self.fetch_next_pulse()?;
+	pub fn current_time(&self) -> u32 
+	{
+		if self.buffer.len == 0 
+		{
+			return 0
 		}
-
-		let start = self.current_pulse.start;
-		self.current_pulse.start += self.current_pulse.bit_time / 2;
-
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: start,
-			end_time: self.current_pulse.start,
-		})
+		self.buffer.timestamps[self.idx]
 	}
+}
 
-	pub fn next_bit(&mut self) -> Option<BitData> {
-		if self.current_pulse.start == self.current_pulse.end {
-			self.current_pulse = self.fetch_next_pulse()?;
-		}
+impl<'a> Iterator for EdgeWiseIterator<'a> 
+{
+	type Item = Edge;
 
-		let start = self.current_pulse.start;
-		self.current_pulse.start += self.current_pulse.bit_time;
+	fn next(&mut self) -> Option<Self::Item> 
+	{
+		self.set_index(self.idx + 1).ok()?;
+		let (value, _) = self.buffer.get_content(self.idx - 1, self.ch)?;
 
-		Some(BitData {
-			high: self.current_pulse.value,
-			start_time: start,
-			end_time: self.current_pulse.start,
-		})
+		// Skip all samples with the same value
+		while self.buffer.get_content(self.idx, self.ch)?.0 == value && self.set_index(self.idx + 1).is_ok() {}
+		Some(Edge::from(value))
 	}
+}
 
-	fn fetch_next_pulse(&mut self) -> Option<Pulse> {
-		let (value, start_time) = self.buffer.get_content(self.idx, self.ch)?;
-		let end_idx = self.buffer.pulse_end(self.idx, self.ch)?;
-		let end_time = self.buffer.timestamps[end_idx];
-		self.idx = end_idx;
+#[derive(Default, Clone, Copy)]
+pub struct BitSignal 
+{
+	pub high: bool,
+	pub end: u32,
+	pub start: u32,
+}
 
-		Some(self.calculate_pulse(value, start_time, end_time))
+impl BitSignal 
+{
+	pub fn duration(&self) -> u32 
+	{
+		self.end - self.start
 	}
+}
 
-	fn calculate_pulse(&self, value: bool, mut start: u32, mut end: u32) -> Pulse {
-		// Calc bit timings for the current pulse
-		let pulse_duration = end - start;
-		// TODO: remove .round() call - i believe it's not available without the stdlib
-		let bit_count = round(pulse_duration as f32 / self.expected_bit_time) as u32;
-		// .max, as pulse must describe at least one bit
-		let bit_time = pulse_duration / bit_count.max(1);
+pub type Pulse = BitSignal;
 
-		let padding = pulse_duration % bit_time;
-		let end_padding = padding / 2;
-		let start_padding = padding - end_padding;
+pub struct PulsewiseIterator<'a> 
+{
+	buffer: EdgeWiseIterator<'a>,
+}
 
-		start += start_padding;
-		end -= end_padding;
-
-		Pulse {
-			end,
-			start,
-			bit_time,
-			value,
+impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a> 
+{
+	fn from(iter: EdgeWiseIterator<'a>) -> Self 
+	{
+		PulsewiseIterator 
+		{
+			buffer: iter,
 		}
 	}
 }
 
-impl<'a> Iterator for BitwiseIterator<'a> {
-	type Item = BitData;
+impl<'a> Iterator for PulsewiseIterator<'a> 
+{
+	type Item = Pulse;
 
-	fn next(&mut self) -> Option<Self::Item> {
-		self.next_bit()
+	fn next(&mut self) -> Option<Self::Item> 
+	{
+		let start = self.buffer.current_time();
+		let next_edge = self.buffer.next()?;
+		let end = self.buffer.current_time();
+
+		Some(Pulse {
+			high: next_edge.into(),
+			start,
+			end,
+		})
 	}
+}
+
+#[cfg(test)]
+mod tests 
+{
+	use super::*;
+	use crate::test_utils::load_sample_buffer;
+
+	fn sample_buffer() -> SampleBuffer 
+	{
+		load_sample_buffer("UART/UART_8N1_300_H.csv")
+	}
+
+	#[test]
+	fn test_get()
+	{
+		let buf = sample_buffer();
+		assert_eq!(buf.len, 8);
+
+		assert_eq!(buf.get_content(0, 0), Some((true, 0)));
+        assert_eq!(buf.get_content(1, 0), Some((false, 38173934)));
+        assert_eq!(buf.get_content(2, 0), Some((true, 39372990)));
+        assert_eq!(buf.get_content(3, 0), Some((false, 39672860)));
+		assert_eq!(buf.get_content(4, 0), Some((true, 40272490)));
+		assert_eq!(buf.get_content(5, 0), Some((false, 40572216)));
+		assert_eq!(buf.get_content(6, 0), Some((true, 40872038)));
+		assert_eq!(buf.get_content(7, 0), Some((true, 65141112)))
+	}
+
+	#[test]
+    fn test_edge_iterator()
+	{
+        let buf = sample_buffer();
+        let edge_iter = buf.edge_iter(0);
+
+        let edges: Vec<Edge> = edge_iter.collect();
+
+        assert_eq!(
+            edges,
+            vec![
+                Edge::Falling,
+                Edge::Rising,
+                Edge::Falling,
+                Edge::Rising,
+                Edge::Falling,
+                Edge::Rising,
+				Edge::Falling,
+            ]
+        );
+    }
 }

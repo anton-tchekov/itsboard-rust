@@ -27,7 +27,7 @@ impl TryFrom<u8> for ROMCmd {
 }
 
 impl ROMCmd {
-	fn to_string(&self) -> &'static str {
+	pub fn to_string(&self) -> &'static str {
 		match self {
 			ROMCmd::ReadROM => "Read ROM",
 			ROMCmd::SkipROM => "Skip ROM",

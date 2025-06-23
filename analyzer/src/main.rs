@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_main)]
+#![cfg_attr(not(test), no_std)]
 #[macro_use]
 
 mod macro_utils;
@@ -28,15 +28,27 @@ mod decoder_framebuffer;
 mod decoder_storage;
 mod waveform;
 mod userflash;
+mod bit_reader;
+
+#[cfg(test)]
+mod test_utils;
 
 use crate::hw::*;
 use crate::lcd::*;
 use crate::delay::*;
 use crate::gui::*;
 
+#[cfg(not(test))]
 use panic_halt as _;
 
-#[cortex_m_rt::entry]
+use cortex_m_rt::entry;
+use stm32f4xx_hal::{
+    pac,
+    prelude::*,
+};
+
+#[allow(clippy::empty_loop)]
+#[cfg_attr(not(test), entry)]
 fn start() -> !
 {
 	let hw = hw_init();

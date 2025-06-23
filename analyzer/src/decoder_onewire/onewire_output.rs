@@ -9,7 +9,9 @@ pub struct OneWireOutput<'a> {
 
 impl <'a>OneWireOutput<'a> {
     pub fn push(&mut self, section: Section) -> Option<()> {
-        self.output.push(section).ok()
+        if self.output.is_full() {return None};
+		self.output.push(section);
+		Some(())
     }
 
     pub fn push_err(&mut self, iter: &mut OnewireIter, start_time: u32, err: OneWireError) -> Option<()> {

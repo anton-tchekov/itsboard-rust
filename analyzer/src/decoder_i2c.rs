@@ -1,5 +1,5 @@
 use crate::decoder::*;
-use crate::sample::*;
+use crate::sample::SampleBuffer;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct DecoderI2C

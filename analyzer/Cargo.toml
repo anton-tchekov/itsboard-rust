@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 cortex-m = "0.7.4"
 cortex-m-rt = "0.7.1"
+libm = "0.2.15"
 panic-halt = "0.2.0"
 
 postcard = "1.0.0"
@@ -19,9 +20,11 @@ serde = { version = "1.0.*", default-features = false }
 version = "0.22.1"
 features = ["stm32f429"]
 
+[dev-dependencies]
+csv = "1.3.1"
+
 [profile.release]
 codegen-units = 1
 incremental = false
 debug = false
 lto = true
-

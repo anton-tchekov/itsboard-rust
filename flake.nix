@@ -35,6 +35,7 @@
           else
             rust.stable.latest.default.override {
               extensions = [ "rust-src" "rustfmt" ];
+              targets = [ "thumbv7em-none-eabihf" ];
             };
       };
 
@@ -48,6 +49,9 @@
             cargo-edit
             cargo-watch
             rust-analyzer
+            pkgs.udev
+            pkgs.pkg-config
+            gcc-arm-embedded
           ];
 
           env = {
