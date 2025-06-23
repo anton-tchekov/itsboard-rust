@@ -333,12 +333,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 
 						write!(buf, " ${:02X}", v).unwrap();
 					}
-					SectionContent::SensorID(v) => {
-						fg = 1; /* Black */
-						bg = 4; /* Yellow */
-
-						write!(buf, " ${:02X}", v).unwrap();
-					}
 					SectionContent::CRC(v) => {
 						fg = 1; /* Black */
 						bg = 5; /* Green */
@@ -350,11 +344,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 						bg = 3; /* Blue */
 
 						write!(buf, " ${:02X}", v).unwrap();
-					}
-					SectionContent::CRC(v) => {
-						fg = 1; /* Black */
-						bg = 5; /* Green */
-						format_byte(&mut buf, v.into());
 					}
 				};
 
