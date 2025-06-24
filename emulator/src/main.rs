@@ -28,6 +28,7 @@ mod timeline;
 mod timeindicator;
 mod durationindicator;
 mod cursors;
+mod bit_reader;
 
 use crate::hw::HW;
 use crate::graphics::*;

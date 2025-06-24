@@ -2,7 +2,7 @@
 
 use crate::{font::{Font, remap_char},
 	lcd::{lcd_emit, lcd_window_end, lcd_window_start,
-		LCD_BLACK, LCD_WHITE, LCD_GREEN, LCD_RED, LCD_BLUE, LCD_YELLOW}};
+		LCD_BLACK, LCD_WHITE, LCD_GREEN, LCD_RED, LCD_BLUE, LCD_YELLOW, LCD_ORANGE}};
 
 use crate::decoder::{SectionBuffer, SectionContent};
 use crate::terminus16_bold::TERMINUS16_BOLD;
@@ -21,7 +21,7 @@ const COLOR_TABLE: [u16; 16] =
 	LCD_BLUE,
 	LCD_YELLOW,
 	LCD_GREEN,
-	0,
+	LCD_ORANGE,
 	0,
 	0,
 	0,
@@ -194,7 +194,7 @@ pub struct DecoderFrameBuffer<const LEN: usize>
 	lines: [DecoderLine<LEN>; 2]
 }
 
-fn format_byte(buf: &mut ByteMutWriter, byte: u32)
+fn format_byte(buf: &mut ByteMutWriter, byte: u64)
 {
 	if (32..=126).contains(&byte)
 	{
@@ -258,8 +258,8 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 			match cur.content
 			{
 					SectionContent::TxByte(v) => {
-									fg = 1;
-									bg = 3;
+									fg = 1; /* Black */
+									bg = 3; /* Blue */
 									line = &mut self.lines[1];
 
 									format_byte(&mut buf, v.into());
@@ -268,17 +268,83 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 					SectionContent::Byte(v) => { format_byte(&mut buf, v.into()) },
 					SectionContent::Empty     => write!(buf, " Empty").unwrap(),
 					SectionContent::Bit(v)    => write!(buf, " {}", v).unwrap(),
-					SectionContent::StartBit  => write!(buf, " Start").unwrap(),
-					SectionContent::StopBit   => write!(buf, " Stop").unwrap(),
-					SectionContent::I2cAddress(v) => write!(buf, " Addr: {:X}", v).unwrap(),
+					SectionContent::StartBit  => {
+									fg = 1; /* Black */
+									bg = 5; /* Green */
+									write!(buf, " Start").unwrap()
+					},
+					SectionContent::StopBit   => {
+									fg = 1; /* Black */
+									bg = 6; /* Orange */
+									write!(buf, " Stop").unwrap()
+					},
+						
+					SectionContent::I2cAddress(v) => {
+									fg = 1; /* Black */
+									bg = 4; /* Yellow */
+									write!(buf, " Addr: {:X}", v).unwrap()
+					},
 					SectionContent::Err(v) => write!(buf, " {}", v).unwrap(),
-					SectionContent::ParityBit(v) => write!(buf, " {}", if v { 1 } else { 0 }).unwrap(),
-					SectionContent::Word(v) => format_byte(&mut buf, v),
-					SectionContent::RepeatedStart => write!(buf, " RS").unwrap(),
-					SectionContent::Ack => write!(buf, " Ack").unwrap(),
-					SectionContent::Nak => write!(buf, " Nak").unwrap(),
-					SectionContent::I2cWrite => write!(buf, " W").unwrap(),
-					SectionContent::I2cRead => write!(buf, " R").unwrap(),
+					SectionContent::ParityBit(v) => write!(buf, " {}", v).unwrap(),
+					SectionContent::Data(v) => format_byte(&mut buf, v.into()),
+					SectionContent::RepeatedStart => {
+									fg = 1; /* Black */
+									bg = 5; /* Green */
+									write!(buf, " RS").unwrap()
+					},
+					SectionContent::Ack => {
+									fg = 1; /* Black */
+									bg = 5; /* Green */
+									write!(buf, " ACK").unwrap()
+					},
+					SectionContent::Nak => {
+									fg = 1; /* Black */
+									bg = 2; /* Red */
+									write!(buf, " NAK").unwrap()
+					},
+					SectionContent::I2cWrite => {
+									fg = 1; /* Black */
+									bg = 1; /* White */
+									write!(buf, " W").unwrap()
+					},
+					SectionContent::I2cRead => {
+						fg = 1; /* Black */
+						bg = 1; /* White */
+						write!(buf, " R").unwrap()
+					},
+					SectionContent::Reset => write!(buf, " Reset").unwrap(),
+					SectionContent::ResetResponse(v) => write!(buf, " {}", if v {"Response"} else {"No Response"}).unwrap(),
+					SectionContent::ResetRecovery => write!(buf, " Reset Recovery").unwrap(),
+					SectionContent::ROMCmd(v) => {
+						fg = 1; /* Black */
+						bg = 3; /* Blue */
+
+						write!(buf, " {}", v.to_string()).unwrap()
+					},
+					SectionContent::FamilyCode(v) => {
+						fg = 1; /* Black */
+						bg = 6; /* Orange */
+
+						write!(buf, " ${:02X}", v).unwrap();
+					},
+					SectionContent::SensorID(v ) => {
+						fg = 1; /* Black */
+						bg = 6; /* Orange */
+
+						write!(buf, " ${:02X}", v).unwrap();
+					}
+					SectionContent::CRC(v) => {
+						fg = 1; /* Black */
+						bg = 5; /* Green */
+
+						write!(buf, " ${:02X}", v).unwrap();
+					}
+					SectionContent::FunctionCmd(v) => {
+						fg = 1; /* Black */
+						bg = 3; /* Blue */
+
+						write!(buf, " ${:02X}", v).unwrap();
+					}
 				};
 
 			let font = &TERMINUS16_BOLD;

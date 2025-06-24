@@ -11,6 +11,8 @@ pub const LCD_GREEN   : u16 = 0x07E0;
 pub const LCD_CYAN    : u16 = 0x07FF;
 pub const LCD_BLUE    : u16 = 0x001F;
 pub const LCD_MAGENTA : u16 = 0xF81F;
+pub const LCD_ORANGE  : u16 = 0xFD80;
+
 
 pub const LCD_SIZE: usize = LCD_WIDTH as usize * LCD_HEIGHT as usize;
 
