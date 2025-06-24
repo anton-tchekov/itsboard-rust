@@ -267,7 +267,10 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 					SectionContent::RxByte(v) => { format_byte(&mut buf, v.into()) },
 					SectionContent::Byte(v) => { format_byte(&mut buf, v.into()) },
 					SectionContent::Empty     => write!(buf, " Empty").unwrap(),
-					SectionContent::Bit(v)    => write!(buf, " {}", v).unwrap(),
+					SectionContent::Bit(v)    => {
+						line = &mut self.lines[1];
+						write!(buf, " {}", if v { 1 } else { 0 }).unwrap()
+					},
 					SectionContent::StartBit  => {
 									fg = 1; /* Black */
 									bg = 5; /* Green */
@@ -278,7 +281,6 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 									bg = 6; /* Orange */
 									write!(buf, " Stop").unwrap()
 					},
-						
 					SectionContent::I2cAddress(v) => {
 									fg = 1; /* Black */
 									bg = 4; /* Yellow */
