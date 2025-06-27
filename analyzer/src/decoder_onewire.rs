@@ -1,6 +1,6 @@
 mod timings;
 mod onewire_error;
-mod onwire_iter;
+mod onewire_iter;
 mod onewire_output;
 pub mod rom_cmd;
 
@@ -9,7 +9,7 @@ use timings::*;
 use crate::bit_reader::BitReader;
 use crate::decoder::*;
 use crate::decoder_onewire::onewire_output::OneWireOutput;
-use crate::decoder_onewire::onwire_iter::OnewireIter;
+use crate::decoder_onewire::onewire_iter::OnewireIter;
 use crate::decoder_onewire::rom_cmd::ROMCmd;
 use crate::sample::*;
 use onewire_error::*;
@@ -45,7 +45,7 @@ where
     None
 }
 
-pub fn read_bits(    
+pub fn read_bits(
     iter: &mut OnewireIter,
     output: &mut OneWireOutput,
     reader: &mut BitReader,
@@ -57,7 +57,7 @@ pub fn read_bits(
 		end_time = end;
         match value {
             Ok(bit) => {
-                output.push(Section { 
+                output.push(Section {
                     start: current_time,
                     end: end_time,
                     content: SectionContent::Bit(bit)
@@ -140,7 +140,7 @@ impl ResetState {
 				});
 			}
 		};
-		
+
 		let recovery_start = iter.current_time();
 		let (start, end, response) = iter.next_response()?;
 		match response {
@@ -169,18 +169,18 @@ impl ResetState {
 				output.push(Section {
 					start,
 					end,
-					content: SectionContent::ResetRecovery 
+					content: SectionContent::ResetRecovery
 				});
 			}
 		}
 
 		let reset = iter.next_reset()?;
 		iter.discard_last();
-		
+
 		if reset.is_ok() {
 			return Some(OneWireState::Reset(ResetState))
 		}
-		
+
 		Some(OneWireState::ROMCmd(ROMCommandState))
 	}
 }
@@ -209,7 +209,7 @@ impl ROMCommandState {
 
 				(Ok(cmd), _) => {
 					output.push(Section { start, end, content: SectionContent::ROMCmd(cmd) })?;
-					
+
 					if reader.is_finished() {
 						return Some(OneWireState::from_rom(iter, cmd));
 					}
@@ -388,6 +388,7 @@ mod tests {
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
 
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
 			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
 		])

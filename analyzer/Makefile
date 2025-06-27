@@ -25,6 +25,12 @@ emu:
 	cp src/decoder_i2c.rs ../emulator/src/decoder_i2c.rs
 	cp src/decoder_onewire.rs ../emulator/src/decoder_onewire.rs
 	cp src/bytewriter.rs ../emulator/src/bytewriter.rs
+	cp src/bit_reader.rs ../emulator/src/bit_reader.rs
+	cp src/decoder_onewire/onewire_error.rs ../emulator/src/decoder_onewire/onewire_error.rs
+	cp src/decoder_onewire/onewire_output.rs ../emulator/src/decoder_onewire/onewire_output.rs
+	cp src/decoder_onewire/onewire_iter.rs ../emulator/src/decoder_onewire/onewire_iter.rs
+	cp src/decoder_onewire/rom_cmd.rs ../emulator/src/decoder_onewire/rom_cmd.rs
+	cp src/decoder_onewire/timings.rs ../emulator/src/decoder_onewire/timings.rs
 	cd ../emulator && cargo run
 
 dump:
