@@ -380,16 +380,15 @@ mod tests {
 	fn test_measure_temp() {
 		let onewire = decoder();
 		let sections = decode_sections("1Wire/OneWireReadROM_MeasureTemp.csv", onewire);
-		let mut section_iter = sections.iter();
 
 		assert_top_layer_eq(&sections, &[
-			// This is wrong
+			// TODO: anpassen mit richtigen werten - diese sind platzhalter
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery, 
 			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
 
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
-			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
 		])
 	}
