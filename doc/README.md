@@ -86,6 +86,11 @@ Die Konfiguration des Protokoll-Decoders wird im internen Flash gespeichert.
 Dadurch bleiben die Einstellungen erhalten, auch wenn man das ITS-Board
 ausschaltet.
 
+## Cursors
+
+Mit den Cursorn kann die Zeit zwischen zwei Ereignissen gemessen werden.
+
+![Cursors](cursors.png)
 
 ## Anwendung für die 4. GS Praktikumsaufgabe
 
