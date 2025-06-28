@@ -520,7 +520,7 @@ const ACTIONS_MAIN: [Action; 8] =
 const ACTIONS_CURSORS: [Action; 8] =
 [
 	Action::LeftFast, Action::RightFast, Action::Left, Action::Right,
-	Action::PrevEdge, Action::NextEdge, Action::Escape, Action::Cycle
+	Action::PrevEdge, Action::NextEdge, Action::Cycle, Action::Escape
 ];
 
 const ACTIONS_DA: [Action; 8] =
