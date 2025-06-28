@@ -12,19 +12,16 @@ pub enum DecoderUnion
 
 pub struct DecoderStorage
 {
-	pub decoder: DecoderUnion
 }
-
-const FLASH_OFFSET: usize = 0;
 
 impl DecoderStorage
 {
-	pub fn load(flash: &UserFlash) -> (DecoderUnion, [u8; 8])
+	pub fn load(_flash: &UserFlash) -> (DecoderUnion, [u8; 8])
 	{
 		(DecoderUnion::None, [0; 8])
 	}
 
-	pub fn save(flash: &mut UserFlash, decoder: &DecoderUnion, a: &[u8])
+	pub fn save(_flash: &mut UserFlash, _decoder: &DecoderUnion, _a: &[u8])
 	{
 	}
 }

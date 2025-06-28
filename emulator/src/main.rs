@@ -37,7 +37,6 @@ use sdl2::keyboard::Keycode;
 use gui::*;
 use std::sync::mpsc;
 use std::thread;
-use crate::test_utils::load_sample_buffer;
 
 enum EventMessage
 {
@@ -46,7 +45,7 @@ enum EventMessage
 }
 
 fn main() -> Result<(), String> {
-	let mut hw = HW::new();
+	let hw = HW::new();
 	let mut gui = Gui::init(hw);
 	let (tx, rx) = mpsc::channel();
 
