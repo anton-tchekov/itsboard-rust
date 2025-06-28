@@ -171,8 +171,8 @@ impl <'a>UartOutput<'a> {
 	}
 
 	pub fn push_signal(&mut self, bit: BitSignal, content: SectionContent) -> Option<()> {
-		self.push(Section { 
-			start: bit.start, 
+		self.push(Section {
+			start: bit.start,
 			end: bit.end,
 			content
 		})
@@ -209,7 +209,7 @@ impl DataState {
 		};
 		let value = reader.get_value().unwrap();
 
-		output.push(Section { 
+		output.push(Section {
 			start,
 			end: bits.current_time(),
 			content: SectionContent::Data(value)

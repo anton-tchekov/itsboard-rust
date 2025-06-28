@@ -43,19 +43,19 @@ pub fn decode_sections(file: &str, decoder: impl Decoder) -> SectionBuffer {
 }
 
 pub fn assert_bits_eq(amount: u8, buf: &mut SectionBufferIter, order: BitOrder, expected: u64) {
-    let mut reader = BitReader::new(amount, order);
+	let mut reader = BitReader::new(amount, order);
 
-    while !reader.is_finished() {
-        match buf.next() {
+	while !reader.is_finished() {
+		match buf.next() {
 			Some(s) => match s.content {
 				SectionContent::Bit(b) => reader.read_bit(b),
 				_ => continue,
 			},
-            None => panic!("Unexpected end of buffer while reading bits"),
-        };
-    }
+			None => panic!("Unexpected end of buffer while reading bits"),
+		};
+	}
 
-    assert_eq!(reader.get_value(), Some(expected));
+	assert_eq!(reader.get_value(), Some(expected));
 }
 
 pub fn assert_bits_lsb_eq(amount: u8, buf: &mut SectionBufferIter, expected: u64) {

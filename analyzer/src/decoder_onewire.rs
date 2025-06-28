@@ -15,62 +15,62 @@ use crate::sample::*;
 use onewire_error::*;
 
 fn process_bits<G>(
-    iter: &mut OnewireIter,
-    output: &mut OneWireOutput,
-    amount:  u8,
-    success_state: OneWireState,
-    value_to_content: G,
+	iter: &mut OnewireIter,
+	output: &mut OneWireOutput,
+	amount:  u8,
+	success_state: OneWireState,
+	value_to_content: G,
 ) -> Option<OneWireState>
 where
-    G: FnOnce(u64) -> SectionContent,
+	G: FnOnce(u64) -> SectionContent,
 {
-    let start = iter.current_time();
-    let mut reader = BitReader::lsb(amount);
-    let (end, result) = read_bits(iter, output, &mut reader)?;
+	let start = iter.current_time();
+	let mut reader = BitReader::lsb(amount);
+	let (end, result) = read_bits(iter, output, &mut reader)?;
 
-    if let Some(value) = reader.get_value() {
-        let content = value_to_content(value);
-        output.push(Section { start, end, content })?;
-    }
+	if let Some(value) = reader.get_value() {
+		let content = value_to_content(value);
+		output.push(Section { start, end, content })?;
+	}
 
-    if reader.is_finished() {
-        return Some(success_state)
-    }
+	if reader.is_finished() {
+		return Some(success_state)
+	}
 
-    if let Err(err) = result {
-        output.push_err(iter, end, err)?;
-        return Some(OneWireState::Reset(ResetState));
-    };
+	if let Err(err) = result {
+		output.push_err(iter, end, err)?;
+		return Some(OneWireState::Reset(ResetState));
+	};
 
-    None
+	None
 }
 
 pub fn read_bits(
-    iter: &mut OnewireIter,
-    output: &mut OneWireOutput,
-    reader: &mut BitReader,
+	iter: &mut OnewireIter,
+	output: &mut OneWireOutput,
+	reader: &mut BitReader,
 ) -> Option<(u32, Result<(), OneWireError>)> {
-    let mut current_time = iter.current_time();
+	let mut current_time = iter.current_time();
 	let mut end_time = iter.current_time();
 
-    while let Some((end, value)) = iter.next_bit() {
+	while let Some((end, value)) = iter.next_bit() {
 		end_time = end;
-        match value {
-            Ok(bit) => {
-                output.push(Section {
-                    start: current_time,
-                    end: end_time,
-                    content: SectionContent::Bit(bit)
-                })?;
-                if reader.read_bit(bit) { break; }
-            },
-            Err(err) => return Some((end_time, Err(err))),
-        };
+		match value {
+			Ok(bit) => {
+				output.push(Section {
+					start: current_time,
+					end: end_time,
+					content: SectionContent::Bit(bit)
+				})?;
+				if reader.read_bit(bit) { break; }
+			},
+			Err(err) => return Some((end_time, Err(err))),
+		};
 
-        current_time = iter.current_time();
-    }
+		current_time = iter.current_time();
+	}
 
-    Some((end_time, Ok(())))
+	Some((end_time, Ok(())))
 }
 
 #[derive(Debug)]
