@@ -12,9 +12,9 @@ pub struct SampleBuffer
 	pub len: usize
 }
 
-impl Default for SampleBuffer 
+impl Default for SampleBuffer
 {
-	fn default() -> Self 
+	fn default() -> Self
 	{
 		Self::new()
 	}
@@ -58,7 +58,7 @@ impl SampleBuffer
 		Some((self.samples[idx] & (1 << ch) != 0, self.timestamps[idx]))
 	}
 
-	pub fn edge_iter(&self, ch: u32) -> EdgeWiseIterator<'_> 
+	pub fn edge_iter(&self, ch: u32) -> EdgeWiseIterator<'_>
 	{
 		EdgeWiseIterator::new(self, ch)
 	}
@@ -208,18 +208,18 @@ impl<'a> Iterator for SampleBufferIterator<'a>
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum Edge 
+pub enum Edge
 {
 	Rising,
 	Falling
 }
 
-impl From<bool> for Edge 
+impl From<bool> for Edge
 {
 	// bool is the value of the previous pulse
-	fn from(value: bool) -> Self 
+	fn from(value: bool) -> Self
 	{
-		match value 
+		match value
 		{
 			true => Edge::Falling,
 			false => Edge::Rising
@@ -227,11 +227,11 @@ impl From<bool> for Edge
 	}
 }
 
-impl Into<bool> for Edge 
+impl Into<bool> for Edge
 {
-	fn into(self) -> bool 
+	fn into(self) -> bool
 	{
-		match self 
+		match self
 		{
 			Edge::Falling => true,
 			Edge::Rising => false
@@ -239,18 +239,18 @@ impl Into<bool> for Edge
 	}
 }
 
-pub struct EdgeWiseIterator<'a> 
+pub struct EdgeWiseIterator<'a>
 {
 	buffer: &'a SampleBuffer,
 	idx: usize,
 	ch: u32,
 }
 
-impl<'a> EdgeWiseIterator<'a> 
+impl<'a> EdgeWiseIterator<'a>
 {
-	pub fn new(buffer: &SampleBuffer, ch: u32) -> EdgeWiseIterator<'_> 
+	pub fn new(buffer: &SampleBuffer, ch: u32) -> EdgeWiseIterator<'_>
 	{
-		EdgeWiseIterator 
+		EdgeWiseIterator
 		{
 			buffer,
 			ch,
@@ -258,14 +258,14 @@ impl<'a> EdgeWiseIterator<'a>
 		}
 	}
 
-	pub fn current_index(&self) -> usize 
+	pub fn current_index(&self) -> usize
 	{
 		self.idx
 	}
 
-	pub fn set_index(&mut self, idx: usize) -> Result<(), ()> 
+	pub fn set_index(&mut self, idx: usize) -> Result<(), ()>
 	{
-		if idx >= self.buffer.len 
+		if idx >= self.buffer.len
 		{
 			return Err(())
 		}
@@ -273,9 +273,9 @@ impl<'a> EdgeWiseIterator<'a>
 		Ok(())
 	}
 
-	pub fn current_time(&self) -> u32 
+	pub fn current_time(&self) -> u32
 	{
-		if self.buffer.len == 0 
+		if self.buffer.len == 0
 		{
 			return 0
 		}
@@ -283,11 +283,11 @@ impl<'a> EdgeWiseIterator<'a>
 	}
 }
 
-impl<'a> Iterator for EdgeWiseIterator<'a> 
+impl<'a> Iterator for EdgeWiseIterator<'a>
 {
 	type Item = Edge;
 
-	fn next(&mut self) -> Option<Self::Item> 
+	fn next(&mut self) -> Option<Self::Item>
 	{
 		self.set_index(self.idx + 1).ok()?;
 		let (value, _) = self.buffer.get_content(self.idx - 1, self.ch)?;
@@ -299,16 +299,16 @@ impl<'a> Iterator for EdgeWiseIterator<'a>
 }
 
 #[derive(Default, Clone, Copy)]
-pub struct BitSignal 
+pub struct BitSignal
 {
 	pub high: bool,
 	pub end: u32,
 	pub start: u32,
 }
 
-impl BitSignal 
+impl BitSignal
 {
-	pub fn duration(&self) -> u32 
+	pub fn duration(&self) -> u32
 	{
 		self.end - self.start
 	}
@@ -316,27 +316,27 @@ impl BitSignal
 
 pub type Pulse = BitSignal;
 
-pub struct PulsewiseIterator<'a> 
+pub struct PulsewiseIterator<'a>
 {
 	buffer: EdgeWiseIterator<'a>,
 }
 
-impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a> 
+impl <'a>From<EdgeWiseIterator<'a>> for PulsewiseIterator<'a>
 {
-	fn from(iter: EdgeWiseIterator<'a>) -> Self 
+	fn from(iter: EdgeWiseIterator<'a>) -> Self
 	{
-		PulsewiseIterator 
+		PulsewiseIterator
 		{
 			buffer: iter,
 		}
 	}
 }
 
-impl<'a> Iterator for PulsewiseIterator<'a> 
+impl<'a> Iterator for PulsewiseIterator<'a>
 {
 	type Item = Pulse;
 
-	fn next(&mut self) -> Option<Self::Item> 
+	fn next(&mut self) -> Option<Self::Item>
 	{
 		let start = self.buffer.current_time();
 		let next_edge = self.buffer.next()?;
@@ -351,12 +351,12 @@ impl<'a> Iterator for PulsewiseIterator<'a>
 }
 
 #[cfg(test)]
-mod tests 
+mod tests
 {
 	use super::*;
 	use crate::test_utils::load_sample_buffer;
 
-	fn sample_buffer() -> SampleBuffer 
+	fn sample_buffer() -> SampleBuffer
 	{
 		load_sample_buffer("UART/UART_8N1_300_H.csv")
 	}
@@ -368,9 +368,9 @@ mod tests
 		assert_eq!(buf.len, 8);
 
 		assert_eq!(buf.get_content(0, 0), Some((true, 0)));
-        assert_eq!(buf.get_content(1, 0), Some((false, 38173934)));
-        assert_eq!(buf.get_content(2, 0), Some((true, 39372990)));
-        assert_eq!(buf.get_content(3, 0), Some((false, 39672860)));
+		assert_eq!(buf.get_content(1, 0), Some((false, 38173934)));
+		assert_eq!(buf.get_content(2, 0), Some((true, 39372990)));
+		assert_eq!(buf.get_content(3, 0), Some((false, 39672860)));
 		assert_eq!(buf.get_content(4, 0), Some((true, 40272490)));
 		assert_eq!(buf.get_content(5, 0), Some((false, 40572216)));
 		assert_eq!(buf.get_content(6, 0), Some((true, 40872038)));
@@ -378,24 +378,24 @@ mod tests
 	}
 
 	#[test]
-    fn test_edge_iterator()
+	fn test_edge_iterator()
 	{
-        let buf = sample_buffer();
-        let edge_iter = buf.edge_iter(0);
+		let buf = sample_buffer();
+		let edge_iter = buf.edge_iter(0);
 
-        let edges: Vec<Edge> = edge_iter.collect();
+		let edges: Vec<Edge> = edge_iter.collect();
 
-        assert_eq!(
-            edges,
-            vec![
-                Edge::Falling,
-                Edge::Rising,
-                Edge::Falling,
-                Edge::Rising,
-                Edge::Falling,
-                Edge::Rising,
+		assert_eq!(
+			edges,
+			vec![
 				Edge::Falling,
-            ]
-        );
-    }
+				Edge::Rising,
+				Edge::Falling,
+				Edge::Rising,
+				Edge::Falling,
+				Edge::Rising,
+				Edge::Falling,
+			]
+		);
+	}
 }

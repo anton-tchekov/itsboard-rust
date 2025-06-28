@@ -27,7 +27,7 @@ impl UserFlash
 		let _ = unlocked_flash.erase(self.sector.number);
 	}
 
-	pub fn write<'a, I>(&mut self, idx: usize, bytes: I)
+	pub fn write<'a, I>(&mut self, bytes: I)
 	where
 	I: Iterator<Item = &'a u8>,
 	{
@@ -38,10 +38,5 @@ impl UserFlash
 	pub fn as_slice(&self) -> &[u8]
 	{
 		&self.locked_flash.read()[self.sector.offset..]
-	}
-
-	pub fn read(&self, idx: usize) -> Option<&u8>
-	{
-		self.locked_flash.read().get(self.sector.offset+idx)
 	}
 }

@@ -42,10 +42,6 @@ use crate::gui::*;
 use panic_halt as _;
 
 use cortex_m_rt::entry;
-use stm32f4xx_hal::{
-	pac,
-	prelude::*,
-};
 
 #[allow(clippy::empty_loop)]
 #[cfg_attr(not(test), entry)]

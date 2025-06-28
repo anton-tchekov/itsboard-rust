@@ -85,7 +85,7 @@ impl<const LEN: usize> DecoderLine<LEN>
 		}
 	}
 
-	fn add_char_v(&mut self, x: u32, y: u32, c: u32, color: u32, font: &Font) -> u32
+	fn add_char_v(&mut self, x: u32, y: u32, c: u32, font: &Font) -> u32
 	{
 		const CHAR_OFFSET: usize = 32;
 		let height_mask = Self::height_bitmask(y, font.height);
@@ -102,7 +102,7 @@ impl<const LEN: usize> DecoderLine<LEN>
 		font.width + 1
 	}
 
-	fn add_char_h(&mut self, x: u32, y: u32, c: u32, color: u32, font: &Font) -> u32
+	fn add_char_h(&mut self, x: u32, y: u32, c: u32, font: &Font) -> u32
 	{
 		let stride = (font.width + 7) >> 3;
 		let offset = (c - 32) * font.height * stride;
@@ -131,16 +131,16 @@ impl<const LEN: usize> DecoderLine<LEN>
 		font.width
 	}
 
-	fn add_char(&mut self, x: u32, y: u32, c: u32, color: u32, font: &Font) -> u32
+	fn add_char(&mut self, x: u32, y: u32, c: u32, font: &Font) -> u32
 	{
 		let c = remap_char(c);
 		if font.horizontal
 		{
-			self.add_char_h(x, y, c, color, font)
+			self.add_char_h(x, y, c, font)
 		}
 		else
 		{
-			self.add_char_v(x, y, c, color, font)
+			self.add_char_v(x, y, c, font)
 		}
 	}
 
@@ -149,7 +149,7 @@ impl<const LEN: usize> DecoderLine<LEN>
 		let mut x0 = x;
 		for c in s.chars()
 		{
-			let w = self.add_char(x0, y, c as u32, color, font);
+			let w = self.add_char(x0, y, c as u32, font);
 			self.set_bg(x0, w, color);
 			x0 += w;
 		}

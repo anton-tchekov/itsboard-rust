@@ -4,30 +4,30 @@ use crate::decoder_onewire::onewire_iter::OnewireIter;
 use crate::decoder_onewire::timings::Timings;
 
 pub struct OneWireOutput<'a> {
-    output: &'a mut SectionBuffer
+	output: &'a mut SectionBuffer
 }
 
 impl <'a>OneWireOutput<'a> {
-    pub fn push(&mut self, section: Section) -> Option<()> {
-        if self.output.is_full() {return None};
+	pub fn push(&mut self, section: Section) -> Option<()> {
+		if self.output.is_full() {return None};
 		self.output.push(section);
 		Some(())
-    }
+	}
 
-    pub fn push_err(&mut self, iter: &mut OnewireIter, start_time: u32, err: OneWireError) -> Option<()> {
-        iter.set_timing(Timings::standard());
-        iter.forward_to_reset()?;
+	pub fn push_err(&mut self, iter: &mut OnewireIter, start_time: u32, err: OneWireError) -> Option<()> {
+		iter.set_timing(Timings::standard());
+		iter.forward_to_reset()?;
 
-        self.push(Section {
-            start: start_time,
-            end: iter.current_time(),
-            content: SectionContent::Err(err.to_string())
-        })
-    }
+		self.push(Section {
+			start: start_time,
+			end: iter.current_time(),
+			content: SectionContent::Err(err.to_string())
+		})
+	}
 }
 
 impl <'a>From<&'a mut SectionBuffer> for OneWireOutput<'a> {
-    fn from(value: &'a mut SectionBuffer) -> Self {
-        Self { output: value }
-    }
+	fn from(value: &'a mut SectionBuffer) -> Self {
+		Self { output: value }
+	}
 }

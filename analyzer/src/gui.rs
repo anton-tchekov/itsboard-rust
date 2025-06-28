@@ -477,28 +477,6 @@ fn cycle_bwd(idx: u32, count: u32) -> u32
 	if idx == 0 { count - 1 } else { idx - 1 }
 }
 
-macro_rules! limit_inc
-{
-	($value:expr, $n:expr) =>
-	{
-		if $value < $n
-		{
-			$value += 1;
-		}
-	};
-}
-
-macro_rules! limit_dec
-{
-	($value:expr, $n:expr) =>
-	{
-		if $value > $n
-		{
-			$value -= 1;
-		}
-	};
-}
-
 const ACTIONS_INFO: [Action; 8] =
 [
 	Action::None, Action::None, Action::None, Action::None,
@@ -1024,7 +1002,7 @@ impl Gui
 	fn invalid_input()
 	{
 		let s = "Invalid Input";
-		for i in 0..3
+		for _i in 0..3
 		{
 			Self::draw_config_saved(0, LCD_RED, s);
 			delay_ms(200);

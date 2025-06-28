@@ -18,11 +18,6 @@ impl Font
 	{
 		self.width * s.len() as u32
 	}
-
-	pub fn stride(&self) -> u32
-	{
-		self.width + if self.horizontal { 1 } else { 0 }
-	}
 }
 
 pub fn lcd_font(x: u32, y: u32, o: u32, fg: u16, bg: u16, font: &Font) -> u32
