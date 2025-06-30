@@ -1,15 +1,11 @@
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(all(not(test), not(feature = "simulator")), no_main)]
+#![cfg_attr(all(not(test), not(feature = "simulator")), no_std)]
 #[macro_use]
 
 mod macro_utils;
-mod hw;
 mod font;
-mod delay;
-mod lcd;
 mod gui;
 mod sample;
-mod sampler;
 mod decoder;
 mod terminus16;
 mod terminus16_bold;
@@ -25,26 +21,63 @@ mod durationindicator;
 mod cursors;
 mod positionindicator;
 mod decoder_framebuffer;
-mod decoder_storage;
 mod waveform;
-mod userflash;
 mod bit_reader;
 
-#[cfg(test)]
+#[cfg_attr(not(feature = "simulator"), path="delay.rs")]
+#[cfg_attr(feature = "simulator", path="sim_delay.rs")]
+mod delay;
+
+#[cfg_attr(not(feature = "simulator"), path="hw.rs")]
+#[cfg_attr(feature = "simulator", path="sim_hw.rs")]
+mod hw;
+
+#[cfg_attr(not(feature = "simulator"), path="lcd.rs")]
+#[cfg_attr(feature = "simulator", path="sim_lcd.rs")]
+mod lcd;
+
+#[cfg_attr(not(feature = "simulator"), path="sampler.rs")]
+#[cfg_attr(feature = "simulator", path="sim_sampler.rs")]
+mod sampler;
+
+#[cfg_attr(not(feature = "simulator"), path="userflash.rs")]
+#[cfg_attr(feature = "simulator", path="sim_userflash.rs")]
+mod userflash;
+
+#[cfg_attr(not(feature = "simulator"), path="decoder_storage.rs")]
+#[cfg_attr(feature = "simulator", path="sim_decoder_storage.rs")]
+mod decoder_storage;
+
+#[cfg(feature = "simulator")]
+mod sim_main;
+
+#[cfg(feature = "simulator")]
+mod graphics;
+
+#[cfg(any(test, feature = "simulator"))]
 mod test_utils;
 
+#[cfg(not(feature = "simulator"))]
 use crate::hw::*;
+
+#[cfg(not(feature = "simulator"))]
 use crate::lcd::*;
-use crate::delay::*;
+
+#[cfg(not(feature = "simulator"))]
 use crate::gui::*;
 
-#[cfg(not(test))]
+#[cfg(feature = "simulator")]
+use crate::sim_main::simulator;
+
+#[cfg(all(not(test), not(feature = "simulator")))]
 use panic_halt as _;
 
+#[cfg(all(not(test), not(feature = "simulator")))]
 use cortex_m_rt::entry;
 
 #[allow(clippy::empty_loop)]
-#[cfg_attr(not(test), entry)]
+#[cfg(all(not(test), not(feature = "simulator")))]
+#[cfg_attr(any(not(test), not(feature = "simulator")), entry)]
 fn start() -> !
 {
 	let hw = hw_init();
@@ -85,4 +118,10 @@ fn start() -> !
 			}
 		}
 	}
+}
+
+#[cfg(feature = "simulator")]
+fn main() -> Result<(), String>
+{
+	simulator()
 }

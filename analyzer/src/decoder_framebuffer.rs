@@ -9,7 +9,7 @@ use crate::terminus16_bold::TERMINUS16_BOLD;
 use crate::bytewriter::ByteMutWriter;
 use crate::waveform::CHANNEL_LABEL_WIDTH;
 use core::fmt::Write;
-use crate::t_to_x;
+use crate::gui::t_to_x;
 
 const HEIGHT: u32 = 16;
 

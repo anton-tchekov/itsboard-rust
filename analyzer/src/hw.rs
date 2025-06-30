@@ -6,8 +6,8 @@ use core::fmt::Write;
 use stm32f4xx_hal::pac::*;
 use stm32f4xx_hal::serial::Tx;
 use core::ptr::{read_volatile, write_volatile};
-
-use crate::{delay_us, userflash::UserFlash};
+use crate::delay::delay_us;
+use crate::userflash::UserFlash;
 
 const LCD_RST: u32 = 12;
 const LCD_DC: u32 = 13;
