@@ -3,7 +3,7 @@ use stm32f4xx_hal::spi::{Polarity, Mode, Phase, Spi};
 use stm32f4xx_hal::pac::RCC;
 use stm32f4xx_hal::uart::{Config, Serial};
 use core::fmt::Write;
-use stm32f4xx_hal::pac::*;
+use stm32f4xx_hal::pac::{GPIOA, GPIOD, GPIOE, GPIOF, GPIOG, TIM2, USART3, Peripherals};
 use stm32f4xx_hal::serial::Tx;
 use core::ptr::{read_volatile, write_volatile};
 use crate::delay::delay_us;

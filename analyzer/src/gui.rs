@@ -2,16 +2,20 @@ use crate::decoder;
 use crate::decoder_framebuffer::DecoderFrameBuffer;
 use crate::delay::delay_ms;
 use crate::hw::HW;
-use crate::lcd::*;
-use crate::font::*;
-use crate::terminus16_bold::*;
-use crate::terminus16::*;
-use crate::tinyfont::*;
-use crate::decoder_uart::*;
-use crate::decoder_spi::*;
-use crate::decoder_i2c::*;
-use crate::decoder_onewire::*;
-use crate::decoder::*;
+use crate::lcd::{lcd_rect, lcd_vline, lcd_hline, lcd_color, LCD_WIDTH, LCD_HEIGHT, LCD_RED, LCD_GREEN, LCD_WHITE, LCD_BLACK};
+use crate::font::{Font, lcd_icon_color, lcd_icon_undraw, lcd_icon_bw, lcd_rect_border, lcd_char, lcd_str, lcd_str_center};
+use crate::terminus16_bold::TERMINUS16_BOLD;
+use crate::terminus16::{TERMINUS16,
+	ICON_DOT, ICON_START, ICON_STOP, ICON_TIME_SHRINK, ICON_TIME_EXPAND,
+	ICON_CYCLE, ICON_INFO, ICON_ADD, ICON_ENTER, ICON_DOWN, ICON_UP,
+	ICON_CHECK, ICON_EXIT, ICON_LEFT, ICON_RIGHT, ICON_LEFT_FAST, ICON_RIGHT_FAST,
+	ICON_CURSORS, ICON_NEXT_EDGE, ICON_PREV_EDGE};
+use crate::tinyfont::TINYFONT;
+use crate::decoder_uart::{StopBits, Parity, DataBits, DecoderUart};
+use crate::decoder_spi::{BitOrder, DecoderSPI};
+use crate::decoder_i2c::DecoderI2C;
+use crate::decoder_onewire::DecoderOneWire;
+use crate::decoder::{Decoder, DecoderPin, SectionBuffer, Section};
 use crate::sampler;
 use crate::sample::SampleBuffer;
 use core::str;
@@ -19,7 +23,8 @@ use core::fmt::Write;
 use crate::bytewriter::ByteMutWriter;
 use crate::hw;
 use crate::positionindicator::PositionIndicator;
-use crate::waveform::*;
+use crate::waveform::{WaveformBuffer, CHANNEL_LABEL_WIDTH, WAVEFORM_SPACING,
+	WAVEFORM_PIN_Y, WAVEFORMS_Y, WAVEFORM_W_USIZE, WAVEFORM_W};
 use crate::decoder_storage::{DecoderUnion, DecoderStorage};
 use crate::cursors::Cursors;
 

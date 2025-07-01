@@ -1,10 +1,10 @@
-use crate::hw::HW;
-use crate::graphics::*;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use crate::gui::*;
 use std::sync::mpsc;
 use std::thread;
+use crate::hw::HW;
+use crate::graphics::Graphics;
+use crate::gui::{Gui, Action};
 
 enum EventMessage
 {

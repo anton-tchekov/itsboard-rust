@@ -1,4 +1,4 @@
-use crate::sample::*;
+use crate::sample::SampleBuffer;
 use crate::delay::delay_ms;
 use crate::test_utils::load_sample_buffer;
 

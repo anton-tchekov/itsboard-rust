@@ -1,8 +1,8 @@
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use crate::lcd::*;
 use sdl2::render::TextureAccess;
 use sdl2::pixels::PixelFormatEnum;
+use crate::lcd::IMAGE;
 
 pub struct Graphics
 {

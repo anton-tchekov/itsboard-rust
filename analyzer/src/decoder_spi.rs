@@ -1,5 +1,5 @@
-use crate::decoder::*;
-use crate::sample::*;
+use crate::decoder::{DecoderPin, Section, SectionContent, SectionBuffer, Decoder, pin_duplicates};
+use crate::sample::{Sample, SampleBuffer};
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum BitOrder

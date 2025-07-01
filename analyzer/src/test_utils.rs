@@ -1,15 +1,12 @@
-use csv::*;
-
 use crate::bit_reader::{BitOrder, BitReader};
-use crate::sample::SampleBuffer;
-use crate::sample::*;
+use crate::sample::{SampleBuffer, BUF_SIZE};
 use crate::decoder::{Decoder, Section, SectionBuffer, SectionBufferIter, SectionContent, SECBUF_SIZE};
 
 const BASE_PATH: &str = "../sample_data/";
 
-pub fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<()>
+pub fn load_buf_from_csv(filename: &str, buf: &mut SampleBuffer) -> Result<(), csv::Error>
 {
-	let mut rdr = ReaderBuilder::new().has_headers(true).from_path(filename)?;
+	let mut rdr = csv::ReaderBuilder::new().has_headers(true).from_path(filename)?;
 
 	for result in rdr.records()
 	{

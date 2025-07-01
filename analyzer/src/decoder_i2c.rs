@@ -1,4 +1,4 @@
-use crate::decoder::*;
+use crate::decoder::{SectionContent, Section, Decoder, DecoderPin, SectionBuffer};
 use crate::sample::SampleBuffer;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -40,7 +40,6 @@ impl Edge
 	}
 }
 
-use Edge::*;
 impl Decoder for DecoderI2C
 {
 	fn decode(&self, samples: &SampleBuffer, output: &mut SectionBuffer) -> Result<(), ()> {
@@ -70,11 +69,11 @@ impl Decoder for DecoderI2C
 			if !in_transmission
 			{
 				/* Start Condition */
-				if sda_edge == Falling && scl
+				if sda_edge == Edge::Falling && scl
 				{
 					start_found = true;
 				}
-				else if scl_edge == Falling && start_found
+				else if scl_edge == Edge::Falling && start_found
 				{
 					start_found = false;
 					in_transmission = true;
@@ -84,20 +83,20 @@ impl Decoder for DecoderI2C
 			else
 			{
 				/* Repeated Start */
-				if sda_edge == Falling && scl
+				if sda_edge == Edge::Falling && scl
 				{
 					in_transmission = true;
 					output.push(Section{start: last_ts, end: ts, content: SectionContent::RepeatedStart});
 				}
 				/* Stop Condition */
-				else if sda_edge == Rising && scl
+				else if sda_edge == Edge::Rising && scl
 				{
 					in_transmission = false;
 					address_seen = false;
 					output.push(Section{start: last_ts, end: ts, content: SectionContent::StopBit});
 				}
 				/* Receiving Bits */
-				else if scl_edge == Rising
+				else if scl_edge == Edge::Rising
 				{
 					/* If we dont already have a Full Byte keep adding them up */
 					if cur_byte_index < 8

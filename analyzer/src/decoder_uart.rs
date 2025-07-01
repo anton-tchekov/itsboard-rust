@@ -1,6 +1,6 @@
 use crate::bit_reader::BitReader;
-use crate::decoder::*;
-use crate::sample::*;
+use crate::decoder::{SectionBuffer, Section, SectionContent, Decoder, DecoderPin, TIMER_CLOCK_RATE};
+use crate::sample::{SampleBuffer, BitSignal, Pulse, PulsewiseIterator};
 use libm::roundf;
 
 // TODO: use .peekable() in rust core
@@ -322,11 +322,9 @@ impl Decoder for DecoderUart {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use crate::sample::*;
-	use crate::decoder::*;
-	use crate::decoder_uart::*;
-	use crate::test_utils::*;
+	use crate::decoder_uart::{StopBits, Parity, DataBits, DecoderUart, SectionContent};
+	use crate::test_utils::{decode_sections, assert_bits_lsb_eq, assert_top_layer_eq,
+		assert_bit_layer_no_time_overlap, assert_top_layer_no_time_overlap};
 
 	fn decoder_8n1_300() -> DecoderUart {
 		DecoderUart {

@@ -1,4 +1,4 @@
-use crate::sample::*;
+use crate::sample::SampleBuffer;
 use crate::decoder_onewire::rom_cmd::ROMCmd;
 
 pub type DecoderPin = u32;

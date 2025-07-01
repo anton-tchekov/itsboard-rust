@@ -1,5 +1,5 @@
-use crate::delay::*;
-use crate::hw::*;
+use crate::delay::delay_ms;
+use crate::hw::{lcd_cs_0, lcd_cs_1, lcd_dc_0, lcd_dc_1, lcd_rst_0, lcd_rst_1, spi_xchg};
 
 pub const LCD_WIDTH: u32 = 480;
 pub const LCD_HEIGHT: u32 = 320;

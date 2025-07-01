@@ -353,7 +353,7 @@ impl<'a> Iterator for PulsewiseIterator<'a>
 #[cfg(test)]
 mod tests
 {
-	use super::*;
+	use crate::sample::{SampleBuffer, Edge};
 	use crate::test_utils::load_sample_buffer;
 
 	fn sample_buffer() -> SampleBuffer

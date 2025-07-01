@@ -1,5 +1,5 @@
-use crate::lcd::*;
-use crate::terminus16::*;
+use crate::lcd::{lcd_rect, lcd_window_start, lcd_emit, lcd_window_end, LCD_BLACK, LCD_WHITE};
+use crate::terminus16::{TERMINUS16, CHAR_DELTA};
 
 pub const CHAR_MISSING: u32 = 127;
 pub const CHAR_MICRO: u32 = 128;

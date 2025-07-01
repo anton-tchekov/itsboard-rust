@@ -58,13 +58,13 @@ mod graphics;
 mod test_utils;
 
 #[cfg(not(feature = "simulator"))]
-use crate::hw::*;
+use crate::hw::{hw_init, blueinput, yellowinput, buttons_read, timer_get, TICKS_PER_US};
 
 #[cfg(not(feature = "simulator"))]
-use crate::lcd::*;
+use crate::lcd::{lcd_init, LCD_BLACK};
 
 #[cfg(not(feature = "simulator"))]
-use crate::gui::*;
+use crate::gui::Gui;
 
 #[cfg(feature = "simulator")]
 use crate::sim_main::simulator;
@@ -81,7 +81,7 @@ use cortex_m_rt::entry;
 fn start() -> !
 {
 	let hw = hw_init();
-	lcd_init(lcd_color(0, 0, 0));
+	lcd_init(LCD_BLACK);
 	let mut gui = Gui::init(hw);
 	blueinput();
 	yellowinput();
