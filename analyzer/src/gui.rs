@@ -5,11 +5,7 @@ use crate::hw::HW;
 use crate::lcd::{lcd_rect, lcd_vline, lcd_hline, lcd_color, LCD_WIDTH, LCD_HEIGHT, LCD_RED, LCD_GREEN, LCD_WHITE, LCD_BLACK};
 use crate::font::{Font, lcd_icon_color, lcd_icon_undraw, lcd_icon_bw, lcd_rect_border, lcd_char, lcd_str, lcd_str_center};
 use crate::terminus16_bold::TERMINUS16_BOLD;
-use crate::terminus16::{TERMINUS16,
-	ICON_DOT, ICON_START, ICON_STOP, ICON_TIME_SHRINK, ICON_TIME_EXPAND,
-	ICON_CYCLE, ICON_INFO, ICON_ADD, ICON_ENTER, ICON_DOWN, ICON_UP,
-	ICON_CHECK, ICON_EXIT, ICON_LEFT, ICON_RIGHT, ICON_LEFT_FAST, ICON_RIGHT_FAST,
-	ICON_CURSORS, ICON_NEXT_EDGE, ICON_PREV_EDGE};
+use crate::terminus16::{TERMINUS16, Icon};
 use crate::tinyfont::TINYFONT;
 use crate::decoder_uart::{StopBits, Parity, DataBits, DecoderUart};
 use crate::decoder_spi::{BitOrder, DecoderSPI};
@@ -699,22 +695,22 @@ impl Gui
 	{
 		match action
 		{
-			Action::Cursors => lcd_icon_bw(x, y, ICON_CURSORS),
-			Action::PrevEdge => lcd_icon_bw(x, y, ICON_PREV_EDGE),
-			Action::NextEdge => lcd_icon_bw(x, y, ICON_NEXT_EDGE),
-			Action::LeftFast => lcd_icon_bw(x, y, ICON_LEFT_FAST),
-			Action::RightFast => lcd_icon_bw(x, y, ICON_RIGHT_FAST),
-			Action::Left => lcd_icon_bw(x, y, ICON_LEFT),
-			Action::Right => lcd_icon_bw(x, y, ICON_RIGHT),
-			Action::Up => lcd_icon_bw(x, y, ICON_UP),
-			Action::Down => lcd_icon_bw(x, y, ICON_DOWN),
-			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
-			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
-			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
-			Action::ZoomIn => lcd_icon_bw(x, y, ICON_TIME_EXPAND),
-			Action::ZoomOut => lcd_icon_bw(x, y, ICON_TIME_SHRINK),
-			Action::Cycle => lcd_icon_bw(x, y, ICON_CYCLE),
-			Action::Stop => lcd_icon_bw(x, y, ICON_STOP),
+			Action::Cursors => lcd_icon_bw(x, y, Icon::Cursors),
+			Action::PrevEdge => lcd_icon_bw(x, y, Icon::PrevEdge),
+			Action::NextEdge => lcd_icon_bw(x, y, Icon::NextEdge),
+			Action::LeftFast => lcd_icon_bw(x, y, Icon::LeftFast),
+			Action::RightFast => lcd_icon_bw(x, y, Icon::RightFast),
+			Action::Left => lcd_icon_bw(x, y, Icon::Left),
+			Action::Right => lcd_icon_bw(x, y, Icon::Right),
+			Action::Up => lcd_icon_bw(x, y, Icon::Up),
+			Action::Down => lcd_icon_bw(x, y, Icon::Down),
+			Action::Enter => lcd_icon_bw(x, y, Icon::Enter),
+			Action::Escape => lcd_icon_bw(x, y, Icon::Exit),
+			Action::Check => lcd_icon_bw(x, y, Icon::Check),
+			Action::ZoomIn => lcd_icon_bw(x, y, Icon::TimeExpand),
+			Action::ZoomOut => lcd_icon_bw(x, y, Icon::TimeShrink),
+			Action::Cycle => lcd_icon_bw(x, y, Icon::Cycle),
+			Action::Stop => lcd_icon_bw(x, y, Icon::Stop),
 			_ => lcd_icon_undraw(x, y)
 		}
 	}
@@ -1238,7 +1234,7 @@ impl Gui
 
 	fn ma_render(&mut self, i: u32, sel: bool)
 	{
-		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_INFO ];
+		const ICONS: [Icon; MA_ICONS as usize] = [ Icon::Start, Icon::Add, Icon::Info ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
 		let x = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING;
 		lcd_icon_color(x, ICON_PADDING, ICONS[i as usize], fg, LCD_BLACK);
@@ -1296,7 +1292,7 @@ impl Gui
 
 	fn ma_running(&mut self)
 	{
-		lcd_icon_color(4, ACTION_ICONS_Y, ICON_DOT, LCD_GREEN, LCD_BLACK);
+		lcd_icon_color(4, ACTION_ICONS_Y, Icon::Dot, LCD_GREEN, LCD_BLACK);
 		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, "RUNNING",
 			LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
 	}

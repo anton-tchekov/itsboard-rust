@@ -1,5 +1,5 @@
 use crate::lcd::{lcd_rect, lcd_window_start, lcd_emit, lcd_window_end, LCD_BLACK, LCD_WHITE};
-use crate::terminus16::{TERMINUS16, CHAR_DELTA};
+use crate::terminus16::{TERMINUS16, Icon, CHAR_DELTA};
 
 pub const CHAR_MISSING: u32 = 127;
 pub const CHAR_MICRO: u32 = 128;
@@ -116,13 +116,14 @@ pub fn lcd_str_center(x: u32, y: u32, s: &str, fg: u16, bg: u16, font: &Font)
 		s, fg, bg, font);
 }
 
-pub fn lcd_icon_color(x: u32, y: u32, icon: u32, fg: u16, bg: u16)
+pub fn lcd_icon_color(x: u32, y: u32, icon: Icon, fg: u16, bg: u16)
 {
-	lcd_font(x, y, icon, fg, bg, &TERMINUS16);
-	lcd_font(x + TERMINUS16.width, y, icon + 1, fg, bg, &TERMINUS16);
+	let c = icon as u32;
+	lcd_font(x, y, c, fg, bg, &TERMINUS16);
+	lcd_font(x + TERMINUS16.width, y, c + 1, fg, bg, &TERMINUS16);
 }
 
-pub fn lcd_icon_bw(x: u32, y: u32, icon: u32)
+pub fn lcd_icon_bw(x: u32, y: u32, icon: Icon)
 {
 	lcd_icon_color(x, y, icon, LCD_WHITE, LCD_BLACK);
 }
