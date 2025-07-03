@@ -12,6 +12,7 @@ pub enum OneWireError {
 	LineRecoveryTooShort,
 	UnexpectedReset,
 	InvalidROM,
+	EmptySearchBranch,
 	// programmer error if these occur
 	UnexpectedFallingEdge,
 	UnexpectedRisingEdge
@@ -34,6 +35,7 @@ impl OneWireError {
 			OneWireError::UnexpectedFallingEdge => "Unexpected falling edge",
 			OneWireError::UnexpectedRisingEdge => "Unexpected rising edge",
 			OneWireError::InvalidROM => "Rom command does not exist",
+			OneWireError::EmptySearchBranch => "Searching for device on empty branch"
 		}
 	}
 }
