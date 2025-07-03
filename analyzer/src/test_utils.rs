@@ -80,7 +80,14 @@ fn assert_no_time_overlap(buf: &SectionBuffer, is_bit_layer: bool) {
 	};
 
 	for section in iter {
-		assert!(prev.end <= section.start);
+		assert!(
+			prev.end <= section.start,
+			"Assertion failed: prev.end ({}) > section.start ({}). prev = {:?}, section = {:?}",
+			prev.end,
+			section.start,
+			prev,
+			section
+   		);
 		prev = section
 	}
 }

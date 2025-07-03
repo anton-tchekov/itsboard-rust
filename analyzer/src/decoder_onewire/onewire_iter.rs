@@ -49,7 +49,7 @@ impl <'a>OnewireIter<'a> {
 		// bit is high
 		if duration <= self.timing.wr_init.max {
 			// we don't want to stretch the time if the line is idle after bit
-			duration += (self.current_time() - start_time).min(self.timing.wr_slot.max);
+			duration = (self.current_time() - start_time).min(self.timing.wr_slot.max);
 			end_time = start_time + duration;
 
 			if duration < self.timing.wr_slot.min + self.timing.line_recover_min {
@@ -58,7 +58,6 @@ impl <'a>OnewireIter<'a> {
 
 			return Some((end_time, Ok(true)));
 		}
-
 		// bit was low
 		let recovery_duration = self.current_time() - end_time;
 
@@ -66,7 +65,8 @@ impl <'a>OnewireIter<'a> {
  			return Some((self.current_time(), Err(OneWireError::LineRecoveryTooShort)));
 		}
 
-		Some((end_time + self.timing.line_recover_min, Ok(false)))
+		let end_duration = recovery_duration.min(self.timing.wr_slot.max - self.timing.wr_init.max);
+		Some((end_time + end_duration, Ok(false)))
 	}
 
 	pub fn next_reset(&mut self) -> Option<Result<(), OneWireError>> {
@@ -110,12 +110,11 @@ impl <'a>OnewireIter<'a> {
 		let mut device_responded = false;
 
 		if duration < self.timing.response.max {
+			let response_start = self.current_time();
 			self.iter.next()?;
 
 			end_time = self.current_time();
 			duration = end_time - start_time;
-
-			start_time = end_time;
 
 			if duration < self.timing.response.min {
 				return Some((start_time, end_time, Err(OneWireError::ResponseTooShort)));
@@ -125,6 +124,7 @@ impl <'a>OnewireIter<'a> {
 				return Some((start_time, end_time, Err(OneWireError::ResponseTooLong)));
 			}
 
+			start_time = response_start;
 			device_responded = true;
 			self.iter.next()?;
 		}

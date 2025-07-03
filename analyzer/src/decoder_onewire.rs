@@ -108,7 +108,7 @@ impl BitProcessor {
 	) -> Option<(u32, Result<bool, OneWireError>)>
 	{
 		let mut slave_reader = BitReader::lsb(2);
-		let (end, result) = self.read_bits(iter, output, &mut slave_reader);
+		let (end, result) = BitProcessor::default().read_bits(iter, output, &mut slave_reader);
 
 		match result {
 			Ok(_) => {},
@@ -200,10 +200,10 @@ impl ResetState {
 
 			Ok(_) => {
 				output.push(Section {
-					start: start,
-					end: end,
+					start,
+					end,
 					content: SectionContent::Reset,
-				});
+				})?;
 			}
 		};
 
@@ -220,23 +220,23 @@ impl ResetState {
 					start,
 					end,
 					content: SectionContent::ResetResponse(responded)
-				});
+				})?;
 			}
 		};
 
 		let recovery = iter.next_reset_recovery(recovery_start)?;
 		match recovery {
 			Err(err) => {
-				output.push_err(iter, start, err)?;
+				output.push_err(iter, end, err)?;
 				return Some(OneWireState::Reset(ResetState));
 			}
 
-			Ok(end) => {
+			Ok(rec_end) => {
 				output.push(Section {
-					start,
-					end,
+					start: end,
+					end: rec_end,
 					content: SectionContent::ResetRecovery
-				});
+				})?;
 			}
 		}
 
@@ -430,15 +430,21 @@ mod tests {
 		let sections = decode_sections("1Wire/OneWireReadROM_MeasureTemp.csv", onewire);
 
 		assert_top_layer_eq(&sections, &[
-			// TODO: anpassen mit richtigen werten - diese sind platzhalter
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
-			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
-			SectionContent::FunctionCmd(0), SectionContent::Data(0),
+			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(40), SectionContent::SensorID(162321683), SectionContent::CRC(165),
 
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
-			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
-			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
-			SectionContent::FunctionCmd(0), SectionContent::Data(0),
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(40), SectionContent::SensorID(162321683), SectionContent::CRC(165), 
+			SectionContent::FunctionCmd(68),
+
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(40), SectionContent::SensorID(162321683), SectionContent::CRC(165), 
+			SectionContent::FunctionCmd(190), SectionContent::Byte(107), SectionContent::Byte(1), SectionContent::Byte(75), SectionContent::Byte(70), 
+			SectionContent::Byte(127), SectionContent::Byte(255), SectionContent::Byte(5), SectionContent::Byte(16), SectionContent::Byte(73)
 		])
 	}
 
@@ -449,5 +455,23 @@ mod tests {
 
 		assert_bit_layer_no_time_overlap(&sections);
 		assert_top_layer_no_time_overlap(&sections);
+	}
+
+	#[test]
+	fn onewire_search_rom() {
+		let onewire = decoder();
+		let sections = decode_sections("1Wire/OneWireSearchROM.csv", onewire);
+
+		assert_top_layer_eq(&sections, &[
+			// TODO: anpassen mit richtigen werten - diese sind platzhalter
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
+			SectionContent::FunctionCmd(0), SectionContent::Data(0),
+
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
+			SectionContent::ROMCmd(ROMCmd::MatchROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
+			SectionContent::FunctionCmd(0), SectionContent::Data(0),
+		])
 	}
 }

@@ -9,3 +9,4 @@ flake.lock
 .direnv/
 .envrc
 target/
+*.vscode

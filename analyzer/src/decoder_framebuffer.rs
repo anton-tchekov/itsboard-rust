@@ -314,9 +314,27 @@ impl<const LEN: usize> DecoderFrameBuffer<LEN>
 					bg = 1; /* White */
 					write!(buf, " R").unwrap()
 				},
-				SectionContent::Reset => write!(buf, " Reset").unwrap(),
-				SectionContent::ResetResponse(v) => write!(buf, " {}", if v {"Response"} else {"No Response"}).unwrap(),
-				SectionContent::ResetRecovery => write!(buf, " Reset Recovery").unwrap(),
+				SectionContent::Reset => {
+					fg = 0; /* Black */
+					bg = 1; /* White */
+					write!(buf, " Reset").unwrap()
+				}
+				SectionContent::ResetResponse(v) => {
+					fg = 5; /* Green */
+					bg = 1; /* White */
+					let mut response = "Response";
+
+					if !v {
+						fg = 2; /* Red */
+						response = "No Response";
+					}
+					write!(buf, " {}", response).unwrap()
+				}
+				SectionContent::ResetRecovery => {
+					fg = 0; /* Black */
+					bg = 1; /* White */
+					write!(buf, " Reset Recovery").unwrap()
+				},
 				SectionContent::ROMCmd(v) => {
 					fg = 1; /* Black */
 					bg = 3; /* Blue */

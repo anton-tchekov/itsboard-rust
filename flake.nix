@@ -52,6 +52,8 @@
             pkgs.udev
             pkgs.pkg-config
             gcc-arm-embedded
+            SDL2
+            SDL2_image
           ];
 
           env = {
