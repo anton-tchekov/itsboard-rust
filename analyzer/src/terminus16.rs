@@ -2482,26 +2482,30 @@ const TERMINUS16_BITMAP: [u8; 2288] =
 	0x00
 ];
 
-pub const ICON_LEFT: u32 = 134;
-pub const ICON_CURSORS: u32 = 136;
-pub const ICON_ADD: u32 = 138;
-pub const ICON_CHECK: u32 = 140;
-pub const ICON_STOP: u32 = 142;
-pub const ICON_TIME_SHRINK: u32 = 144;
-pub const ICON_NEXT_EDGE: u32 = 146;
-pub const ICON_ENTER: u32 = 148;
-pub const ICON_PREV_EDGE: u32 = 150;
-pub const ICON_UP: u32 = 152;
-pub const ICON_RIGHT: u32 = 154;
-pub const ICON_INFO: u32 = 156;
-pub const ICON_EXIT: u32 = 158;
-pub const ICON_DOWN: u32 = 160;
-pub const ICON_DOT: u32 = 162;
-pub const ICON_LEFT_FAST: u32 = 164;
-pub const ICON_RIGHT_FAST: u32 = 166;
-pub const ICON_TIME_EXPAND: u32 = 168;
-pub const ICON_CYCLE: u32 = 170;
-pub const ICON_START: u32 = 172;
+#[derive(Clone, Copy)]
+pub enum Icon
+{
+	Left = 134,
+	Cursors = 136,
+	Add = 138,
+	Check = 140,
+	Stop = 142,
+	TimeShrink = 144,
+	NextEdge = 146,
+	Enter = 148,
+	PrevEdge = 150,
+	Up = 152,
+	Right = 154,
+	Info = 156,
+	Exit = 158,
+	Down = 160,
+	Dot = 162,
+	LeftFast = 164,
+	RightFast = 166,
+	TimeExpand = 168,
+	Cycle = 170,
+	Start = 172
+}
 
 pub const CHAR_DELTA: u32 = 174;
 

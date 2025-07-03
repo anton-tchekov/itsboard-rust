@@ -1,5 +1,5 @@
-use crate::delay::*;
-use crate::hw::*;
+use crate::delay::delay_ms;
+use crate::hw::{lcd_cs_0, lcd_cs_1, lcd_dc_0, lcd_dc_1, lcd_rst_0, lcd_rst_1, spi_xchg};
 
 pub const LCD_WIDTH: u32 = 480;
 pub const LCD_HEIGHT: u32 = 320;
@@ -203,25 +203,6 @@ pub fn lcd_rect(x: u32, y: u32, w: u32, h: u32, color: u16)
 		count -= 1;
 		spi_xchg(color_hi);
 		spi_xchg(color_lo);
-	}
-
-	lcd_window_end();
-}
-
-pub fn lcd_callback(x: u32, y: u32, w: u32, h: u32, callback: &dyn Fn(u32, u32) -> u16)
-{
-	lcd_window_start(x, y, w, h);
-	let mut y0 = 0;
-	while y0 < h
-	{
-		let mut x0 = 0;
-		while x0 < w
-		{
-			lcd_emit(callback(x0, y0));
-			x0 += 1;
-		}
-
-		y0 += 1;
 	}
 
 	lcd_window_end();

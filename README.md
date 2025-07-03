@@ -25,17 +25,3 @@ Flash:
 ASM Dump:
 
 `make dump`
-
-## TODO
-
-Ist das alles?
-
-- OneWire
-- SPI Clock Modes
-- I2C Colors
-- Mac OS
-- touch support
-	- Kein multitouch
-
-- Dokumentation
-- i guess qality of life

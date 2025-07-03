@@ -2,16 +2,16 @@ use crate::decoder;
 use crate::decoder_framebuffer::DecoderFrameBuffer;
 use crate::delay::delay_ms;
 use crate::hw::HW;
-use crate::lcd::*;
-use crate::font::*;
-use crate::terminus16_bold::*;
-use crate::terminus16::*;
-use crate::tinyfont::*;
-use crate::decoder_uart::*;
-use crate::decoder_spi::*;
-use crate::decoder_i2c::*;
-use crate::decoder_onewire::*;
-use crate::decoder::*;
+use crate::lcd::{lcd_rect, lcd_vline, lcd_hline, lcd_color, LCD_WIDTH, LCD_HEIGHT, LCD_RED, LCD_GREEN, LCD_WHITE, LCD_BLACK};
+use crate::font::{Font, lcd_icon_color, lcd_icon_undraw, lcd_icon_bw, lcd_rect_border, lcd_char, lcd_str, lcd_str_center};
+use crate::terminus16_bold::TERMINUS16_BOLD;
+use crate::terminus16::{TERMINUS16, Icon};
+use crate::tinyfont::TINYFONT;
+use crate::decoder_uart::{StopBits, Parity, DataBits, DecoderUart};
+use crate::decoder_spi::{BitOrder, DecoderSPI};
+use crate::decoder_i2c::DecoderI2C;
+use crate::decoder_onewire::DecoderOneWire;
+use crate::decoder::{Decoder, DecoderPin, SectionBuffer, Section};
 use crate::sampler;
 use crate::sample::SampleBuffer;
 use core::str;
@@ -19,7 +19,8 @@ use core::fmt::Write;
 use crate::bytewriter::ByteMutWriter;
 use crate::hw;
 use crate::positionindicator::PositionIndicator;
-use crate::waveform::*;
+use crate::waveform::{WaveformBuffer, CHANNEL_LABEL_WIDTH, WAVEFORM_SPACING,
+	WAVEFORM_PIN_Y, WAVEFORMS_Y, WAVEFORM_W_USIZE, WAVEFORM_W};
 use crate::decoder_storage::{DecoderUnion, DecoderStorage};
 use crate::cursors::Cursors;
 
@@ -477,28 +478,6 @@ fn cycle_bwd(idx: u32, count: u32) -> u32
 	if idx == 0 { count - 1 } else { idx - 1 }
 }
 
-macro_rules! limit_inc
-{
-	($value:expr, $n:expr) =>
-	{
-		if $value < $n
-		{
-			$value += 1;
-		}
-	};
-}
-
-macro_rules! limit_dec
-{
-	($value:expr, $n:expr) =>
-	{
-		if $value > $n
-		{
-			$value -= 1;
-		}
-	};
-}
-
 const ACTIONS_INFO: [Action; 8] =
 [
 	Action::None, Action::None, Action::None, Action::None,
@@ -520,7 +499,7 @@ const ACTIONS_MAIN: [Action; 8] =
 const ACTIONS_CURSORS: [Action; 8] =
 [
 	Action::LeftFast, Action::RightFast, Action::Left, Action::Right,
-	Action::PrevEdge, Action::NextEdge, Action::Escape, Action::Cycle
+	Action::PrevEdge, Action::NextEdge, Action::Cycle, Action::Escape
 ];
 
 const ACTIONS_DA: [Action; 8] =
@@ -716,22 +695,22 @@ impl Gui
 	{
 		match action
 		{
-			Action::Cursors => lcd_icon_bw(x, y, ICON_CURSORS),
-			Action::PrevEdge => lcd_icon_bw(x, y, ICON_PREV_EDGE),
-			Action::NextEdge => lcd_icon_bw(x, y, ICON_NEXT_EDGE),
-			Action::LeftFast => lcd_icon_bw(x, y, ICON_LEFT_FAST),
-			Action::RightFast => lcd_icon_bw(x, y, ICON_RIGHT_FAST),
-			Action::Left => lcd_icon_bw(x, y, ICON_LEFT),
-			Action::Right => lcd_icon_bw(x, y, ICON_RIGHT),
-			Action::Up => lcd_icon_bw(x, y, ICON_UP),
-			Action::Down => lcd_icon_bw(x, y, ICON_DOWN),
-			Action::Enter => lcd_icon_bw(x, y, ICON_ENTER),
-			Action::Escape => lcd_icon_bw(x, y, ICON_EXIT),
-			Action::Check => lcd_icon_bw(x, y, ICON_CHECK),
-			Action::ZoomIn => lcd_icon_bw(x, y, ICON_TIME_EXPAND),
-			Action::ZoomOut => lcd_icon_bw(x, y, ICON_TIME_SHRINK),
-			Action::Cycle => lcd_icon_bw(x, y, ICON_CYCLE),
-			Action::Stop => lcd_icon_bw(x, y, ICON_STOP),
+			Action::Cursors => lcd_icon_bw(x, y, Icon::Cursors),
+			Action::PrevEdge => lcd_icon_bw(x, y, Icon::PrevEdge),
+			Action::NextEdge => lcd_icon_bw(x, y, Icon::NextEdge),
+			Action::LeftFast => lcd_icon_bw(x, y, Icon::LeftFast),
+			Action::RightFast => lcd_icon_bw(x, y, Icon::RightFast),
+			Action::Left => lcd_icon_bw(x, y, Icon::Left),
+			Action::Right => lcd_icon_bw(x, y, Icon::Right),
+			Action::Up => lcd_icon_bw(x, y, Icon::Up),
+			Action::Down => lcd_icon_bw(x, y, Icon::Down),
+			Action::Enter => lcd_icon_bw(x, y, Icon::Enter),
+			Action::Escape => lcd_icon_bw(x, y, Icon::Exit),
+			Action::Check => lcd_icon_bw(x, y, Icon::Check),
+			Action::ZoomIn => lcd_icon_bw(x, y, Icon::TimeExpand),
+			Action::ZoomOut => lcd_icon_bw(x, y, Icon::TimeShrink),
+			Action::Cycle => lcd_icon_bw(x, y, Icon::Cycle),
+			Action::Stop => lcd_icon_bw(x, y, Icon::Stop),
 			_ => lcd_icon_undraw(x, y)
 		}
 	}
@@ -1024,7 +1003,7 @@ impl Gui
 	fn invalid_input()
 	{
 		let s = "Invalid Input";
-		for i in 0..3
+		for _i in 0..3
 		{
 			Self::draw_config_saved(0, LCD_RED, s);
 			delay_ms(200);
@@ -1255,7 +1234,7 @@ impl Gui
 
 	fn ma_render(&mut self, i: u32, sel: bool)
 	{
-		const ICONS: [u32; MA_ICONS as usize] = [ ICON_START, ICON_ADD, ICON_INFO ];
+		const ICONS: [Icon; MA_ICONS as usize] = [ Icon::Start, Icon::Add, Icon::Info ];
 		let fg = if sel { COLOR_SEL } else { LCD_WHITE };
 		let x = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1) + ICON_PADDING;
 		lcd_icon_color(x, ICON_PADDING, ICONS[i as usize], fg, LCD_BLACK);
@@ -1313,7 +1292,7 @@ impl Gui
 
 	fn ma_running(&mut self)
 	{
-		lcd_icon_color(4, ACTION_ICONS_Y, ICON_DOT, LCD_GREEN, LCD_BLACK);
+		lcd_icon_color(4, ACTION_ICONS_Y, Icon::Dot, LCD_GREEN, LCD_BLACK);
 		lcd_str(MA_BOTTOM_TEXT_X, ACTION_ICONS_Y + 1, "RUNNING",
 			LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
 	}

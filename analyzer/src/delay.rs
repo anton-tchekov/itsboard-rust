@@ -1,6 +1,6 @@
 // Busy-loop delay functions
 
-use crate::hw::*;
+use crate::hw::{timer_get, TICKS_PER_US};
 
 pub fn delay_us(us: u32)
 {

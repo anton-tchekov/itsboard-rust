@@ -1,3 +1,0 @@
-all:
-	clear
-	cargo run

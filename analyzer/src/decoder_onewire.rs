@@ -4,15 +4,15 @@ mod onewire_iter;
 mod onewire_output;
 pub mod rom_cmd;
 
-use timings::*;
+use timings::Timings;
 
 use crate::bit_reader::BitReader;
-use crate::decoder::*;
+use crate::decoder::{SectionBuffer, SectionContent, Section, Decoder, DecoderPin};
 use crate::decoder_onewire::onewire_output::OneWireOutput;
 use crate::decoder_onewire::onewire_iter::OnewireIter;
 use crate::decoder_onewire::rom_cmd::ROMCmd;
-use crate::sample::*;
-use onewire_error::*;
+use crate::sample::SampleBuffer;
+use onewire_error::OneWireError;
 
 const NO_SLAVE_ON_BRANCH: u8 = 0b11;
 
@@ -413,11 +413,10 @@ impl Decoder for DecoderOneWire {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use crate::sample::*;
-	use crate::decoder::*;
-	use crate::decoder_uart::*;
-	use crate::test_utils::*;
+	use crate::decoder_onewire::{DecoderOneWire, ROMCmd};
+	use crate::decoder::{SectionContent};
+	use crate::test_utils::{decode_sections, assert_top_layer_eq,
+		assert_bit_layer_no_time_overlap, assert_top_layer_no_time_overlap};
 
 	fn decoder() -> DecoderOneWire {
 		DecoderOneWire {
@@ -432,8 +431,8 @@ mod tests {
 
 		assert_top_layer_eq(&sections, &[
 			// TODO: anpassen mit richtigen werten - diese sind platzhalter
-			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery, 
-			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0), 
+			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,
+			SectionContent::ROMCmd(ROMCmd::ReadROM), SectionContent::FamilyCode(0), SectionContent::SensorID(0), SectionContent::CRC(0),
 			SectionContent::FunctionCmd(0), SectionContent::Data(0),
 
 			SectionContent::Reset, SectionContent::ResetResponse(true), SectionContent::ResetRecovery,

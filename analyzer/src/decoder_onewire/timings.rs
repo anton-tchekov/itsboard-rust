@@ -6,24 +6,24 @@ use crate::decoder::TIMER_TICKS_PER_US;
 #[derive(Copy, Clone)]
 pub struct Range<T>
 where
-    T: Add<Output = T> + Mul<Output = T> + Copy
+	T: Add<Output = T> + Mul<Output = T> + Copy
 {
-    pub min: T,
-    pub max: T,
+	pub min: T,
+	pub max: T,
 }
 
 impl<T> Range<T>
 where
-    T: Add<Output = T> + Mul<Output = T> + Copy
+	T: Add<Output = T> + Mul<Output = T> + Copy
 {
-    fn scale(&self, factor: T) -> Self
-    where
-    {
-        Self {
-            min: self.min * factor,
-            max: self.max * factor,
-        }
-    }
+	fn scale(&self, factor: T) -> Self
+	where
+	{
+		Self {
+			min: self.min * factor,
+			max: self.max * factor,
+		}
+	}
 }
 
 impl Range<f32> {
@@ -38,9 +38,9 @@ impl Range<f32> {
 
 // TODO: link to source
 #[derive(Copy, Clone)]
-pub struct Timings<T> 
+pub struct Timings<T>
 where
-    T: Add<Output = T> + Mul<Output = T> + Copy,
+	T: Add<Output = T> + Mul<Output = T> + Copy,
 {
 	// Low time before read/write
 	pub wr_init: Range<T>,
@@ -57,7 +57,7 @@ where
 }
 
 impl <T>Timings<T>
-where 
+where
 	T: Add<Output = T> + Mul<Output = T> + Copy,
 {
 	fn scale(&self, factor: T) -> Self {
@@ -84,7 +84,7 @@ impl Timings<u32> {
 		}
 		.scale(TIMER_TICKS_PER_US)
 	}
-	
+
 	pub fn overdrive() -> Self {
 		Timings {
 			wr_init: Range { min: 1.0, max: 1.85},

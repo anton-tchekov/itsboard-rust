@@ -1,4 +1,4 @@
-use crate::sample::*;
+use crate::sample::SampleBuffer;
 use crate::decoder_onewire::rom_cmd::ROMCmd;
 
 pub type DecoderPin = u32;
@@ -76,12 +76,12 @@ impl SectionBuffer
 		self.len += 1;
 	}
 
-	pub fn is_full(&self) -> bool 
+	pub fn is_full(&self) -> bool
 	{
 		self.len >= self.sections.len()
 	}
 
-	pub fn iter(&self) -> SectionBufferIter 
+	pub fn iter(&self) -> SectionBufferIter
 	{
 		SectionBufferIter {
 			buffer: self,
@@ -113,13 +113,13 @@ impl SectionBuffer
 	}
 }
 
-pub struct SectionBufferIter<'a> 
+pub struct SectionBufferIter<'a>
 {
 	buffer: &'a SectionBuffer,
 	index: usize,
 }
 
-impl<'a> Iterator for SectionBufferIter<'a> 
+impl<'a> Iterator for SectionBufferIter<'a>
 {
 	type Item = &'a Section;
 

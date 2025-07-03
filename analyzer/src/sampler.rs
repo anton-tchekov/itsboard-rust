@@ -1,5 +1,5 @@
-use crate::hw::*;
-use crate::sample::*;
+use crate::hw::{buttons_read, timer_set, timer_get, blueread};
+use crate::sample::{Sample, SampleBuffer};
 use crate::decoder::TIMER_CLOCK_RATE;
 
 fn sample() -> Sample
