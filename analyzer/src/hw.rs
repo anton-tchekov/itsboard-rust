@@ -13,6 +13,9 @@ const LCD_RST: u32 = 12;
 const LCD_DC: u32 = 13;
 const LCD_CS: u32 = 14;
 
+const TP_CS: u32 = 14; // GPIOF
+const TP_IRQ: u32 = 13; // GPIOE
+
 const OFFSET_CLEAR: u32 = 16;
 
 pub const TICKS_PER_US: u32 = 90;
@@ -65,6 +68,9 @@ pub fn hw_init() -> HW
 		(*GPIOD::ptr()).moder().write(|w| w.bits(0x50005555));
 		(*GPIOE::ptr()).moder().write(|w| w.bits(0x00405555));
 		(*GPIOF::ptr()).moder().write(|w| w.bits(0x05000000));
+
+		/* Touch Pins */
+		(*GPIOF::ptr()).moder().modify(|r, w| w.bits(r.bits() | (1 << (TP_CS * 2))));
 
 		/* BL: D15, CS: D14 */
 		(*GPIOD::ptr()).bsrr().write(|w| w.bits(0xFF | (1 << 15)));
@@ -141,6 +147,8 @@ pub fn hw_init() -> HW
 	let locked_flash = LockedFlash::new(raw_flash);
 	let user_flash   = UserFlash::new(locked_flash);
 
+	lcd_cs_1();
+	tp_cs_1();
 	writeln!(tx, "ITS-Board initialized\n").unwrap();
 	HW { user_flash, spi, tx }
 }
@@ -243,4 +251,23 @@ pub fn lcd_cs_0()
 pub fn lcd_cs_1()
 {
 	unsafe { (*GPIOD::ptr()).bsrr().write(|w| w.bits(1 << LCD_CS)); }
+}
+
+pub fn tp_cs_0()
+{
+	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << (TP_CS + OFFSET_CLEAR))); }
+}
+
+pub fn tp_cs_1()
+{
+	unsafe { (*GPIOF::ptr()).bsrr().write(|w| w.bits(1 << TP_CS)); }
+}
+
+pub fn get_tp_irq() -> bool
+{
+	let result;
+
+	unsafe { result = ((*GPIOE::ptr()).idr().read().bits() & (1 << TP_IRQ)) > 0; }
+
+	return result;
 }

@@ -57,6 +57,9 @@ mod graphics;
 #[cfg(any(test, feature = "simulator"))]
 mod test_utils;
 
+#[cfg_attr(not(feature = "simulator"), path="touch.rs")]
+mod touch;
+
 #[cfg(not(feature = "simulator"))]
 use crate::hw::{hw_init, blueinput, yellowinput, buttons_read, timer_get, TICKS_PER_US};
 
@@ -80,11 +83,18 @@ use cortex_m_rt::entry;
 #[cfg_attr(any(not(test), not(feature = "simulator")), entry)]
 fn start() -> !
 {
+    use lcd::{lcd_rect, LCD_GREEN};
+    use touch::LCDTouch;
+
 	let hw = hw_init();
 	lcd_init(LCD_BLACK);
 	let mut gui = Gui::init(hw);
 	blueinput();
 	yellowinput();
+
+	let mut touch = LCDTouch::new();
+	let mut touch_release_counter = 0;
+	let mut last_check_touch = 0;
 
 	let mut ticks: [u32; 8] = [0; 8];
 	let mut last_check = 0;
@@ -114,6 +124,28 @@ fn start() -> !
 					}
 
 					ticks[i] = 50;
+				}
+			}
+		}
+
+		let t_touch = timer_get();
+		if (t_touch - last_check_touch) >= (TICKS_PER_US * 1000) * 5
+		{
+			last_check_touch = t_touch;
+			if touch.is_pressed()
+			{
+				if touch_release_counter >= 10
+				{
+					let coords = touch.get_touch_coords();
+					gui.touch(coords);
+				}
+				touch_release_counter = 0;
+			}
+			else
+			{
+				if touch_release_counter < 10
+				{
+					touch_release_counter += 1;
 				}
 			}
 		}

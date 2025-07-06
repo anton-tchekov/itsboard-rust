@@ -1,8 +1,9 @@
-use crate::decoder;
+use crate::touch::{Coordinate, LCDTouch};
+use crate::{decoder, touch};
 use crate::decoder_framebuffer::DecoderFrameBuffer;
 use crate::delay::delay_ms;
-use crate::hw::HW;
-use crate::lcd::{lcd_rect, lcd_vline, lcd_hline, lcd_color, LCD_WIDTH, LCD_HEIGHT, LCD_RED, LCD_GREEN, LCD_WHITE, LCD_BLACK};
+use crate::hw::{get_tp_irq, lcd_cs_0, HW};
+use crate::lcd::{lcd_clear, lcd_color, lcd_hline, lcd_rect, lcd_vline, LCD_BLACK, LCD_GREEN, LCD_HEIGHT, LCD_RED, LCD_WHITE, LCD_WIDTH};
 use crate::font::{Font, lcd_icon_color, lcd_icon_undraw, lcd_icon_bw, lcd_rect_border, lcd_char, lcd_str, lcd_str_center};
 use crate::terminus16_bold::TERMINUS16_BOLD;
 use crate::terminus16::{TERMINUS16, Icon};
@@ -83,6 +84,7 @@ pub enum Action
 	Stop
 }
 
+#[derive(PartialEq)]
 enum Mode
 {
 	Main,
@@ -769,6 +771,111 @@ impl Gui
 		self.action(self.button_to_action(key));
 	}
 
+	pub fn touch(&mut self, coords: Coordinate)
+	{
+		/* Bottom Buttons */
+		for i in 0..BUTTON_COUNT as u32
+		{
+			let x1 = (ACTION_ICONS_X - ICON_PADDING) + (i * ACTION_ICONS_SKIP);
+			let y1 = ACTION_ICONS_Y;
+			let x2 = x1 + ACTION_ICONS_SKIP;
+			let y2 = y1 + TERMINUS16.height;
+
+			if coords.x > x1 as u16 && coords.x < x2 as u16
+			&& coords.y > y1 as u16 && coords.y < y2 as u16
+			{
+				let key = BUTTON_COUNT as u32-i-1;
+				self.key(key as i32);
+			}
+		}
+		
+		/* Main Top Buttons */
+		if self.mode == Mode::Main
+		{
+			for i in 0..MA_ICONS
+			{
+				let x1 = LCD_WIDTH - (MA_ICONS - i) * (ICON_BOX + 1);
+				let y1 = 0;
+				let x2 = x1 + ICON_BOX;
+				let y2 = y1 + TERMINUS16.height + ICON_PADDING;
+
+				if coords.x > x1 as u16 && coords.x < x2 as u16
+				&& coords.y > y1 as u16 && coords.y < y2 as u16
+				{
+					self.ma_selected = i;
+					self.ma_enter();
+				}
+			}
+		}
+
+		/* Decoder Buttons */
+		if self.mode == Mode::DecoderAdd
+		{
+			for i in 0..DECODER_COUNT as u32
+			{
+				let btn = self.da_button(i);
+
+				let x1 = btn.x;
+				let y1 = btn.y;
+				let x2 = x1 + btn.w - DA_PADDING;
+				let y2 = y1 + BUTTON_HEIGHT;
+
+				if coords.x > x1 as u16 && coords.x < x2 as u16
+				&& coords.y > y1 as u16 && coords.y < y2 as u16
+				{
+					self.da_selected = i;
+					self.da_enter();
+				}
+			}
+		}
+
+		/* Inside of a Decoder */
+		if self.mode == Mode::DecoderI2C || self.mode == Mode::DecoderOneWire ||
+		self.mode == Mode::DecoderSpi || self.mode == Mode::DecoderUart
+		{
+			let inputs: Option<core::slice::Iter<'_, &Input>> = match self.mode
+			{
+				Mode::DecoderI2C => Some(I2C_INPUTS.iter()),
+				Mode::DecoderOneWire => Some(ONEWIRE_INPUTS.iter()),
+				Mode::DecoderSpi => Some(SPI_INPUTS.iter()),
+				Mode::DecoderUart => Some(UART_INPUTS.iter()),
+
+				_ => None
+			};
+
+			for (y, input) in inputs.unwrap().enumerate()
+			{
+				/* Plus */
+				let x1 = Self::input_text_x(Align::Right, TERMINUS16.width(" ")) + DA_PADDING * 1;
+				let y1 = INPUT_TEXT_Y + y as u32 * INPUT_Y_SKIP - 10;
+				let x2 = x1 + DA_PADDING * 2;
+				let y2 = y1 + TERMINUS16_BOLD.height + 10;
+
+				writeln!(self.hw.tx, "{} {} {} {}", x1, y1, x2, y2);
+
+				if coords.x > x1 as u16 && coords.x < x2 as u16
+				&& coords.y > y1 as u16 && coords.y < y2 as u16
+				{
+					self.cd_selected = y as u32;
+					self.cd_left();
+				}
+
+				/* Minus */
+				let x1 = Self::input_text_x(Align::Right, TERMINUS16.width(" ")) + DA_PADDING * 5;
+				let y1 = INPUT_TEXT_Y + y as u32 * INPUT_Y_SKIP - 10;
+				let x2 = x1 + DA_PADDING * 2;
+				let y2 = y1 + TERMINUS16_BOLD.height + 10;
+
+				if coords.x > x1 as u16 && coords.x < x2 as u16
+				&& coords.y > y1 as u16 && coords.y < y2 as u16
+				{
+					self.cd_selected = y as u32;
+					self.cd_right();
+				}
+			}
+		}
+	}
+
 	fn mode_switch(&mut self, new_mode: Mode)
 	{
 		match self.mode
@@ -907,6 +1014,9 @@ impl Gui
 		let y = INPUT_TEXT_Y + y * INPUT_Y_SKIP;
 		let x = Self::input_text_x(input.select.align, w);
 		lcd_rect(x, y, w, TERMINUS16.height, LCD_BLACK);
+
+		lcd_rect(Self::input_text_x(Align::Right, TERMINUS16.width(" ")) + DA_PADDING * 2,
+		y, DA_PADDING * 8, TERMINUS16_BOLD.height, LCD_BLACK);
 	}
 
 	fn input_render(&mut self, input: &Input, y: u32)
@@ -927,6 +1037,12 @@ impl Gui
 		lcd_str(Self::input_text_x(input.select.align, TERMINUS16.width(text)),
 			INPUT_TEXT_Y + y * INPUT_Y_SKIP,
 			text, LCD_WHITE, LCD_BLACK, &TERMINUS16);
+
+		lcd_str(Self::input_text_x(Align::Right, TERMINUS16.width(" ")) + DA_PADDING * 2
+		, INPUT_TEXT_Y + y * INPUT_Y_SKIP, "-", LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
+
+		lcd_str(Self::input_text_x(Align::Right, TERMINUS16.width(" ")) + DA_PADDING * 6
+		, INPUT_TEXT_Y + y * INPUT_Y_SKIP, "+", LCD_WHITE, LCD_BLACK, &TERMINUS16_BOLD);
 	}
 
 	fn cd_undraw(&mut self)
